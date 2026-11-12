@@ -52,10 +52,11 @@ SpeedFog uses a **dedicated base `1050290000`**, in map coordinates m60_50_29_00
 | Range | Offsets | Type | Purpose | Set by |
 |-------|---------|------|---------|--------|
 | 1050290000-1050290099 | 0xxx offsets 0-99 | Saved (persistent) | Mod state flags | Various injectors |
+| 1050290100-1050290299 | 0xxx offsets 100-299 | Saved (persistent) | Race item use and removal flags | RaceItemsPlugin |
 | 1050294000-1050294999 | 4xxx offsets 0-999 | Saved (persistent) | Zone tracking, finish event, death markers | ZoneTrackingInjector, RunCompleteInjector, DeathMarkerInjector |
 
 Both ranges use saved flags (persist across area reloads):
-- Category 1050290 (offset 0-099): persistent mod state (items given, etc.)
+- Category 1050290 (offset 0-299): persistent mod state (items given, etc.) and the race item use/removal flags
 - Category 1050294 (offset 0-999): zone tracking, cleared by racing mod after capture
   (so generator EMEVD must never wait on these: features needing "player entered
   cluster X" set their own 1050290xxx mirror flags, see the Halloween jumpscares)
@@ -69,6 +70,8 @@ Both ranges use saved flags (persist across area reloads):
 | 1050290010-1050290019 | 10-19 | Halloween jumpscare layer played (one per chosen layer, ascending) | HalloweenJumpscareInjector |
 | 1050290020-1050290029 | 20-29 | Halloween jumpscare "left layer" mirror flags, set before warps into the next layer | ZoneTrackingInjector (via RegionToFlags) |
 | 1050290030-1050290099 | 30-99 | Halloween jumpscare "entered cluster" mirror flags, set before warps into an armed cluster | ZoneTrackingInjector (via RegionToFlags) |
+| 1050290100-1050290199 | 100-199 | Race item use flags (`1050290100 + n`, n = goods id - 1450800): set by the racing mod when the player uses the item | RaceItemsPlugin (waits on them) |
+| 1050290200-1050290299 | 200-299 | Race item removal flags (`1050290200 + n`): set by the racing mod to take the goods back | RaceItemsPlugin (waits on them) |
 
 ### Zone Tracking Flags (1050294xxx)
 
@@ -123,6 +126,7 @@ Event ID ranges and auxiliary flags are declared centrally in
 | 755865100 | GateDecorInjector | map emevds | Halloween decoration SFX (sequential, capacity 400) |
 | 755865500 | HalloweenDarknessInjector | common.emevd | Re-apply the evergaol gparam override (opt-in) |
 | 755865600 | HalloweenJumpscareInjector | map emevds | Halloween jumpscare actors (one event per actor, capacity 100) |
+| 755865700 | RaceItemsPlugin | common.emevd | Race items (opt-in): use events at `base + n`, removal events at `base + 50 + n`, n = goods id - 1450800 (capacity 100) |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0),
 built by `EmevdHelper.InitializeEvent`.
@@ -134,6 +138,7 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 | Range | Param(s) | Owner | Reference | Notes |
 |-------|----------|-------|-----------|-------|
 | 1450700-1450799 | PhantomParam, SpEffectVfxParam, SpEffectParam | Phantom skins catalog | `docs/phantom-skins.md` | |
+| 1450800-1450899 | EquipParamGoods, SpEffectParam | RaceItemsPlugin | `SpeedFogIds.RaceItemParamIdMin/Max`, `data/plugins/race_items.toml` | Race items: goods id = marker SpEffect id, effect SpEffect id = goods id + 20; vanilla has neither (checked 2026-11-12) |
 | 755890000 | NpcParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossNpcRow` | Boss clone; outside 5280-band to avoid nerflantern patching |
 | 755890000 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossSpEffectRow` | Partial damage-cut state for boss |
 | 755890000 | NpcThinkParam | AmbientSpawnInjector | `SpeedFogIds.HostileGreeterThinkRow` | Greeter think row (species basis: untouchable 52800000 or wormface 45700100, perception capped at `GREETER_AGGRO_DIST`) |
@@ -145,6 +150,15 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 | 755890003 | NpcParam | HalloweenJumpscareInjector | `SpeedFogIds.HalloweenJumpscareNpcRow` | Jumpscare actor clone (greeter recipe: flat `GREETER_TIER` scaling, no runes, no drop) |
 | 755890003 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableNearWarpMarkerSpEffect` | Near-warp marker, copy of vanilla 20011452, written in every seed (the static anibnd applies it on every untouchable's burst 3001) |
 
+## Reserved Icon IDs
+
+Menu icon ids (a third namespace, not entity ids nor param rows). Vanilla icon ids top out around 8490.
+
+| Range | Owner | Reference | Notes |
+|-------|-------|-----------|-------|
+| 60383-60384 | Halloween plugin | `SpeedFogIds.HalloweenGoldenSeedIcon`, `HalloweenSacredTearIcon` | Golden Seed pumpkin, corrupted Sacred Tear |
+| 60385-60399 | RaceItemsPlugin | `SpeedFogIds.RaceItemIconIdMin/Max`, `[icons]` in `data/plugins/race_items.toml` | One icon per item kind (`MENU_ItemIcon_<id>`) |
+
 ## Reserved FMG Entry IDs
 
 Text entries added to the game's message files (another namespace: FMG entry
@@ -152,6 +166,7 @@ ids, per FMG file).
 
 | Range | FMG | Owner | Reference | Notes |
 |-------|-----|-------|-----------|-------|
+| 1450800-1450899 | GoodsName, GoodsInfo, GoodsCaption (engus + frafr) | RaceItemsPlugin | `data/plugins/race_items.toml` | Entry id = goods id |
 | 755890000-755890099 | NpcName (item_dlc02.msgbnd.dcx, engus + frafr) | BossNameInjector | `SpeedFogIds.BossNameFmgIds` | Healthbar names of relocated enemies with no vanilla NpcName entry of that text, one id per distinct name (`docs/boss-healthbar-names.md`). Vanilla NpcName ids sit in the 9xxxxxxxx band; the Item Randomizer's `editnames` allocator (off) starts at 907770000 |
 
 ## Risks & Constraints

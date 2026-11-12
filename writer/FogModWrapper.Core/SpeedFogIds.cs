@@ -94,6 +94,11 @@ public static class SpeedFogIds
     public static readonly IdRange HalloweenJumpscareEvents =
         new("HalloweenJumpscareInjector", 755865600, 100);
 
+    /// <summary>One event per race item that has a use flag (slot n = goods id
+    /// - 1450800), plus the removal events at slot 50 + n.</summary>
+    public static readonly IdRange RaceItemEvents =
+        new("RaceItemsPlugin", 755865700, 100);
+
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -108,6 +113,7 @@ public static class SpeedFogIds
         HalloweenDecorEvents,
         HalloweenDarknessEvents,
         HalloweenJumpscareEvents,
+        RaceItemEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---
@@ -154,6 +160,19 @@ public static class SpeedFogIds
     public const int HalloweenJumpscareLeftFlagCount = 10;
     public const int HalloweenJumpscareEnteredFlagBase = 1050290030;
     public const int HalloweenJumpscareEnteredFlagCount = 70;
+
+    /// <summary>Saved flags of the race items (category 1050290, never polled
+    /// by anything else): the racing mod sets use flag base + n when the
+    /// player uses the item with goods id 1450800 + n, and the plugin's
+    /// removal event waits on the removal flag base + n to take the goods
+    /// back. Each range holds 100 flags.</summary>
+    public const int RaceItemUseFlagBase = 1050290100;
+    public const int RaceItemRemoveFlagBase = 1050290200;
+
+    /// <summary>Reserved EquipParamGoods and SpEffectParam ids of the race
+    /// items (vanilla has neither, adjacent to the phantom skins range).</summary>
+    public const int RaceItemParamIdMin = 1450800;
+    public const int RaceItemParamIdMax = 1450899;
 
     // --- MSB entity ID bases (not EMEVD event ids; a separate id space) ---
 
@@ -312,6 +331,11 @@ public static class SpeedFogIds
     /// Vanilla iconId: 384 (EquipParamGoods row 10020, renamed
     /// "Profane Tear" by the text catalogue).</summary>
     public const int HalloweenSacredTearIcon = 60384;
+
+    /// <summary>Icon ids of the race items (MENU_ItemIcon_60385..60399, shipped
+    /// by the speedfog-race-items overlay), after the Halloween ones.</summary>
+    public const int RaceItemIconIdMin = 60385;
+    public const int RaceItemIconIdMax = 60399;
 
     // --- FMG text ids (NpcName.fmg entry ids: a separate namespace from
     //     entity ids, event ids and param rows) ---

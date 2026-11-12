@@ -20,6 +20,7 @@ All three rows share the same id. Pattern adapted from RandomizerCommon's `Enemy
 
 - `77690-77694`: EnemyRandomizer enemy tier auras
 - `1450601`: EnemyRandomizer single phantom row
+- `1450800-1450899`: race items (EquipParamGoods and SpEffectParam, `data/plugins/race_items.toml`)
 
 Do not allocate from these ranges in other speedfog injectors.
 

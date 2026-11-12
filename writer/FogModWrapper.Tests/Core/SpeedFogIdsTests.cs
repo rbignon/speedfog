@@ -85,6 +85,19 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
+    public void RaceItems_AreRegisteredAndTheirFlagsClearOfHalloweenAndTheBase()
+    {
+        Assert.Contains(SpeedFogIds.RaceItemEvents, SpeedFogIds.EventRanges);
+
+        int use = SpeedFogIds.RaceItemUseFlagBase;
+        int remove = SpeedFogIds.RaceItemRemoveFlagBase;
+        Assert.True(use >= 1050290100 && use + 99 < remove);
+        Assert.True(remove + 99 <= 1050290299);
+        // Halloween flags occupy 1050290000-099, the banner and items flags sit inside it.
+        Assert.True(use > 1050290099);
+    }
+
+    [Fact]
     public void JumpscareMirrorFlags_AreSavedModStateFlagsDisjointFromTheLayerFlags()
     {
         // The mirror flags replace the zone-tracking flags the racing mod
