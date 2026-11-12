@@ -110,7 +110,10 @@ PNG files in, nothing else changes. For the graphic artist and for Roger:
   `toxic_blossom` (ids 60385-60395; the three Rune Pouches share one icon).
 - **After the drop**: overwrite the files (never re-run
   `tools/generate_race_item_icons.py` afterwards, it would overwrite the art),
-  run `tools/bootstrap.py` on the generation host (a missing or non-160x160 file
+  re-run `tools/bootstrap.py` on the generation host (it also needs a re-run
+  after the rename to `speedfog-icons`; `speedfog` refuses to generate a
+  Halloween or race items seed while the overlay is missing or older than the
+  icon PNGs or `race_items.toml`; a missing or non-160x160 file
   makes `ItemIconPatcher` skip the whole overlay with a warning), regenerate the
   pools, then in speedfog-racing run `tools/sync_race_item_icons.py` and release
   the mod.
@@ -132,7 +135,14 @@ On one test seed with the plugin enabled:
 
 - An item given by `func_item_inject` lands in a quick slot (auto-equip), as a
   picked-up flask does; and what happens when every quick slot is full.
+- Every item shows its icon, name and caption. The icon route relies on the
+  texture-name fallback that [halloween-icons.md](halloween-icons.md) still
+  lists as not verified in game: if icons render blank, see that doc's
+  fallbacks.
 - The slot empties when the single item is used.
+- Use an item, rest at a grace: it does not come back (the goods rows clear
+  `isFullSuppleItem`, `suppleType` and the Physick tutorial flag they inherit
+  from goods 250).
 - The use flag is set once per use, Mushroom included.
 - A removal flag removes the goods and clears itself.
 - `stateInfo` 287 and 286 (Lightning) and 154 (Flask Stopper) do what their
@@ -140,6 +150,11 @@ On one test seed with the plugin enabled:
 - Hammer 0.35 makes a light build fat-roll, and what a medium build gets.
 - Blue Shell (`maxHpRate = 0.5`) halves max HP and caps current HP without
   killing.
-- Toxic Blossom poisons the player.
+- Toxic Blossom poisons the player, and whether a bolus cures it is open: its
+  effect row clones SpEffect 3370, the vanilla poison status (`effectEndurance`
+  60, buildup re-applied every second for 60 s), so a bolus may or may not clear
+  it.
+- A Rune Pouch raises its use flag (its marker template is 3269, Golden Rune
+  [1], not the Bell-proven 10600).
 - Each Rune Pouch grants its runes (10000 / 20000 / 40000).
 - The Mushroom removes the stamina cost for 15 s.

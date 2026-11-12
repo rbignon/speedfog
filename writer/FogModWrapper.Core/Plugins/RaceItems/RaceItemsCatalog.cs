@@ -10,7 +10,8 @@ public sealed record RaceItemSpEffect(int Id, int Template, IReadOnlyDictionary<
 /// <summary>One race item. <see cref="Marker"/> is the SpEffect the goods row
 /// applies when used (its id equals <see cref="GoodsId"/>); both it and
 /// <see cref="UseFlag"/> are null for the unusable Shield. <see cref="Effect"/>
-/// is the extra SpEffect the item's EMEVD event applies, when there is one.</summary>
+/// is the extra SpEffect the racing mod applies to the target runner(s) when the
+/// item is used, when there is one.</summary>
 public sealed record RaceItem(
     string Key, string Icon, int IconId, string Name, string Info, string Caption,
     int GoodsId, int? UseFlag, int RemoveFlag,
@@ -43,8 +44,16 @@ public static class RaceItemsCatalog
         {
             if (iObj is not TomlTable iTable)
                 throw new InvalidDataException($"{Prefix} [icons] must be a table");
+            var seenIconIds = new Dictionary<int, string>();
             foreach (var (name, _) in iTable)
-                icons[name] = TomlHelpers.ToInt(iTable, name, Prefix);
+            {
+                int id = TomlHelpers.ToInt(iTable, name, Prefix);
+                CheckRange("icon id", name, id, SpeedFogIds.RaceItemIconIdMin, SpeedFogIds.RaceItemIconIdMax);
+                if (seenIconIds.TryGetValue(id, out var other))
+                    throw new InvalidDataException($"{Prefix} icons '{name}' and '{other}' share id {id}");
+                seenIconIds[id] = name;
+                icons[name] = id;
+            }
         }
 
         var items = new List<RaceItem>();

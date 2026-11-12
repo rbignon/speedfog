@@ -69,8 +69,8 @@ The overlay is shared with the race items plugin ([race-items.md](race-items.md)
 which ships 11 more icons (ids 60385-60395). ModEngine 2 keeps the first copy
 of a given file, so a second overlay shipping its own `05_dummy.tpf.dcx` would
 hide the other's icons: both icon sets live in ONE file, in ONE overlay,
-`data/mods/speedfog-icons/`, shipped when Halloween OR race items is enabled
-(every Halloween pool enables race items too). Everything below about the
+`data/mods/speedfog-icons/`, shipped when Halloween OR race items is enabled.
+Everything below about the
 patcher and the packaging applies to both sets; the rest of this page is about
 the two Halloween icons.
 

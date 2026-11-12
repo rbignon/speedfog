@@ -89,12 +89,22 @@ public class SpeedFogIdsTests
     {
         Assert.Contains(SpeedFogIds.RaceItemEvents, SpeedFogIds.EventRanges);
 
-        int use = SpeedFogIds.RaceItemUseFlagBase;
-        int remove = SpeedFogIds.RaceItemRemoveFlagBase;
-        Assert.True(use >= 1050290100 && use + 99 < remove);
-        Assert.True(remove + 99 <= 1050290299);
-        // Halloween flags occupy 1050290000-099, the banner and items flags sit inside it.
-        Assert.True(use > 1050290099);
+        var use = Enumerable.Range(SpeedFogIds.RaceItemUseFlagBase, 100).ToHashSet();
+        var remove = Enumerable.Range(SpeedFogIds.RaceItemRemoveFlagBase, 100).ToHashSet();
+        Assert.Empty(use.Intersect(remove));
+
+        var others = new HashSet<int> { SpeedFogIds.BannerShownFlag, 1050290000 };
+        others.UnionWith(Enumerable.Range(SpeedFogIds.HalloweenJumpscareLayerFlagBase, SpeedFogIds.HalloweenJumpscareLayerFlagCount));
+        others.UnionWith(Enumerable.Range(SpeedFogIds.HalloweenJumpscareLeftFlagBase, SpeedFogIds.HalloweenJumpscareLeftFlagCount));
+        others.UnionWith(Enumerable.Range(SpeedFogIds.HalloweenJumpscareEnteredFlagBase, SpeedFogIds.HalloweenJumpscareEnteredFlagCount));
+        Assert.Empty(use.Intersect(others));
+        Assert.Empty(remove.Intersect(others));
+
+        // Saved category 1050290 (flags 1050290000-1050290999).
+        Assert.All(use.Concat(remove), f => Assert.Equal(1050290, f / 1000));
+
+        // Param ids: clear of the Phantom skin range right below.
+        Assert.True(SpeedFogIds.RaceItemParamIdMin > PhantomCatalogLoader.IdRangeEnd);
     }
 
     [Fact]

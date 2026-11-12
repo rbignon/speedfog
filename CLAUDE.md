@@ -62,6 +62,7 @@ speedfog/
 │   ├── enemy_data.py        # enemy.txt parsing, boss placement patching
 │   ├── care_package.py      # Randomized starting build system
 │   ├── tarnished.py         # Tarnished Pack showcase: class loadout + Torrent skin draws
+│   ├── race_items.py        # Race items catalog loader (data/plugins/race_items.toml -> graph.json race_items)
 │   ├── boss_arena_constraints.py  # Boss/arena tag model, compat check, matcher
 │   ├── fog_mod.py           # FogMod wrapper (runs FogModWrapper.exe)
 │   ├── item_randomizer.py   # Item Randomizer integration
@@ -86,6 +87,8 @@ speedfog/
 │   ├── plugins/             # Plugin data files
 │   │   ├── summer.toml      # Summer theme text catalogue (tracked)
 │   │   ├── halloween.toml   # Halloween theme text catalogue (tracked)
+│   │   ├── race_items.toml  # Race items catalog: icons, goods/SpEffect rows, flags, texts (tracked)
+│   │   ├── race_items_icon_<icon>.png  # Race item icon art (placeholders), 160x160, one per [icons] name (tracked)
 │   │   ├── halloween_decorations.toml  # Halloween gate decoration catalogue (bones, candelabras, candles; tracked)
 │   │   ├── halloween_icon_pumpkin_seed.png  # Golden Seed ("Pumpkin Seed") authored icon art, 160x160 (tracked)
 │   │   ├── halloween_icon_profane_tear.png  # Sacred Tear ("Profane Tear") authored icon art, 160x160 (tracked)
@@ -113,7 +116,7 @@ speedfog/
 │   │   ├── ShopIdAllocator.cs  # Shop ID allocation utilities
 │   │   ├── MapSplitsLoader.cs  # Load data/map_splits.toml (synthetic zones/fogs)
 │   │   ├── PhaseTimer.cs    # Per-phase timing (standard timer, no ad-hoc Stopwatches)
-│   │   └── Plugins/         # Plugin catalogue loaders and records: Themes/ (TextThemeCatalogLoader, TextThemeCatalog), Halloween/ (HalloweenDecorLoader)
+│   │   └── Plugins/         # Plugin catalogue loaders and records: Themes/ (TextThemeCatalogLoader, TextThemeCatalog), Halloween/ (HalloweenDecorLoader), RaceItems/ (RaceItemsCatalog)
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point + ordered list of pipeline phases
 │   │   ├── Pipeline/        # Context (shared phase state) + one class per phase (LoadInputs ... ModDir)
@@ -171,10 +174,11 @@ speedfog/
 │   │   │   └── PhantomCatalogInjector.cs  # Phantom skins catalog baked into params
 │   │   ├── Plugins/         # C# side of the [plugin.<name>] tables (contract: docs/plugins/README.md)
 │   │   │   ├── SpeedFogPlugin.cs  # Plugin base class: no-op hooks the pipeline phases call
-│   │   │   ├── PluginRegistry.cs  # Enabled plugins in execution order (summer, weather, halloween)
+│   │   │   ├── PluginRegistry.cs  # Enabled plugins in execution order (summer, weather, halloween, race_items)
 │   │   │   ├── Themes/      # TextTheme: cosmetic text reskins shared by summer and halloween
 │   │   │   ├── Summer/      # SummerPlugin (text theme only)
 │   │   │   ├── Weather/     # WeatherPlugin + WeatherInjector (force weather / pin clock hour)
+│   │   │   ├── RaceItems/   # RaceItemsPlugin + injectors (regulation rows, EMEVD removal events, texts) for [plugin.race_items]
 │   │   │   └── Halloween/   # HalloweenPlugin and its injectors
 │   │   │       ├── HalloweenPlugin.cs  # Hooks, parsed settings, jumpscare plan, regulation-to-MSB row guards
 │   │   │       ├── HalloweenPluginSettings.cs  # Parse [plugin.halloween] parameters
@@ -211,6 +215,7 @@ speedfog/
 │   ├── port_boss_arena_tags.py  # Port BAR data → data/boss_arena_tags.json
 │   ├── generate_title_screen.py  # Generate data/title_screen_overlay.png (title badge)
 │   ├── generate_halloween_icons.py  # Generate the placeholder Halloween item icon PNGs (data/plugins/)
+│   ├── generate_race_item_icons.py  # Generate the placeholder race item icon PNGs (data/plugins/; one-shot, never re-run over real art)
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── diff_vanilla_snapshot.py  # Hash-diff an unpacked game dir against eldendata/Vanilla (game patch triage)
 │   ├── refresh_vanilla_snapshot.py  # Refresh the FogMod snapshot (eldendata/Vanilla) from the game dir (run automatically by bootstrap.py; manual runs for game-patch triage)
@@ -260,6 +265,7 @@ speedfog/
 │       ├── halloween-icons.md  # Halloween item icon redirect (Golden Seed, Sacred Tear)
 │       ├── halloween-darkness.md  # Halloween evergaol lighting over the whole run
 │       ├── halloween-jumpscares.md  # Halloween jumpscares: Aging Untouchable warping onto the player in drawn dungeon layers
+│       ├── race-items.md    # Race items: Mario Kart style goods, SpEffects, flags, texts, icons, in-game checks
 │       └── weather.md       # Weather plugin: force weather + pin clock hour
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by StaticModBuilder)
 └── output/                  # Generated mod (gitignored, self-contained)
@@ -312,6 +318,7 @@ speedfog/
 | `docs/plugins/halloween-jumpscares.md` | Halloween jumpscares: layer draw (JumpscarePlanner), hidden c5280 actors, warp-onto-player event, ids, owed in-game checks |
 | `docs/plugins/halloween-darkness.md` | Halloween darkness: vanilla evergaol gparam override re-applied from common.emevd, area interactions, rejected custom-gparam approach, owed in-game checks |
 | `docs/plugins/winter.md` | Winter plugin: static mod built at bootstrap (scan of the vertex layouts, two matbin binders, 276 frosted half-resolution TPFs), `[plugin.winter]` + weather companion, racing activation lines, `WINTER FAILED` and `--no-winter`, measured sizes and times, validation status (in-game pass owed), deferred families and trees |
+| `docs/plugins/race-items.md` | Race items plugin: item table, reserved ids and flags, goods/SpEffect rows, removal events, texts, icon replacement, calibration values, in-game checks |
 | `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
@@ -396,8 +403,8 @@ speedfog/
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |
 | `MapSplitsInjector` | Injects map_splits.toml synthetic zones/fogs into AnnotationData before `Graph.Construct`, splits EnemyAreas (see `docs/map-splits.md`) |
 | `SpeedFogPlugin` | Base class of the C# side of a `[plugin.<name>]` table: no-op hooks the phases call (`AfterFogModWrite`, `OnCommonEmevd`, `OnRegulation`, `TextThemeName`, `OnModDirMsb`, `OnModDirLate`); plugin state lives in the object (see `docs/plugins/README.md`) |
-| `PluginRegistry` | Creates the enabled, known plugins in execution order (summer, weather, halloween) at the end of `LoadInputsPhase` and names them from its entries (plugin classes do not repeat their config key); each parses its table on creation |
-| `SummerPlugin` / `WeatherPlugin` / `HalloweenPlugin` | The three plugins; `HalloweenPlugin` owns the parsed settings, the jumpscare plan and the regulation-to-MSB row guards |
+| `PluginRegistry` | Creates the enabled, known plugins in execution order (summer, weather, halloween, race_items) at the end of `LoadInputsPhase` and names them from its entries (plugin classes do not repeat their config key); each parses its table on creation |
+| `SummerPlugin` / `WeatherPlugin` / `HalloweenPlugin` / `RaceItemsPlugin` | The plugins (`RaceItemsPlugin`: see `docs/plugins/race-items.md`); `HalloweenPlugin` owns the parsed settings, the jumpscare plan and the regulation-to-MSB row guards |
 | `TextTheme` | Cosmetic text reskins per theme, summer + halloween, applied by `ModDirPhase` for each plugin's `TextThemeName` |
 | `MsgBndEditor` | Shared msgbnd editing for the engus + frafr text injectors (`TextTheme`, `BossNameInjector`): mod copy over vanilla, written only on change |
 | `BossNameInjector` | Healthbar names of relocated enemies (graph.json `boss_names`): resolves each name to a NpcName id (exact vanilla engus match, else a `SpeedFogIds.BossNameFmgIds` entry written to engus + frafr) and repoints the arena's `DisplayBossHealthBar` nameId in the map EMEVD, leaving alone the arenas the randomizer already named; runs before `TextTheme` and hands it the allocated {name -> id} so a theme can reskin them by `boss_name` (see `docs/boss-healthbar-names.md`) |

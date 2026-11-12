@@ -45,32 +45,40 @@ public static class RaceItemsRegulationInjector
         var row = GameEditor.AddRow(goods, item.GoodsId, GoodsTemplateId);
         bool usable = item.Marker != null;
 
-        Set(row, "goodsType", 0);
-        Set(row, "replaceItemId", -1);
-        Set(row, "maxNum", 1);
-        Set(row, "isOnlyOne", 1);
-        Set(row, "isDiscard", 0);
-        Set(row, "isDeposit", 0);
-        Set(row, "isDrop", 0);
-        Set(row, "sellValue", -1);
-        Set(row, "iconId", item.IconId);
-        Set(row, "refCategory", usable ? 2 : 0);
-        Set(row, "refId_default", usable ? item.Marker!.Id : -1);
-        Set(row, "isConsume", usable ? 1 : 0);
-        Set(row, "isAutoEquip", usable ? 1 : 0);
+        Set(row, "EquipParamGoods", "goodsType", 0);
+        Set(row, "EquipParamGoods", "replaceItemId", -1);
+        Set(row, "EquipParamGoods", "maxNum", 1);
+        Set(row, "EquipParamGoods", "isOnlyOne", 1);
+        Set(row, "EquipParamGoods", "isDiscard", 0);
+        Set(row, "EquipParamGoods", "isDeposit", 0);
+        Set(row, "EquipParamGoods", "isDrop", 0);
+        Set(row, "EquipParamGoods", "sellValue", -1);
+        Set(row, "EquipParamGoods", "iconId", item.IconId);
+        Set(row, "EquipParamGoods", "refCategory", usable ? 2 : 0);
+        Set(row, "EquipParamGoods", "refId_default", usable ? item.Marker!.Id : -1);
+        Set(row, "EquipParamGoods", "isConsume", usable ? 1 : 0);
+        Set(row, "EquipParamGoods", "isAutoEquip", usable ? 1 : 0);
+        // The Physick template refills at a grace and shows a tutorial: a used
+        // item must not come back after resting. Same profile as the vanilla
+        // Phantom Bloody Finger (107) and Phantom Great Rune (135).
+        Set(row, "EquipParamGoods", "isFullSuppleItem", 0);
+        Set(row, "EquipParamGoods", "suppleType", 0);
+        Set(row, "EquipParamGoods", "itemGetTutorialFlagId", 0);
     }
 
     private static void AddSpEffectRow(PARAM sp, RaceItemSpEffect effect)
     {
         var row = GameEditor.AddRow(sp, effect.Id, effect.Template);
         foreach (var (field, value) in effect.Fields)
-            Set(row, field, value);
+            Set(row, "SpEffectParam", field, value);
     }
 
     /// <summary>Writes <paramref name="value"/> converted to the cell's own type.</summary>
-    private static void Set(PARAM.Row row, string field, double value)
+    private static void Set(PARAM.Row row, string param, string field, double value)
     {
-        var cell = row[field];
+        var cell = row.Cells.FirstOrDefault(c => c.Def.InternalName == field)
+            ?? throw new InvalidDataException(
+                $"race_items: unknown field '{field}' on {param} row {row.ID}");
         cell.Value = Convert.ChangeType(value, cell.Value.GetType());
     }
 }

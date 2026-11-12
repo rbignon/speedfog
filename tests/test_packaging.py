@@ -10,6 +10,7 @@ from speedfog.packaging import (
     copy_packaging_assets,
     missing_winter_mod_files,
     package_seed,
+    stale_icon_overlay,
     stale_static_mod_scripts,
     write_modengine_config,
 )
@@ -540,3 +541,66 @@ def test_missing_winter_mod_files_lists_everything_for_an_absent_folder(
     ]
     _populate_winter(tmp_path)
     assert missing_winter_mod_files(tmp_path) == []
+
+
+def _make_icon_tree(root: Path, overlay_mtime: float, source_mtime: float) -> None:
+    plugins = root / "data" / "plugins"
+    plugins.mkdir(parents=True)
+    sources = [
+        plugins / "race_items_icon_banana.png",
+        plugins / "halloween_icon_pumpkin_seed.png",
+        plugins / "race_items.toml",
+    ]
+    for source in sources:
+        source.write_bytes(b"x")
+        os.utime(source, (source_mtime, source_mtime))
+    if overlay_mtime:
+        tpf = root / "data" / "mods" / "speedfog-icons" / "menu" / "05_dummy.tpf.dcx"
+        tpf.parent.mkdir(parents=True)
+        tpf.write_bytes(b"x")
+        os.utime(tpf, (overlay_mtime, overlay_mtime))
+
+
+def test_stale_icon_overlay_flags_race_items_enabled_but_overlay_not_built(
+    tmp_path: Path,
+) -> None:
+    _make_icon_tree(tmp_path, overlay_mtime=0, source_mtime=1_000)
+
+    problems = stale_icon_overlay(
+        tmp_path, halloween_enabled=False, race_items_enabled=True
+    )
+
+    assert len(problems) == 1
+    assert "speedfog-icons" in problems[0]
+    assert "missing" in problems[0]
+
+
+def test_stale_icon_overlay_flags_an_overlay_older_than_an_icon(
+    tmp_path: Path,
+) -> None:
+    _make_icon_tree(tmp_path, overlay_mtime=1_000, source_mtime=2_000)
+
+    problems = stale_icon_overlay(
+        tmp_path, halloween_enabled=True, race_items_enabled=False
+    )
+
+    assert len(problems) == 3
+    assert any("race_items_icon_banana.png" in p and "older" in p for p in problems)
+    assert any("race_items.toml" in p for p in problems)
+
+
+def test_stale_icon_overlay_accepts_a_fresh_overlay_and_ignores_unneeded_ones(
+    tmp_path: Path,
+) -> None:
+    _make_icon_tree(tmp_path, overlay_mtime=3_000, source_mtime=2_000)
+    assert (
+        stale_icon_overlay(tmp_path, halloween_enabled=True, race_items_enabled=True)
+        == []
+    )
+    # Neither plugin enabled: a missing overlay is nobody's problem.
+    bare = tmp_path / "bare"
+    bare.mkdir()
+    assert (
+        stale_icon_overlay(bare, halloween_enabled=False, race_items_enabled=False)
+        == []
+    )

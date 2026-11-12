@@ -16,6 +16,7 @@ from typing import Any
 ID_RANGE = range(1450800, 1450900)  # EquipParamGoods and SpEffectParam
 USE_FLAG_RANGE = range(1050290100, 1050290200)
 REMOVE_FLAG_RANGE = range(1050290200, 1050290300)
+ICON_ID_RANGE = range(60385, 60400)
 
 
 def _check_range(label: str, key: str, value: Any, allowed: range) -> None:
@@ -41,6 +42,16 @@ def load_race_items_catalog(path: Path) -> dict[str, dict[str, Any]]:
     items = data.get("item", [])
     if not isinstance(icons, dict) or not isinstance(items, list):
         raise ValueError("race_items: [icons] must be a table and [[item]] an array")
+
+    seen_icon_ids: dict[int, str] = {}
+    for icon_name, icon_id in icons.items():
+        _check_range("icon id", icon_name, icon_id, ICON_ID_RANGE)
+        if icon_id in seen_icon_ids:
+            raise ValueError(
+                f"race_items: icons '{icon_name}' and '{seen_icon_ids[icon_id]}' "
+                f"share id {icon_id}"
+            )
+        seen_icon_ids[icon_id] = icon_name
 
     result: dict[str, dict[str, Any]] = {}
     goods_ids: set[int] = set()

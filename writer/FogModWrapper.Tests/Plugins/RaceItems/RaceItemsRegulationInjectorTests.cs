@@ -48,6 +48,46 @@ public class RaceItemsRegulationInjectorTests
     }
 
     [Fact]
+    public void Goods_row_drops_the_physick_supply_and_tutorial_fields()
+    {
+        // The template carries the Physick's grace refill and tutorial popup.
+        var goods = BuildParamFromDef("EquipParamGoods", 250);
+        var template = goods[250]!;
+        template["isFullSuppleItem"].Value = (byte)1;
+        template["suppleType"].Value = (byte)3;
+        template["itemGetTutorialFlagId"].Value = 710590u;
+        var sp = BuildParamFromDef("SpEffect", 10600);
+        AddRowFromTemplate(sp, 3269);
+        AddRowFromTemplate(sp, 3370);
+        RaceItemsRegulationInjector.Apply(goods, sp, RaceItemsCatalog.Load(ShippedCatalogPath()));
+
+        foreach (var id in new[] { 1450800, 1450807 })
+        {
+            var row = goods[id]!;
+            Assert.Equal((byte)0, row["isFullSuppleItem"].Value);
+            Assert.Equal((byte)0, row["suppleType"].Value);
+            Assert.Equal(0u, row["itemGetTutorialFlagId"].Value);
+        }
+    }
+
+    [Fact]
+    public void Unknown_field_names_the_field_the_row_and_the_param()
+    {
+        var goods = BuildParamFromDef("EquipParamGoods", 250);
+        var sp = BuildParamFromDef("SpEffect", 10600);
+        var items = new[]
+        {
+            new RaceItem("x", "i", 60385, "X", "i", "c", 1450850, 1050290150, 1050290250,
+                new RaceItemSpEffect(1450850, 10600, new Dictionary<string, double> { ["noSuchField"] = 1 }),
+                null),
+        };
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsRegulationInjector.Apply(goods, sp, items));
+        Assert.Contains("noSuchField", ex.Message);
+        Assert.Contains("1450850", ex.Message);
+        Assert.Contains("SpEffectParam", ex.Message);
+    }
+
+    [Fact]
     public void Shield_is_passive()
     {
         var (goods, sp) = Inject();

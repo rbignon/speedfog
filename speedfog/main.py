@@ -48,7 +48,12 @@ from speedfog.item_randomizer import (
     generate_item_config,
     run_item_randomizer,
 )
-from speedfog.packaging import PackagingError, package_seed, stale_static_mod_scripts
+from speedfog.packaging import (
+    PackagingError,
+    package_seed,
+    stale_icon_overlay,
+    stale_static_mod_scripts,
+)
 from speedfog.race_items import load_race_items_catalog
 from speedfog.spoiler import append_boss_placements_to_spoiler, export_spoiler_log
 from speedfog.tarnished import build_class_loadout, build_torrent_skins, tarnished_rng
@@ -244,6 +249,27 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 "Error: the static mod scripts are stale; rerun tools/bootstrap.py,"
                 " or the repack alone (data/mods-src/README.md), before generating"
                 " seeds",
+                file=sys.stderr,
+            )
+            return 1
+
+        # The icons overlay (Halloween and race item icons) is built by
+        # bootstrap too; a missing or older one ships stale icons silently.
+        stale_icons = stale_icon_overlay(
+            project_root,
+            halloween_enabled=bool(
+                config.plugins.get("halloween", {}).get("enabled", False)
+            ),
+            race_items_enabled=bool(
+                config.plugins.get("race_items", {}).get("enabled", False)
+            ),
+        )
+        if stale_icons:
+            for problem in stale_icons:
+                print(f"Error: {problem}", file=sys.stderr)
+            print(
+                "Error: the icons overlay is stale; rerun tools/bootstrap.py on the"
+                " generation host before generating seeds",
                 file=sys.stderr,
             )
             return 1

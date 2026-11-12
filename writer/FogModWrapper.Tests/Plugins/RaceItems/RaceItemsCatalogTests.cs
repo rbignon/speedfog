@@ -102,6 +102,22 @@ public class RaceItemsCatalogTests
     }
 
     [Fact]
+    public void Rejects_icon_id_outside_the_reserved_range()
+    {
+        var toml = "[icons]\nshield = 60400\n" + Item("a", 1450800);
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
+        Assert.Contains("icon id", ex.Message);
+    }
+
+    [Fact]
+    public void Rejects_duplicate_icon_id()
+    {
+        var toml = "[icons]\nshield = 60385\nbanana = 60385\n" + Item("a", 1450800);
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
+        Assert.Contains("share id", ex.Message);
+    }
+
+    [Fact]
     public void Rejects_unknown_icon()
     {
         var toml = Icons + Item("a", 1450800).Replace("icon = \"shield\"", "icon = \"nope\"");

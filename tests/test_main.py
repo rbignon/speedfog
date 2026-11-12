@@ -222,6 +222,7 @@ def fake_build(monkeypatch):
     # The static mod freshness check reads the real data/ tree; keep the
     # build tests independent of this machine's bootstrap state.
     monkeypatch.setattr(main_module, "stale_static_mod_scripts", lambda root: [])
+    monkeypatch.setattr(main_module, "stale_icon_overlay", lambda root, **kw: [])
     return fake_run_fogmodwrapper, calls
 
 
@@ -384,3 +385,32 @@ def test_main_build_refuses_a_stale_static_mod_script(
     # before the seed directory existed.
     assert calls["itemrando"] == [] and calls["fogmod"] == [] and calls["package"] == []
     assert not out_dir.exists()
+
+
+def test_main_build_refuses_a_stale_icon_overlay(
+    tmp_path, monkeypatch, fake_build, capsys
+):
+    _real_clusters_or_skip()
+    _, calls = fake_build
+    monkeypatch.setattr(
+        main_module,
+        "stale_icon_overlay",
+        lambda root, **kw: ["data/mods/speedfog-icons/ is missing or empty"],
+    )
+    game_dir = tmp_path / "Game"
+    game_dir.mkdir()
+
+    rc = _run_main(
+        monkeypatch,
+        "--seed",
+        "0",
+        "-o",
+        str(tmp_path / "out"),
+        "--game-dir",
+        str(game_dir),
+    )
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "speedfog-icons" in err and "bootstrap" in err
+    assert calls["fogmod"] == [] and calls["package"] == []

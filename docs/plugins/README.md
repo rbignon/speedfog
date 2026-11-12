@@ -80,8 +80,8 @@ the cohesive unit stays the config namespace, read independently where each
 piece runs. Halloween spans six features under one namespace: `TextTheme`
 (boss/UI text reskin), `AmbientSpawnInjector` (dungeon exit gate
 greeters/ambushes), `GateDecorInjector` (catalogue decorations),
-`HalloweenIconInjector` (item icon redirect, plus its own bootstrap-time
-overlay builder and packaging conditional), `HalloweenJumpscareInjector` (an
+`HalloweenIconInjector` (item icon redirect; the bootstrap-time overlay builder and
+packaging conditional are shared with race items), `HalloweenJumpscareInjector` (an
 Aging Untouchable appearing on the player in a few dungeon layers), and
 `HalloweenDarknessInjector` (evergaol lighting everywhere); their
 FogModWrapper side is driven by `HalloweenPlugin` (the text theme through its

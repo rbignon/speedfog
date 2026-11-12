@@ -68,8 +68,8 @@ marker = { template = 3269, fields = { soul = 40000 } }
 key = "banana"
 icon = "banana"
 name = "Banana"
-info = "The runner just ahead of you slips."
-caption = "A race item. Using it drops a banana peel in the path of the runner just ahead of you."
+info = "The runner just behind you slips."
+caption = "A race item. Using it drops a banana peel in the path of the runner just behind you."
 goods_id = 1450804
 use_flag = 1050290104
 remove_flag = 1050290204
@@ -115,8 +115,8 @@ effect = { id = 1450827, template = 10600, fields = { equipWeightChangeRate = 0.
 key = "ink"
 icon = "ink"
 name = "Ink"
-info = "Everyone else sees ink for 15 seconds."
-caption = "A race item. Using it blots out the screen of every other runner for 15 seconds."
+info = "Everyone else cannot see their exits for 15 seconds."
+caption = "A race item. Using it hides the exits and their location text from every other runner for 15 seconds."
 goods_id = 1450808
 use_flag = 1050290108
 remove_flag = 1050290208
@@ -140,8 +140,8 @@ effect = { id = 1450829, template = 10600, fields = { maxHpRate = 0.5, effectEnd
 key = "lightning"
 icon = "lightning"
 name = "Lightning"
-info = "Everyone else is struck for 15 seconds."
-caption = "A race item. Using it afflicts every other runner for 15 seconds."
+info = "Everyone else is slowed for 15 seconds."
+caption = "A race item. Using it slows every other runner for 15 seconds."
 goods_id = 1450810
 use_flag = 1050290110
 remove_flag = 1050290210
@@ -153,8 +153,8 @@ effect = { id = 1450830, template = 10600, fields = { stateInfo = 287, effectEnd
 key = "flask_stopper"
 icon = "flask_stopper"
 name = "Flask Stopper"
-info = "The leader cannot drink flasks for 15 seconds."
-caption = "A race item. Using it stops the race leader from drinking flasks for 15 seconds."
+info = "Everyone else cannot drink flasks for 15 seconds."
+caption = "A race item. Using it stops every other runner from drinking flasks for 15 seconds."
 goods_id = 1450811
 use_flag = 1050290111
 remove_flag = 1050290211

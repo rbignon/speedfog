@@ -333,7 +333,7 @@ public static class SpeedFogIds
     public const int HalloweenSacredTearIcon = 60384;
 
     /// <summary>Icon ids of the race items (MENU_ItemIcon_60385..60399, shipped
-    /// by the speedfog-race-items overlay), after the Halloween ones.</summary>
+    /// by the speedfog-icons overlay), after the Halloween ones.</summary>
     public const int RaceItemIconIdMin = 60385;
     public const int RaceItemIconIdMax = 60399;
 

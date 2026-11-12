@@ -59,7 +59,7 @@ def test_duration_matches_the_speffect_that_carries_it():
 
 
 def _write_catalog(
-    tmp_path: Path, *items: str, icons: str = "[icons]\nfoo = 1\n"
+    tmp_path: Path, *items: str, icons: str = "[icons]\nfoo = 60385\n"
 ) -> Path:
     path = tmp_path / "cat.toml"
     path.write_text(icons + "".join(items), encoding="utf-8")
@@ -106,6 +106,32 @@ def test_loader_rejects_marker_without_use_flag(tmp_path):
 
 
 def test_loader_rejects_unknown_icon(tmp_path):
-    path = _write_catalog(tmp_path, _item(), icons="[icons]\nbar = 1\n")
+    path = _write_catalog(tmp_path, _item(), icons="[icons]\nbar = 60386\n")
     with pytest.raises(ValueError, match="unknown icon"):
         load_race_items_catalog(path)
+
+
+def test_loader_rejects_icon_id_outside_reserved_range(tmp_path):
+    path = _write_catalog(tmp_path, _item(), icons="[icons]\nfoo = 60400\n")
+    with pytest.raises(ValueError, match="icon id"):
+        load_race_items_catalog(path)
+
+
+def test_loader_rejects_duplicate_icon_id(tmp_path):
+    path = _write_catalog(
+        tmp_path, _item(), icons="[icons]\nfoo = 60385\nbar = 60385\n"
+    )
+    with pytest.raises(ValueError, match="share id"):
+        load_race_items_catalog(path)
+
+
+def test_captions_state_their_numbers():
+    # A caption number that drifts from its field misleads the player.
+    for item in _raw_items():
+        text = f"{item['info']} {item['caption']}"
+        soul = item.get("marker", {}).get("fields", {}).get("soul")
+        if soul is not None:
+            assert str(soul) in item["caption"], item["key"]
+        duration = item.get("duration_s")
+        if duration is not None:
+            assert f"{duration} seconds" in text, item["key"]

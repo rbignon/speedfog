@@ -52,6 +52,40 @@ def stale_static_mod_scripts(project_root: Path) -> list[str]:
     return problems
 
 
+def stale_icon_overlay(
+    project_root: Path, *, halloween_enabled: bool, race_items_enabled: bool
+) -> list[str]:
+    """The icons overlay is missing or older than its sources, when one is needed.
+
+    tools/bootstrap.py (ItemIconPatcher) builds data/mods/speedfog-icons from
+    data/plugins/halloween_icon_*.png and race_items_icon_*.png (the item ids
+    come from race_items.toml). A host that has not re-run bootstrap since an
+    icon or the catalog changed (or since the overlay was renamed) would ship
+    stale placeholders or no icons, with nothing to show for it. Nothing to
+    check when neither the Halloween nor the race items plugin is enabled.
+    """
+    if not (halloween_enabled or race_items_enabled):
+        return []
+    plugins = project_root / "data" / "plugins"
+    overlay = project_root / "data" / "mods" / "speedfog-icons"
+    built = [p for p in overlay.rglob("*") if p.is_file()] if overlay.is_dir() else []
+    rel_overlay = overlay.relative_to(project_root).as_posix()
+    if not built:
+        return [f"{rel_overlay}/ is missing or empty (icons overlay not built)"]
+    sources = [
+        *plugins.glob("halloween_icon_*.png"),
+        *plugins.glob("race_items_icon_*.png"),
+        plugins / "race_items.toml",
+    ]
+    built_mtime = max(p.stat().st_mtime for p in built)
+    return [
+        f"{rel_overlay}/ is older than its source "
+        f"{source.relative_to(project_root).as_posix()}"
+        for source in sorted(sources)
+        if source.is_file() and source.stat().st_mtime > built_mtime
+    ]
+
+
 def write_modengine_config(
     output_dir: Path,
     *,
