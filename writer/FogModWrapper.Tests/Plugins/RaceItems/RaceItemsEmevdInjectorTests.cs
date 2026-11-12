@@ -80,6 +80,11 @@ public class RaceItemsEmevdInjectorTests
 
         var inits = Evt(emevd, 0).Instructions.Where(i => i.Bank == 2000 && i.ID == 0).ToList();
         Assert.Equal(25, inits.Count);
+        var expectedIds = Enumerable.Range(1, 12).Select(UseId)
+            .Concat(Enumerable.Range(0, 13).Select(RemoveId)).Select(id => (int)id).ToHashSet();
+        var initIds = inits.Select(i => BitConverter.ToInt32(i.ArgData, 4)).ToList();
+        Assert.Equal(25, initIds.Distinct().Count());
+        Assert.True(expectedIds.SetEquals(initIds));
     }
 
     [Fact]
@@ -96,9 +101,14 @@ public class RaceItemsEmevdInjectorTests
         Assert.Equal(
             new[] { (4, 5), (2003, 66), (4, 5), (1000, 4) },
             mushroom.Instructions.Select(i => (i.Bank, i.ID)).ToArray());
-        Assert.Equal(1450806, BitConverter.ToInt32(mushroom.Instructions[0].ArgData, 8));
+        // Has-SpEffect layout: entity @4, SpEffect @8, should-have @12,
+        // comparison type @13, number of characters (float) @16.
+        AssertHasSpEffect(mushroom.Instructions[0], 1450806, shouldHave: 1);
+        AssertHasSpEffect(mushroom.Instructions[2], 1450806, shouldHave: 0);
+        // Set Event Flag: flag @4, state @8 (ON = 1).
         Assert.Equal(1050290106u, BitConverter.ToUInt32(mushroom.Instructions[1].ArgData, 4));
-        Assert.Equal(1450806, BitConverter.ToInt32(mushroom.Instructions[2].ArgData, 8));
+        Assert.Equal(1, mushroom.Instructions[1].ArgData[8]);
+        AssertRestart(mushroom.Instructions[3]);
     }
 
     [Fact]
@@ -120,5 +130,21 @@ public class RaceItemsEmevdInjectorTests
         // Set Event Flag: flag 1050290200, state OFF (0).
         Assert.Equal(1050290200u, BitConverter.ToUInt32(shield.Instructions[2].ArgData, 4));
         Assert.Equal(0, shield.Instructions[2].ArgData[8]);
+        // IF Event Flag: state @1 (ON = 1), flag @4.
+        Assert.Equal(1, shield.Instructions[0].ArgData[1]);
+        Assert.Equal(1050290200u, BitConverter.ToUInt32(shield.Instructions[0].ArgData, 4));
+        AssertRestart(shield.Instructions[3]);
     }
+
+    private static void AssertHasSpEffect(EMEVD.Instruction ins, int speffect, int shouldHave)
+    {
+        Assert.Equal(10000, BitConverter.ToInt32(ins.ArgData, 4));
+        Assert.Equal(speffect, BitConverter.ToInt32(ins.ArgData, 8));
+        Assert.Equal(shouldHave, ins.ArgData[12]);
+        Assert.Equal(0, ins.ArgData[13]); // ComparisonType.Equal
+        Assert.Equal(1f, BitConverter.ToSingle(ins.ArgData, 16));
+    }
+
+    private static void AssertRestart(EMEVD.Instruction ins) =>
+        Assert.Equal(1, ins.ArgData[0]); // EventEndType.Restart
 }
