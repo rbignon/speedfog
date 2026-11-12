@@ -22,16 +22,22 @@ base (levers, pitfalls, coverage numbers): [winter-rendering.md](../winter-rende
   treads, pebbles) turn white, walls stay bare. Terrain materials without a
   snow shader have their albedo layers pointed at the vanilla snow ground.
   No new texture is needed for this part.
-- Ships 268 frosted texture packs (134 stems, each with its `_l` twin):
+- Ships 270 frosted texture packs (135 stems, each with its `_l` twin):
   leaf clumps, ivy, vines, leaf litter, grass atlases of the DLC and the
   SpeedTree shrubs turn white while keeping their cut-out shape, and the
   catacomb and Shadow Keep elevators and levers (`AEG027_016/002`,
   `AEG427_002/023`) get a frosted look, since their `_Skin_PaintDecal`
-  shaders have no snow twin to convert to. The Shadow Keep textures get the
-  heavy frost (`heavy_tpfs`): with the normal one, their dark planks read as
-  pale wood under the shaft's warm, dim light (checked in game 2026-11-12,
-  after a flat magenta albedo proved the pack is loaded for that DLC asset);
-  the catacomb ones read fine with the normal frost and keep it.
+  shaders have no snow twin to convert to. The base-game wooden elevator
+  cabins (`AEG027_001` and its siblings, Limgrave Tunnels for example) get
+  the same treatment for another reason: their `M[AMSN]` matbins have a
+  twin but stay vanilla in the conversion because the cabin meshes are
+  skinned, so their shared texture `AET003_501` is frosted (it also sits
+  under the snow layer of the converted Academy pieces, as intended). The
+  Shadow Keep textures get the heavy frost (`heavy_tpfs`): with the normal
+  one, their dark planks read as pale wood under the shaft's warm, dim light
+  (checked in game 2026-11-12, after a flat magenta albedo proved the pack
+  is loaded for that DLC asset); the catacomb ones read fine with the normal
+  frost and keep it.
 - Replaces Torrent with the Frozen Reindeer mount: three authored binders
   (`chr/c8002.chrbnd.dcx`, `chr/c8002_h.texbnd.dcx`, `chr/c8000.anibnd.dcx`)
   shipped verbatim from the overlay folder `data/mods-src/speedfog-winter/`
@@ -120,7 +126,7 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
    `data/plugins/winter_materials.toml` (snow texture paths, the three
    template matbins and their modal snow parameters, 35 conversion rules,
    the retarget table, the terrain selectors and keep list) into a
-   `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 134 TPF
+   `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 135 TPF
    stems in two lists, `tpfs` and `heavy_tpfs`, one frost strength each).
    Retarget targets are verified to exist before anything is built.
 2. **Layout scan.** `MaterialLayoutScanner` reads every mapbnd and geombnd
@@ -239,9 +245,9 @@ Measured on the real game (1.17, a local game copy, Wine):
 |---|---|
 | Material binders | 2.58 MB (base) and 0.53 MB (DLC); vanilla 2.75 MB and 0.61 MB |
 | Matbins | 7053 conversions, 886 retargets, 38 skinned exclusions, 11 UV-set exclusions, 0 layout skips |
-| Textures | 268 TPFs, 19.79 MB |
+| Textures | 270 TPFs, 20.25 MB |
 | Overlay (Torrent skin) | 3 binders, 6.63 MB |
-| Folder shipped per seed | 30 MB (29.52 MB); 23 MB (22.90 MB) without the overlay |
+| Folder shipped per seed | 30 MB (29.99 MB); 23 MB (23.36 MB) without the overlay |
 | Scan | 226 s over 24 987 binders, 283 skinned materials, 4841 matbins with fewer than 2 UV sets |
 | Winter step | 240 to 339 s inside the bootstrap step over three runs (scan about 226 s) |
 | Whole bootstrap | 472 s |
@@ -282,6 +288,8 @@ read at map load):
 - Shadow Keep elevator cabin and levers under the heavy frost (`heavy_tpfs`):
   snow rather than pale wood, grain still readable; the catacomb elevator and
   lever, on the normal frost, unchanged.
+- A base-game wooden elevator cabin (`AEG027_001`, Limgrave Tunnels
+  `m32_01`): frosted like the lever beside it (`AET003_501`, normal frost).
 - The ten far-terrain pieces listed above, whose far layer is flat white
   rather than tiled snow.
 - Torrent: whistle, idle, gallop, double jump; the reindeer model with its
