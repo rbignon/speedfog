@@ -56,6 +56,7 @@ class GraphExportOptions:
     class_loadout: dict[str, Any] | None = None
     torrent_skins: dict[str, Any] | None = None
     tarnished_pack: bool = False
+    race_items: dict[str, dict[str, Any]] | None = None
 
 
 def load_phantom_skins_catalog(path: Path) -> dict[str, int]:
@@ -635,6 +636,8 @@ def dag_to_dict(
     # Tarnished Pack showcase fields: only present when the corresponding
     # draw ran (starting_loadout / unlock_torrent_skins), unlike care_package
     # which is always present (possibly empty).
+    if export.race_items is not None:
+        result["race_items"] = export.race_items
     if export.class_loadout is not None:
         result["class_loadout"] = export.class_loadout
     if export.torrent_skins is not None:
@@ -685,6 +688,7 @@ _GRAPH_SCHEMA: dict[str, type] = {
 # Tarnished Pack showcase draw ran (see dag_to_dict). Type-checked when
 # present, but unlike _GRAPH_SCHEMA their absence is not a validation error.
 _GRAPH_OPTIONAL_SCHEMA: dict[str, type] = {
+    "race_items": dict,
     "class_loadout": dict,
     "torrent_skins": dict,
 }

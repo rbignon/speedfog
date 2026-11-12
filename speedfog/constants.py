@@ -18,7 +18,9 @@ from __future__ import annotations
 #      arena, see docs/item-randomizer.md "Helper enemy scaling")
 # 4.10: tarnished_pack ([tarnished] enabled; false removes the shop rows only
 #       Tarnished Pack owners see, see docs/tarnished-showcase.md)
-GRAPH_JSON_VERSION = "4.10"
+# 4.11: optional race_items (catalog of the race items plugin, written when
+#       [plugin.race_items] is enabled)
+GRAPH_JSON_VERSION = "4.11"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.

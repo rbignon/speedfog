@@ -49,6 +49,7 @@ from speedfog.item_randomizer import (
     run_item_randomizer,
 )
 from speedfog.packaging import PackagingError, package_seed, stale_static_mod_scripts
+from speedfog.race_items import load_race_items_catalog
 from speedfog.spoiler import append_boss_placements_to_spoiler, export_spoiler_log
 from speedfog.tarnished import build_class_loadout, build_torrent_skins, tarnished_rng
 from speedfog.validator import validate_exclusions
@@ -451,6 +452,13 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         project_root / "data" / "phantom_skins.toml"
     )
 
+    # Race items catalog (graph.json race_items), only when the plugin is enabled.
+    race_items = None
+    if config.plugins.get("race_items", {}).get("enabled"):
+        race_items = load_race_items_catalog(
+            project_root / "data" / "plugins" / "race_items.toml"
+        )
+
     # Export JSON v4 format (for FogModWrapper and visualization)
     json_path = seed_dir / "graph.json"
     starting_goods = config.starting_items.get_starting_goods()
@@ -476,6 +484,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         class_loadout=class_loadout,
         torrent_skins=torrent_skins,
         tarnished_pack=config.tarnished.enabled,
+        race_items=race_items,
     )
     export_json(dag, clusters, json_path, export_options)
     print(f"Written: {json_path}")

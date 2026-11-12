@@ -1,0 +1,175 @@
+# Race items catalog (Mario Kart style items for speedfog-racing).
+# Consumed by the Python loader (speedfog/race_items.py, exported as graph.json
+# race_items) and by the C# RaceItems plugin, when [plugin.race_items] is enabled.
+#
+# Numbering (n = goods_id - 1450800): marker SpEffect id = goods_id, effect
+# SpEffect id = goods_id + 20, use_flag = 1050290100 + n, remove_flag =
+# 1050290200 + n. Marker template 10600 is neutral (every rate at 1); 3269 is
+# Golden Rune [1]; 3370 is a self-targeted poison row. `fields` maps SpEffect
+# paramdef field names to numbers. Amounts and rates are starting values to
+# calibrate in game.
+
+[icons]
+shield = 60385
+rune_pouch = 60386
+banana = 60387
+red_shell = 60388
+mushroom = 60389
+hammer = 60390
+ink = 60391
+blue_shell = 60392
+lightning = 60393
+flask_stopper = 60394
+toxic_blossom = 60395
+
+[[item]]
+key = "shield"
+icon = "shield"
+name = "Shield"
+info = "Blocks the next item thrown at you."
+caption = "A race item. It cannot be used: it sits in your inventory and absorbs the next hostile item, then disappears."
+goods_id = 1450800
+remove_flag = 1050290200
+
+[[item]]
+key = "rune_pouch_1"
+icon = "rune_pouch"
+name = "Small Rune Pouch"
+info = "A small handful of runes."
+caption = "A race item. Using it grants 10000 runes."
+goods_id = 1450801
+use_flag = 1050290101
+remove_flag = 1050290201
+marker = { template = 3269, fields = { soul = 10000 } }
+
+[[item]]
+key = "rune_pouch_2"
+icon = "rune_pouch"
+name = "Rune Pouch"
+info = "A decent bag of runes."
+caption = "A race item. Using it grants 20000 runes."
+goods_id = 1450802
+use_flag = 1050290102
+remove_flag = 1050290202
+marker = { template = 3269, fields = { soul = 20000 } }
+
+[[item]]
+key = "rune_pouch_3"
+icon = "rune_pouch"
+name = "Large Rune Pouch"
+info = "A heavy bag of runes."
+caption = "A race item. Using it grants 40000 runes."
+goods_id = 1450803
+use_flag = 1050290103
+remove_flag = 1050290203
+marker = { template = 3269, fields = { soul = 40000 } }
+
+[[item]]
+key = "banana"
+icon = "banana"
+name = "Banana"
+info = "The runner just ahead of you slips."
+caption = "A race item. Using it drops a banana peel in the path of the runner just ahead of you."
+goods_id = 1450804
+use_flag = 1050290104
+remove_flag = 1050290204
+marker = { template = 10600, fields = {} }
+
+[[item]]
+key = "red_shell"
+icon = "red_shell"
+name = "Red Shell"
+info = "Hits the runner just ahead of you."
+caption = "A race item. Using it launches a shell at the runner just ahead of you."
+goods_id = 1450805
+use_flag = 1050290105
+remove_flag = 1050290205
+marker = { template = 10600, fields = {} }
+
+[[item]]
+key = "mushroom"
+icon = "mushroom"
+name = "Mushroom"
+info = "Free stamina for 15 seconds."
+caption = "A race item. Using it removes your stamina cost for 15 seconds."
+goods_id = 1450806
+use_flag = 1050290106
+remove_flag = 1050290206
+duration_s = 15
+marker = { template = 10600, fields = { consumeStaminaRate = 0, effectEndurance = 15 } }
+
+[[item]]
+key = "hammer"
+icon = "hammer"
+name = "Hammer"
+info = "Everyone else fat-rolls for 15 seconds."
+caption = "A race item. Using it makes every other runner overweight for 15 seconds."
+goods_id = 1450807
+use_flag = 1050290107
+remove_flag = 1050290207
+duration_s = 15
+marker = { template = 10600, fields = {} }
+effect = { id = 1450827, template = 10600, fields = { equipWeightChangeRate = 0.35, effectEndurance = 15 } }
+
+[[item]]
+key = "ink"
+icon = "ink"
+name = "Ink"
+info = "Everyone else sees ink for 15 seconds."
+caption = "A race item. Using it blots out the screen of every other runner for 15 seconds."
+goods_id = 1450808
+use_flag = 1050290108
+remove_flag = 1050290208
+duration_s = 15
+marker = { template = 10600, fields = {} }
+
+[[item]]
+key = "blue_shell"
+icon = "blue_shell"
+name = "Blue Shell"
+info = "The leader loses half their health for 15 seconds."
+caption = "A race item. Using it halves the maximum health of the race leader for 15 seconds."
+goods_id = 1450809
+use_flag = 1050290109
+remove_flag = 1050290209
+duration_s = 15
+marker = { template = 10600, fields = {} }
+effect = { id = 1450829, template = 10600, fields = { maxHpRate = 0.5, effectEndurance = 15 } }
+
+[[item]]
+key = "lightning"
+icon = "lightning"
+name = "Lightning"
+info = "Everyone else is struck for 15 seconds."
+caption = "A race item. Using it afflicts every other runner for 15 seconds."
+goods_id = 1450810
+use_flag = 1050290110
+remove_flag = 1050290210
+duration_s = 15
+marker = { template = 10600, fields = {} }
+effect = { id = 1450830, template = 10600, fields = { stateInfo = 287, effectEndurance = 15 } }
+
+[[item]]
+key = "flask_stopper"
+icon = "flask_stopper"
+name = "Flask Stopper"
+info = "The leader cannot drink flasks for 15 seconds."
+caption = "A race item. Using it stops the race leader from drinking flasks for 15 seconds."
+goods_id = 1450811
+use_flag = 1050290111
+remove_flag = 1050290211
+duration_s = 15
+marker = { template = 10600, fields = {} }
+effect = { id = 1450831, template = 10600, fields = { stateInfo = 154, effectEndurance = 15 } }
+
+[[item]]
+key = "toxic_blossom"
+icon = "toxic_blossom"
+name = "Toxic Blossom"
+info = "Poisons everyone else."
+caption = "A race item. Using it poisons every other runner."
+goods_id = 1450812
+use_flag = 1050290112
+remove_flag = 1050290212
+marker = { template = 10600, fields = {} }
+effect = { id = 1450832, template = 3370, fields = { poizonAttackPower = 99999 } }

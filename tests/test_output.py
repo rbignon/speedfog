@@ -2673,6 +2673,40 @@ class TestDagToDictPlugins:
         assert result["plugins"] == {}
 
 
+class TestDagToDictRaceItems:
+    def _clusters(self, dag):
+        return ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+
+    def test_dag_to_dict_writes_race_items_when_given(self):
+        dag = make_test_dag()
+        catalog = {
+            "hammer": {
+                "name": "Hammer",
+                "icon": "hammer",
+                "goods_id": 1450807,
+                "use_flag": 1050290107,
+                "remove_flag": 1050290207,
+                "effect_speffect": 1450827,
+                "duration_ms": 15000,
+            }
+        }
+        result = dag_to_dict(
+            dag, self._clusters(dag), GraphExportOptions(race_items=catalog)
+        )
+        assert result["race_items"] == catalog
+        validate_graph_dict(result)
+
+    def test_dag_to_dict_omits_race_items_when_disabled(self):
+        dag = make_test_dag()
+        result = dag_to_dict(dag, self._clusters(dag), GraphExportOptions())
+        assert "race_items" not in result
+        validate_graph_dict(result)
+
+
 class TestDagToDictTarnishedFields:
     """Tests for the optional class_loadout / torrent_skins graph.json keys."""
 
