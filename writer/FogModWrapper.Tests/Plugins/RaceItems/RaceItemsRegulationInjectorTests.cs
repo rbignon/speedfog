@@ -20,13 +20,22 @@ public class RaceItemsRegulationInjectorTests
         throw new FileNotFoundException("data/plugins/race_items.toml not found above " + AppContext.BaseDirectory);
     }
 
+    /// <summary>The SpEffect templates the shipped catalog clones from. 102360 and
+    /// 425 carry the vanilla value their item relies on, so a clone shows it.</summary>
+    private static PARAM SpEffectTemplates()
+    {
+        var sp = BuildParamFromDef("SpEffect", 10600);
+        AddRowFromTemplate(sp, 3269);
+        AddRowFromTemplate(sp, 102360)["stateInfo"].Value = (ushort)499;
+        AddRowFromTemplate(sp, 425)["moveType"].Value = (byte)4;
+        AddRowFromTemplate(sp, 3370);
+        return sp;
+    }
+
     private static (PARAM goods, PARAM sp) Inject()
     {
         var goods = BuildParamFromDef("EquipParamGoods", 250);
-        // 10600, 3269 and 3370 are the SpEffect templates the catalog clones from.
-        var sp = BuildParamFromDef("SpEffect", 10600);
-        AddRowFromTemplate(sp, 3269);
-        AddRowFromTemplate(sp, 3370);
+        var sp = SpEffectTemplates();
         RaceItemsRegulationInjector.Apply(goods, sp, RaceItemsCatalog.Load(ShippedCatalogPath()));
         return (goods, sp);
     }
@@ -56,9 +65,7 @@ public class RaceItemsRegulationInjectorTests
         template["isFullSuppleItem"].Value = (byte)1;
         template["suppleType"].Value = (byte)3;
         template["itemGetTutorialFlagId"].Value = 710590u;
-        var sp = BuildParamFromDef("SpEffect", 10600);
-        AddRowFromTemplate(sp, 3269);
-        AddRowFromTemplate(sp, 3370);
+        var sp = SpEffectTemplates();
         RaceItemsRegulationInjector.Apply(goods, sp, RaceItemsCatalog.Load(ShippedCatalogPath()));
 
         foreach (var id in new[] { 1450800, 1450807 })
@@ -105,19 +112,19 @@ public class RaceItemsRegulationInjectorTests
         Assert.Equal(0.5f, sp[1450829]!["maxHpRate"].Value);
         Assert.Equal(15f, sp[1450829]!["effectEndurance"].Value);
         Assert.Equal(99999, sp[1450832]!["poizonAttackPower"].Value);
-        Assert.Equal(0f, sp[1450806]!["consumeStaminaRate"].Value);
+        Assert.Equal((ushort)499, sp[1450806]!["stateInfo"].Value);
         Assert.Equal(15f, sp[1450806]!["effectEndurance"].Value);
         Assert.Equal(40000, sp[1450803]!["soul"].Value);
-        Assert.Equal((ushort)287, sp[1450830]!["stateInfo"].Value);
+        Assert.Equal((byte)4, sp[1450830]!["moveType"].Value);
+        Assert.Equal(15f, sp[1450830]!["effectEndurance"].Value);
+        Assert.Equal(1f, sp[1450807]!["effectEndurance"].Value);
     }
 
     [Fact]
     public void Inject_twice_pins_second_call_behavior()
     {
         var goods = BuildParamFromDef("EquipParamGoods", 250);
-        var sp = BuildParamFromDef("SpEffect", 10600);
-        AddRowFromTemplate(sp, 3269);
-        AddRowFromTemplate(sp, 3370);
+        var sp = SpEffectTemplates();
         var items = RaceItemsCatalog.Load(ShippedCatalogPath());
         RaceItemsRegulationInjector.Apply(goods, sp, items);
         // GameEditor.AddRow refuses an existing id: the plugin runs once per build.

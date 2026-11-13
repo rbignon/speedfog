@@ -41,21 +41,36 @@ def test_shipped_catalog_ids_follow_the_numbering():
         assert entry["effect_speffect"] in (None, entry["goods_id"] + 20)
 
 
+NEUTRAL_MARKER_TEMPLATE = 10600
+
+
 def test_duration_matches_the_speffect_that_carries_it():
     for item in _raw_items():
         duration = item.get("duration_s")
         effect = item.get("effect")
-        marker_endurance = (
-            item.get("marker", {}).get("fields", {}).get("effectEndurance")
-        )
+        marker = item.get("marker")
         if effect is not None and "effectEndurance" in effect["fields"]:
             assert effect["fields"]["effectEndurance"] == duration, item["key"]
-        elif marker_endurance is not None:
-            assert marker_endurance == duration, item["key"]
+        elif (
+            marker is not None
+            and marker["template"] != NEUTRAL_MARKER_TEMPLATE
+            and "effectEndurance" in marker["fields"]
+        ):
+            # The marker is the effect (Mushroom): its endurance is the duration.
+            assert marker["fields"]["effectEndurance"] == duration, item["key"]
         elif item["key"] == "ink":
             assert duration == 15
         else:
             assert duration is None, item["key"]
+
+
+def test_neutral_markers_last_long_enough_for_the_use_event():
+    # With the template's effectEndurance 0, the use event never saw a neutral
+    # marker in game, so the item's use flag never rose.
+    for item in _raw_items():
+        marker = item.get("marker")
+        if marker is not None and marker["template"] == NEUTRAL_MARKER_TEMPLATE:
+            assert marker["fields"].get("effectEndurance", 0) > 0, item["key"]
 
 
 def _write_catalog(

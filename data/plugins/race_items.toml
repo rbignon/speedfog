@@ -4,10 +4,15 @@
 #
 # Numbering (n = goods_id - 1450800): marker SpEffect id = goods_id, effect
 # SpEffect id = goods_id + 20, use_flag = 1050290100 + n, remove_flag =
-# 1050290200 + n. Marker template 10600 is neutral (every rate at 1); 3269 is
-# Golden Rune [1]; 3370 is a self-targeted poison row. `fields` maps SpEffect
-# paramdef field names to numbers. Amounts and rates are starting values to
-# calibrate in game.
+# 1050290200 + n. Templates: 10600 is neutral (every rate at 1); 3269 is Golden
+# Rune [1]; 102360 is the Viridian Hidden Tear (stateInfo 499, no stamina
+# consumption); 425 is a vanilla slowing bullet (moveType 4, forced slow walk);
+# 3370 is a self-targeted poison row. `fields` maps SpEffect paramdef field
+# names to numbers. Amounts and rates are starting values to calibrate in game.
+#
+# A neutral marker sets effectEndurance = 1, so it lasts long enough for the
+# use event to see it: with the template's 0, the Hammer's use flag stayed off
+# in game. The Rune Pouch markers keep 0, their use flag rose.
 
 [icons]
 shield = 60385
@@ -73,7 +78,7 @@ caption = "A race item. Using it drops a banana peel in the path of the runner j
 goods_id = 1450804
 use_flag = 1050290104
 remove_flag = 1050290204
-marker = { template = 10600, fields = {} }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
 
 [[item]]
 key = "red_shell"
@@ -84,7 +89,7 @@ caption = "A race item. Using it launches a shell at the runner just ahead of yo
 goods_id = 1450805
 use_flag = 1050290105
 remove_flag = 1050290205
-marker = { template = 10600, fields = {} }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
 
 [[item]]
 key = "mushroom"
@@ -96,7 +101,7 @@ goods_id = 1450806
 use_flag = 1050290106
 remove_flag = 1050290206
 duration_s = 15
-marker = { template = 10600, fields = { consumeStaminaRate = 0, effectEndurance = 15 } }
+marker = { template = 102360, fields = { effectEndurance = 15 } }
 
 [[item]]
 key = "hammer"
@@ -108,7 +113,7 @@ goods_id = 1450807
 use_flag = 1050290107
 remove_flag = 1050290207
 duration_s = 15
-marker = { template = 10600, fields = {} }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450827, template = 10600, fields = { equipWeightChangeRate = 0.35, effectEndurance = 15 } }
 
 [[item]]
@@ -121,7 +126,7 @@ goods_id = 1450808
 use_flag = 1050290108
 remove_flag = 1050290208
 duration_s = 15
-marker = { template = 10600, fields = {} }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
 
 [[item]]
 key = "blue_shell"
@@ -133,7 +138,7 @@ goods_id = 1450809
 use_flag = 1050290109
 remove_flag = 1050290209
 duration_s = 15
-marker = { template = 10600, fields = {} }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450829, template = 10600, fields = { maxHpRate = 0.5, effectEndurance = 15 } }
 
 [[item]]
@@ -146,8 +151,8 @@ goods_id = 1450810
 use_flag = 1050290110
 remove_flag = 1050290210
 duration_s = 15
-marker = { template = 10600, fields = {} }
-effect = { id = 1450830, template = 10600, fields = { stateInfo = 287, effectEndurance = 15 } }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
+effect = { id = 1450830, template = 425, fields = { effectEndurance = 15 } }
 
 [[item]]
 key = "flask_stopper"
@@ -159,7 +164,7 @@ goods_id = 1450811
 use_flag = 1050290111
 remove_flag = 1050290211
 duration_s = 15
-marker = { template = 10600, fields = {} }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450831, template = 10600, fields = { stateInfo = 154, effectEndurance = 15 } }
 
 [[item]]
@@ -171,5 +176,5 @@ caption = "A race item. Using it poisons every other runner."
 goods_id = 1450812
 use_flag = 1050290112
 remove_flag = 1050290212
-marker = { template = 10600, fields = {} }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450832, template = 3370, fields = { poizonAttackPower = 99999 } }

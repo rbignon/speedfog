@@ -51,19 +51,34 @@ flag is 1050290200 + n.
 | 1 | `rune_pouch_1` | Small Rune Pouch | 1450801 | 3269, `soul = 10000` | none | none |
 | 2 | `rune_pouch_2` | Rune Pouch | 1450802 | 3269, `soul = 20000` | none | none |
 | 3 | `rune_pouch_3` | Large Rune Pouch | 1450803 | 3269, `soul = 40000` | none | none |
-| 4 | `banana` | Banana | 1450804 | 10600 | none | none |
-| 5 | `red_shell` | Red Shell | 1450805 | 10600 | none | none |
-| 6 | `mushroom` | Mushroom | 1450806 | 10600, `consumeStaminaRate = 0`, `effectEndurance = 15` | none (the marker is the effect) | 15 s |
-| 7 | `hammer` | Hammer | 1450807 | 10600 | 1450827, 10600, `equipWeightChangeRate = 0.35`, `effectEndurance = 15` | 15 s |
-| 8 | `ink` | Ink | 1450808 | 10600 | none (overlay only) | 15 s |
-| 9 | `blue_shell` | Blue Shell | 1450809 | 10600 | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
-| 10 | `lightning` | Lightning | 1450810 | 10600 | 1450830, 10600, `stateInfo = 287`, `effectEndurance = 15` | 15 s |
-| 11 | `flask_stopper` | Flask Stopper | 1450811 | 10600 | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
-| 12 | `toxic_blossom` | Toxic Blossom | 1450812 | 10600 | 1450832, 3370, `poizonAttackPower = 99999` | none |
+| 4 | `banana` | Banana | 1450804 | 10600, `effectEndurance = 1` | none | none |
+| 5 | `red_shell` | Red Shell | 1450805 | 10600, `effectEndurance = 1` | none | none |
+| 6 | `mushroom` | Mushroom | 1450806 | 102360, `effectEndurance = 15` | none (the marker is the effect) | 15 s |
+| 7 | `hammer` | Hammer | 1450807 | 10600, `effectEndurance = 1` | 1450827, 10600, `equipWeightChangeRate = 0.35`, `effectEndurance = 15` | 15 s |
+| 8 | `ink` | Ink | 1450808 | 10600, `effectEndurance = 1` | none (overlay only) | 15 s |
+| 9 | `blue_shell` | Blue Shell | 1450809 | 10600, `effectEndurance = 1` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
+| 10 | `lightning` | Lightning | 1450810 | 10600, `effectEndurance = 1` | 1450830, 425, `effectEndurance = 15` | 15 s |
+| 11 | `flask_stopper` | Flask Stopper | 1450811 | 10600, `effectEndurance = 1` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
+| 12 | `toxic_blossom` | Toxic Blossom | 1450812 | 10600, `effectEndurance = 1` | 1450832, 3370, `poizonAttackPower = 99999` | none |
 
 Templates: 10600 is FogRando's Bell of Return marker (neutral, every rate at
 1, self-targeted; `GameDataWriterE.cs:3857-3871`), 3269 is Golden Rune [1]
-(`soul = 200`), 3370 is the poison row the randomizer's trap copies.
+(`soul = 200`), 102360 is the Viridian Hidden Tear (15 s without stamina
+consumption: `stateInfo = 499`, the only 1.17 regulation row using it, plus
+its buff icon, visual effect and a chain to vanilla rows 102361 and 102363), 425 is the vanilla bullet that slows the player
+(`moveType = 4`, the forced slow walk; 20 s in vanilla), 3370 is the poison row
+the randomizer's trap copies.
+
+A neutral marker sets `effectEndurance = 1`, so it lasts long enough for the
+use event to see it. With the template's 0, the Hammer's use flag stayed off in
+game, while the Rune Pouch markers (also 0, plus `soul`) raised theirs, and so
+does FogRando's bell (0, but its goods row is not the Physick clone). The 1 s
+window is the fix under test, not a proven cause.
+
+Two dead ends from the first in-game pass: `consumeStaminaRate` only scales the
+stamina cost of weapon attacks (rolls and sprints still cost stamina), and
+`stateInfo` 286 / 287 ("movement slow" in the community enum) slowed nothing:
+no row of the 1.17 regulation uses them.
 
 ## Events
 
@@ -125,36 +140,55 @@ the Halloween icons (see [halloween-icons.md](halloween-icons.md)): one
 ## Calibration values
 
 Starting values Roger tunes in game, then bakes into the pools (effect values
-are part of every seed): Hammer `equipWeightChangeRate = 0.35`, Lightning
-`stateInfo = 287` (286 is the alternative), the Rune Pouch amounts 10000 /
-20000 / 40000.
+are part of every seed): Hammer `equipWeightChangeRate = 0.35`, the Rune Pouch
+amounts 10000 / 20000 / 40000. The Hammer value is a multiplier of the maximum
+equip load, so it cannot put every build in the fat-roll band: at 0.35 a build
+between 24.5 % and 35 % of its load fat-rolls, a heavier one is overloaded (a
+32 / 49.8 build ends at 32 / 17.4 in game).
 
 ## In-game checks
 
-On one test seed with the plugin enabled:
+How to run them, on a test seed without the racing mod: Cheat Engine with The
+Grand Archives table (`ER_TGA_v1.17.0.CT`).
 
-- An item given by `func_item_inject` lands in a quick slot (auto-equip), as a
-  picked-up flask does; and what happens when every quick slot is full.
-- Every item shows its icon, name and caption. The icon route relies on the
-  texture-name fallback that [halloween-icons.md](halloween-icons.md) still
-  lists as not verified in game: if icons render blank, see that doc's
-  fallbacks.
-- The slot empties when the single item is used.
-- Use an item, rest at a grace: it does not come back (the goods rows clear
-  `isFullSuppleItem`, `suppleType` and the Physick tutorial flag they inherit
-  from goods 250).
-- The use flag is set once per use, Mushroom included.
-- A removal flag removes the goods and clears itself.
-- `stateInfo` 287 and 286 (Lightning) and 154 (Flask Stopper) do what their
-  names say.
-- Hammer 0.35 makes a light build fat-roll, and what a medium build gets.
-- Blue Shell (`maxHpRate = 0.5`) halves max HP and caps current HP without
-  killing.
-- Toxic Blossom poisons the player, and whether a bolus cures it is open: its
-  effect row clones SpEffect 3370, the vanilla poison status (`effectEndurance`
-  60, buildup re-applied every second for 60 s), so a bolus may or may not clear
-  it.
-- A Rune Pouch raises its use flag (its marker template is 3269, Golden Rune
-  [1], not the Bell-proven 10600).
-- Each Rune Pouch grants its runes (10000 / 20000 / 40000).
-- The Mushroom removes the stamina cost for 15 s.
+- `Scripts > Build Creation > ItemGib` gives an item: `Item` is
+  `0x40000000 | goods id` in hex (`40162337` for the Hammer), then
+  `> Spawn Item`. The practice tool's item spawner cannot give these items, its
+  list is fixed.
+- `Event Flags > Event Flags by ID` reads and writes a use or removal flag.
+- `Scripts > Functions > ApplyEffect` applies an effect SpEffect (`SpEffectId`,
+  then `> Add SpEffect`). In a race the effects land on the other runners, so
+  this is the only way to see them alone.
+
+First pass (seed 603810141, 2026-11-13):
+
+- **Passed.**
+  - **Inventory.** The item lands in a quick slot (with every quick slot full,
+    it only goes to the inventory). It shows its small icon, name and caption.
+    It is consumed on use and does not come back at a grace.
+  - **Flags and pouches.** A removal flag removes the goods and clears itself.
+    The Rune Pouches grant their runes and raise their use flag.
+  - **Effects.** Flask Stopper (`stateInfo = 154`) blocks flasks. The Hammer
+    effect works. Blue Shell halves max HP. Toxic Blossom poisons, and
+    Neutralizing Boluses cure it.
+- **Failed, fixed since.**
+  - The Hammer's use flag stayed off: neutral markers now last 1 s.
+  - The Mushroom left rolls and sprints costing stamina: its marker is now the
+    Viridian Hidden Tear row.
+  - Lightning (`stateInfo = 287`) slowed nothing: its effect is now cloned
+    from 425.
+- **Not fixed.** The large icon of the inventory's detail panel is blank, as
+  for the Halloween icons. It is a separate texture,
+  `MENU_Knowledge_<iconId>.tpf.dcx` inside `menu/{hi,low}/00_solo.tpfbhd`
+  (whose `.tpfbdt` weighs 1.4 GB), which the `05_dummy` overlay does not
+  provide.
+
+To check on the next seed:
+
+- the use flag of the Hammer and of the other neutral markers;
+- the Mushroom over rolls and sprints, its use flag rising once, and its
+  effect ending at 15 s (the clone keeps the tear's chain to 102361 and
+  102363);
+- Lightning: how slow, rolls included, its visual effect, and the effect
+  ending at 15 s (the vanilla bullet row lasts 20 s);
+- each Rune Pouch still raising its flag and granting its runes once.

@@ -162,8 +162,14 @@ To replace the art again:
 
 ## EXPERIMENT STATUS
 
-This feature has not been verified in-game yet. Two things are unknown
-until it is:
+Partly checked in game on 2026-11-13 with the race items icons, which share
+this overlay and mechanism ([race-items.md](race-items.md)). The small icon
+resolves in the quick slots and in the inventory list. The large icon of the
+inventory's detail panel stays blank, for the Halloween icons too. That icon is
+a separate texture, `MENU_Knowledge_<iconId>.tpf.dcx` inside
+`menu/{hi,low}/00_solo.tpfbhd`, which this overlay does not provide.
+
+The text below predates that check. Two things were unknown until it ran:
 
 1. **Name-fallback resolution for inventory icons specifically.** The
    fallback lookup is documented and already validated in-game for the
