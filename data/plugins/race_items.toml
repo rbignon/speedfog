@@ -5,14 +5,19 @@
 # Numbering (n = goods_id - 1450800): marker SpEffect id = goods_id, effect
 # SpEffect id = goods_id + 20, use_flag = 1050290100 + n, remove_flag =
 # 1050290200 + n. Templates: 10600 is neutral (every rate at 1); 3269 is Golden
-# Rune [1]; 102360 is the Viridian Hidden Tear (stateInfo 499, no stamina
-# consumption); 425 is a vanilla slowing bullet (moveType 4, forced slow walk);
-# 3370 is a self-targeted poison row. `fields` maps SpEffect paramdef field
-# names to numbers. Amounts and rates are starting values to calibrate in game.
+# Rune [1]; 3370 is a self-targeted poison row. `fields` maps SpEffect paramdef
+# field names to numbers. Amounts and rates are starting values to calibrate in
+# game.
 #
-# A neutral marker sets effectEndurance = 1, so it lasts long enough for the
-# use event to see it: with the template's 0, the Hammer's use flag stayed off
-# in game. The Rune Pouch markers keep 0, their use flag rose.
+# Some behaviors live in the player's c0000.hks, keyed on a vanilla SpEffect id
+# (102360 makes rolls and sprints free, 4101 forces a slow walk), so a copy
+# under another id does not get them. An item reaches them by cycling the
+# vanilla row (cycleOccurrenceSpEffectId, applied every motionInterval
+# seconds), as vanilla row 20011920 does with 4101.
+#
+# Neutral markers set effectEndurance = 1 rather than the template's one-frame
+# 0. That does not make their use flag rise in game: which markers the use
+# event sees is still open (docs/plugins/race-items.md, in-game checks).
 
 [icons]
 shield = 60385
@@ -101,7 +106,7 @@ goods_id = 1450806
 use_flag = 1050290106
 remove_flag = 1050290206
 duration_s = 15
-marker = { template = 102360, fields = { effectEndurance = 15 } }
+marker = { template = 10600, fields = { effectEndurance = 1, motionInterval = 0.5, cycleOccurrenceSpEffectId = 102360 } }
 
 [[item]]
 key = "hammer"
@@ -152,7 +157,7 @@ use_flag = 1050290110
 remove_flag = 1050290210
 duration_s = 15
 marker = { template = 10600, fields = { effectEndurance = 1 } }
-effect = { id = 1450830, template = 425, fields = { effectEndurance = 15 } }
+effect = { id = 1450830, template = 10600, fields = { effectEndurance = 15, motionInterval = 0.06, cycleOccurrenceSpEffectId = 4101 } }
 
 [[item]]
 key = "flask_stopper"

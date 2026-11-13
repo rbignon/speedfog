@@ -41,36 +41,31 @@ def test_shipped_catalog_ids_follow_the_numbering():
         assert entry["effect_speffect"] in (None, entry["goods_id"] + 20)
 
 
-NEUTRAL_MARKER_TEMPLATE = 10600
+# Vanilla SpEffects a marker cycles, with their effectEndurance read from the
+# 1.17 regulation (re-check after a game patch): 102360 is the Viridian Hidden
+# Tear.
+VANILLA_ENDURANCE = {102360: 15}
 
 
 def test_duration_matches_the_speffect_that_carries_it():
     for item in _raw_items():
         duration = item.get("duration_s")
         effect = item.get("effect")
-        marker = item.get("marker")
+        marker_fields = item.get("marker", {}).get("fields", {})
         if effect is not None and "effectEndurance" in effect["fields"]:
             assert effect["fields"]["effectEndurance"] == duration, item["key"]
-        elif (
-            marker is not None
-            and marker["template"] != NEUTRAL_MARKER_TEMPLATE
-            and "effectEndurance" in marker["fields"]
-        ):
-            # The marker is the effect (Mushroom): its endurance is the duration.
-            assert marker["fields"]["effectEndurance"] == duration, item["key"]
+        elif "cycleOccurrenceSpEffectId" in marker_fields:
+            # The marker applies a vanilla effect (Mushroom), which lasts about
+            # its own endurance.
+            cycled = marker_fields["cycleOccurrenceSpEffectId"]
+            assert (
+                cycled in VANILLA_ENDURANCE
+            ), f"{item['key']}: no endurance for {cycled}"
+            assert VANILLA_ENDURANCE[cycled] == duration, item["key"]
         elif item["key"] == "ink":
             assert duration == 15
         else:
             assert duration is None, item["key"]
-
-
-def test_neutral_markers_last_long_enough_for_the_use_event():
-    # With the template's effectEndurance 0, the use event never saw a neutral
-    # marker in game, so the item's use flag never rose.
-    for item in _raw_items():
-        marker = item.get("marker")
-        if marker is not None and marker["template"] == NEUTRAL_MARKER_TEMPLATE:
-            assert marker["fields"].get("effectEndurance", 0) > 0, item["key"]
 
 
 def _write_catalog(

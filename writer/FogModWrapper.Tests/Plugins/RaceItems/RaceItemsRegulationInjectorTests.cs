@@ -20,14 +20,11 @@ public class RaceItemsRegulationInjectorTests
         throw new FileNotFoundException("data/plugins/race_items.toml not found above " + AppContext.BaseDirectory);
     }
 
-    /// <summary>The SpEffect templates the shipped catalog clones from. 102360 and
-    /// 425 carry the vanilla value their item relies on, so a clone shows it.</summary>
+    /// <summary>The SpEffect templates the shipped catalog clones from.</summary>
     private static PARAM SpEffectTemplates()
     {
         var sp = BuildParamFromDef("SpEffect", 10600);
         AddRowFromTemplate(sp, 3269);
-        AddRowFromTemplate(sp, 102360)["stateInfo"].Value = (ushort)499;
-        AddRowFromTemplate(sp, 425)["moveType"].Value = (byte)4;
         AddRowFromTemplate(sp, 3370);
         return sp;
     }
@@ -112,10 +109,10 @@ public class RaceItemsRegulationInjectorTests
         Assert.Equal(0.5f, sp[1450829]!["maxHpRate"].Value);
         Assert.Equal(15f, sp[1450829]!["effectEndurance"].Value);
         Assert.Equal(99999, sp[1450832]!["poizonAttackPower"].Value);
-        Assert.Equal((ushort)499, sp[1450806]!["stateInfo"].Value);
-        Assert.Equal(15f, sp[1450806]!["effectEndurance"].Value);
+        Assert.Equal(102360, sp[1450806]!["cycleOccurrenceSpEffectId"].Value);
+        Assert.Equal(0.5f, sp[1450806]!["motionInterval"].Value);
         Assert.Equal(40000, sp[1450803]!["soul"].Value);
-        Assert.Equal((byte)4, sp[1450830]!["moveType"].Value);
+        Assert.Equal(4101, sp[1450830]!["cycleOccurrenceSpEffectId"].Value);
         Assert.Equal(15f, sp[1450830]!["effectEndurance"].Value);
         Assert.Equal(1f, sp[1450807]!["effectEndurance"].Value);
     }

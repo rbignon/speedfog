@@ -53,32 +53,43 @@ flag is 1050290200 + n.
 | 3 | `rune_pouch_3` | Large Rune Pouch | 1450803 | 3269, `soul = 40000` | none | none |
 | 4 | `banana` | Banana | 1450804 | 10600, `effectEndurance = 1` | none | none |
 | 5 | `red_shell` | Red Shell | 1450805 | 10600, `effectEndurance = 1` | none | none |
-| 6 | `mushroom` | Mushroom | 1450806 | 102360, `effectEndurance = 15` | none (the marker is the effect) | 15 s |
+| 6 | `mushroom` | Mushroom | 1450806 | 10600, `effectEndurance = 1`, cycles 102360 every 0.5 s | none (the marker applies it) | 15 s |
 | 7 | `hammer` | Hammer | 1450807 | 10600, `effectEndurance = 1` | 1450827, 10600, `equipWeightChangeRate = 0.35`, `effectEndurance = 15` | 15 s |
 | 8 | `ink` | Ink | 1450808 | 10600, `effectEndurance = 1` | none (overlay only) | 15 s |
 | 9 | `blue_shell` | Blue Shell | 1450809 | 10600, `effectEndurance = 1` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
-| 10 | `lightning` | Lightning | 1450810 | 10600, `effectEndurance = 1` | 1450830, 425, `effectEndurance = 15` | 15 s |
+| 10 | `lightning` | Lightning | 1450810 | 10600, `effectEndurance = 1` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
 | 11 | `flask_stopper` | Flask Stopper | 1450811 | 10600, `effectEndurance = 1` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
 | 12 | `toxic_blossom` | Toxic Blossom | 1450812 | 10600, `effectEndurance = 1` | 1450832, 3370, `poizonAttackPower = 99999` | none |
 
 Templates: 10600 is FogRando's Bell of Return marker (neutral, every rate at
 1, self-targeted; `GameDataWriterE.cs:3857-3871`), 3269 is Golden Rune [1]
-(`soul = 200`), 102360 is the Viridian Hidden Tear (15 s without stamina
-consumption: `stateInfo = 499`, the only 1.17 regulation row using it, plus
-its buff icon, visual effect and a chain to vanilla rows 102361 and 102363), 425 is the vanilla bullet that slows the player
-(`moveType = 4`, the forced slow walk; 20 s in vanilla), 3370 is the poison row
-the randomizer's trap copies.
+(`soul = 200`), 3370 is the poison row the randomizer's trap copies.
 
-A neutral marker sets `effectEndurance = 1`, so it lasts long enough for the
-use event to see it. With the template's 0, the Hammer's use flag stayed off in
-game, while the Rune Pouch markers (also 0, plus `soul`) raised theirs, and so
-does FogRando's bell (0, but its goods row is not the Physick clone). The 1 s
-window is the fix under test, not a proven cause.
+Some behaviors are not in the SpEffect row but in the player's behavior script
+(`action/script/c0000.hks`), which tests vanilla SpEffect ids.
 
-Two dead ends from the first in-game pass: `consumeStaminaRate` only scales the
-stamina cost of weapon attacks (rolls and sprints still cost stamina), and
-`stateInfo` 286 / 287 ("movement slow" in the community enum) slowed nothing:
-no row of the 1.17 regulation uses them.
+- **Observed in game.** Rolls and sprints are free while 102360 (Viridian
+  Hidden Tear) is on the player, and 4101 forces a slow walk. Copies of 102360
+  and 425 under another id kept their param fields but neither behavior.
+- **Read from the script's constants.** 102360 sits next to the stamina costs
+  of rolls, jumps and quick steps; 425, 4100 and 4101 sit next to the move
+  speed and equip weight code.
+
+An item reaches those behaviors by cycling the vanilla row:
+`cycleOccurrenceSpEffectId` applies it every `motionInterval` seconds while the
+item's row lasts, as vanilla row 20011920 does with 4101. The Mushroom marker
+lasts 1 s and cycles 102360 every 0.5 s; 102360 lasts 15 s from its last
+application, so about 15 to 16 s in all. The Lightning effect cycles 4101
+(0.1 s each) for 15 s.
+
+Neutral markers set `effectEndurance = 1` rather than the template's one-frame
+0. That does not make their use flag rise: see the in-game checks below.
+
+Dead ends from the in-game passes: `consumeStaminaRate` only scales the stamina
+cost of weapon attacks; `stateInfo` 286 / 287 ("movement slow" in the
+community enum) slowed nothing, and no row of the 1.17 regulation uses them;
+copies of 102360 and 425 kept their param fields but not the c0000.hks
+behaviors.
 
 ## Events
 
@@ -87,8 +98,8 @@ Both shapes are adapted from FogRando's `common_bellofreturn`
 
 - **Use event** (one per usable item, id `755865700 + n`): wait for the
   marker SpEffect on the player, set the use flag, wait for the marker to
-  end, restart. The flag goes up once per use, including the Mushroom (whose
-  marker lasts 15 s, so one use is one flag raise).
+  end, restart, so one use is one flag raise. In game the flag only rose for
+  some markers (see the in-game checks).
 - **Removal event** (one per item, id `755865750 + n`): wait for the removal
   flag, remove one of the goods from the player, clear the flag, restart. The
   racing mod raises the flag; the event clears it, so the flag is a one-shot
@@ -97,8 +108,8 @@ Both shapes are adapted from FogRando's `common_bellofreturn`
 Items with an effect SpEffect (Hammer, Blue Shell, Lightning, Flask Stopper,
 Toxic Blossom) are not applied by an event: when the server resolves a use,
 the target's racing mod applies the effect SpEffect itself. The Mushroom and
-the Rune Pouches take effect through the game's own use, their marker being
-the effect.
+the Rune Pouches take effect through the game's own use: the Pouch marker is
+the effect, the Mushroom marker applies 102360.
 
 ## graph.json `race_items`
 
@@ -160,7 +171,7 @@ Grand Archives table (`ER_TGA_v1.17.0.CT`).
   then `> Add SpEffect`). In a race the effects land on the other runners, so
   this is the only way to see them alone.
 
-First pass (seed 603810141, 2026-11-13):
+Passes on seed 603810141, 2026-11-13:
 
 - **Passed.**
   - **Inventory.** The item lands in a quick slot (with every quick slot full,
@@ -170,25 +181,28 @@ First pass (seed 603810141, 2026-11-13):
     The Rune Pouches grant their runes and raise their use flag.
   - **Effects.** Flask Stopper (`stateInfo = 154`) blocks flasks. The Hammer
     effect works. Blue Shell halves max HP. Toxic Blossom poisons, and
-    Neutralizing Boluses cure it.
-- **Failed, fixed since.**
-  - The Hammer's use flag stayed off: neutral markers now last 1 s.
-  - The Mushroom left rolls and sprints costing stamina: its marker is now the
-    Viridian Hidden Tear row.
-  - Lightning (`stateInfo = 287`) slowed nothing: its effect is now cloned
-    from 425.
-- **Not fixed.** The large icon of the inventory's detail panel is blank, as
-  for the Halloween icons. It is a separate texture,
-  `MENU_Knowledge_<iconId>.tpf.dcx` inside `menu/{hi,low}/00_solo.tpfbhd`
-  (whose `.tpfbdt` weighs 1.4 GB), which the `05_dummy` overlay does not
-  provide.
+    Neutralizing Boluses cure it. The Mushroom (cycling 102360) makes rolls and
+    sprints free. Lightning (cycling 4101) forces a slow walk.
+- **Open: the use flag of most markers stays off.** The Rune Pouch markers
+  (with `soul`) raise their flag, and so did the first Mushroom marker (with
+  `consumeStaminaRate = 0`, 15 s). Every other marker tried left its flag off:
+  neutral with 0 s or 1 s, the Mushroom cycling 102360, and a 15 s marker with
+  a buff icon, whose icon showed for the whole 15 s. The marker is on the
+  player, the use event does not see it. No other event of the seed uses the
+  event ids or the flags. Until this is solved, only the Rune Pouches are
+  usable in a race: the other items never report their use.
+- **Large icon, experiment passed.** The inventory's detail panel draws a
+  separate texture, `MENU_Knowledge_<iconId>` (1024x1024 BC7 in vanilla, inside
+  `menu/{hi,low}/00_solo.tpfbhd`, whose `.tpfbdt` weighs 1.4 GB). Added to the
+  `05_dummy` overlay in a test build, it resolves by name like the small icon;
+  with the placeholders, the overlay grew from 0.12 MB to 2.9 MB. Not shipped
+  yet.
 
 To check on the next seed:
 
-- the use flag of the Hammer and of the other neutral markers;
-- the Mushroom over rolls and sprints, its use flag rising once, and its
-  effect ending at 15 s (the clone keeps the tear's chain to 102361 and
-  102363);
-- Lightning: how slow, rolls included, its visual effect, and the effect
-  ending at 15 s (the vanilla bullet row lasts 20 s);
+- the use flag of every usable item (the open issue above);
+- the Mushroom: buff icon, how long rolls stay free, and no flicker or repeated
+  sound from the 102360 re-applications; a second Mushroom during the first;
+- Lightning: its effect ending at 15 s, and no hitch over its 250 re-applications
+  of 4101;
 - each Rune Pouch still raising its flag and granting its runes once.
