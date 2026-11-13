@@ -16,8 +16,10 @@
 # seconds), as vanilla row 20011920 does with 4101.
 #
 # Neutral markers set effectEndurance = 1 rather than the template's one-frame
-# 0. That does not make their use flag rise in game: which markers the use
-# event sees is still open (docs/plugins/race-items.md, in-game checks).
+# 0, a margin for the use event (every use flag rises in game).
+#
+# The Hammer's equipWeightChangeRate is a fallback: the racing mod rewrites it
+# per target before applying the effect, from the target's equip load.
 
 [icons]
 shield = 60385

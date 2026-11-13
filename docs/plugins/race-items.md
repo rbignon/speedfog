@@ -54,7 +54,7 @@ flag is 1050290200 + n.
 | 4 | `banana` | Banana | 1450804 | 10600, `effectEndurance = 1` | none | none |
 | 5 | `red_shell` | Red Shell | 1450805 | 10600, `effectEndurance = 1` | none | none |
 | 6 | `mushroom` | Mushroom | 1450806 | 10600, `effectEndurance = 1`, cycles 102360 every 0.5 s | none (the marker applies it) | 15 s |
-| 7 | `hammer` | Hammer | 1450807 | 10600, `effectEndurance = 1` | 1450827, 10600, `equipWeightChangeRate = 0.35`, `effectEndurance = 15` | 15 s |
+| 7 | `hammer` | Hammer | 1450807 | 10600, `effectEndurance = 1` | 1450827, 10600, `equipWeightChangeRate = 0.35` (rewritten per target by the racing mod), `effectEndurance = 15` | 15 s |
 | 8 | `ink` | Ink | 1450808 | 10600, `effectEndurance = 1` | none (overlay only) | 15 s |
 | 9 | `blue_shell` | Blue Shell | 1450809 | 10600, `effectEndurance = 1` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
 | 10 | `lightning` | Lightning | 1450810 | 10600, `effectEndurance = 1` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
@@ -83,7 +83,7 @@ application, so about 15 to 16 s in all. The Lightning effect cycles 4101
 (0.1 s each) for 15 s.
 
 Neutral markers set `effectEndurance = 1` rather than the template's one-frame
-0. That does not make their use flag rise: see the in-game checks below.
+0, a margin for the use event; every use flag rises in game.
 
 Dead ends from the in-game passes: `consumeStaminaRate` only scales the stamina
 cost of weapon attacks; `stateInfo` 286 / 287 ("movement slow" in the
@@ -98,8 +98,7 @@ Both shapes are adapted from FogRando's `common_bellofreturn`
 
 - **Use event** (one per usable item, id `755865700 + n`): wait for the
   marker SpEffect on the player, set the use flag, wait for the marker to
-  end, restart, so one use is one flag raise. In game the flag only rose for
-  some markers (see the in-game checks).
+  end, restart, so one use is one flag raise.
 - **Removal event** (one per item, id `755865750 + n`): wait for the removal
   flag, remove one of the goods from the player, clear the flag, restart. The
   racing mod raises the flag; the event clears it, so the flag is a one-shot
@@ -174,11 +173,15 @@ vanilla sizes, not measured).
 ## Calibration values
 
 Starting values Roger tunes in game, then bakes into the pools (effect values
-are part of every seed): Hammer `equipWeightChangeRate = 0.35`, the Rune Pouch
-amounts 10000 / 20000 / 40000. The Hammer value is a multiplier of the maximum
-equip load, so it cannot put every build in the fat-roll band: at 0.35 a build
-between 24.5 % and 35 % of its load fat-rolls, a heavier one is overloaded (a
-32 / 49.8 build ends at 32 / 17.4 in game).
+are part of every seed): the Rune Pouch amounts 10000 / 20000 / 40000.
+
+The Hammer's `equipWeightChangeRate` multiplies the maximum equip load, so no
+fixed value puts every build in the fat-roll band (at 0.35 a 32 / 49.8 build
+ended at 32 / 17.4 in game, overloaded). The racing mod therefore rewrites the
+row in memory for each target, just before applying it, so the target's
+current load sits at 97 % of its max (a server setting; see speedfog-racing
+`docs/RACE_ITEMS.md`, effect `equip_load`). The seed's 0.35 only applies when
+the mod cannot read the load.
 
 ## In-game checks
 
@@ -190,6 +193,9 @@ Grand Archives table (`ER_TGA_v1.17.0.CT`).
   `> Spawn Item`. The practice tool's item spawner cannot give these items, its
   list is fixed.
 - `Event Flags > Event Flags by ID` reads and writes a use or removal flag.
+  Its `State` is read from the game only when the `Event Flag ID` changes: type
+  (or re-type) the ID after the action, or `State` shows a stale value. The
+  `Examples > Print Flags in Range` script reads them live.
 - `Scripts > Functions > ApplyEffect` applies an effect SpEffect (`SpEffectId`,
   then `> Add SpEffect`). In a race the effects land on the other runners, so
   this is the only way to see them alone.
@@ -206,14 +212,10 @@ Passes on seed 603810141, 2026-11-13:
     effect works. Blue Shell halves max HP. Toxic Blossom poisons, and
     Neutralizing Boluses cure it. The Mushroom (cycling 102360) makes rolls and
     sprints free. Lightning (cycling 4101) forces a slow walk.
-- **Open: the use flag of most markers stays off.** The Rune Pouch markers
-  (with `soul`) raise their flag, and so did the first Mushroom marker (with
-  `consumeStaminaRate = 0`, 15 s). Every other marker tried left its flag off:
-  neutral with 0 s or 1 s, the Mushroom cycling 102360, and a 15 s marker with
-  a buff icon, whose icon showed for the whole 15 s. The marker is on the
-  player, the use event does not see it. No other event of the seed uses the
-  event ids or the flags. Until this is solved, only the Rune Pouches are
-  usable in a race: the other items never report their use.
+- **Use flags.** Every usable item raises its use flag, the neutral markers
+  included. Earlier passes read some flags as 0 because the ID was typed before
+  the action (see `State` above), which sent the debugging after markers that
+  worked.
 - **Large icon.** The inventory's detail panel draws a separate texture,
   `MENU_Knowledge_<iconId>`, which the `05_dummy` overlay now ships too (see
   Replacing the icons). A test build showed it resolves by name like the small
@@ -222,7 +224,7 @@ Passes on seed 603810141, 2026-11-13:
 
 To check on the next seed:
 
-- the use flag of every usable item (the open issue above);
+- the large icon of every item in the inventory's detail panel;
 - the Mushroom: buff icon, how long rolls stay free, and no flicker or repeated
   sound from the 102360 re-applications; a second Mushroom during the first;
 - Lightning: its effect ending at 15 s, and no hitch over its 250 re-applications
