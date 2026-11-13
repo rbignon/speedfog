@@ -128,8 +128,10 @@ where the table above says none.
 The 11 icons ship as placeholder flat shapes. The art is replaced by dropping
 PNG files in, nothing else changes. For the graphic artist and for Roger:
 
-- **Format**: PNG, 1024x1024, RGBA with a transparent background. One file per
-  icon: every in-game size is derived from it by downscaling (below).
+- **Format**: PNG, RGBA with a transparent background, square, at least
+  160x160; 1024x1024 asked of the artist, so sharper large icons stay one
+  setting away (below). One file per icon: every in-game texture is derived
+  from it by resizing.
 - **Files**: `data/plugins/race_items_icon_<icon>.png`, `<icon>` being a name of
   the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
   `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
@@ -151,24 +153,23 @@ overlay:
 
 - `MENU_ItemIcon_<id>`, 160x160 (the size of every vanilla item icon): the
   inventory list and the quick slots.
-- `MENU_Knowledge_<id>`, 1024x1024 in `menu/hi` and 512x512 in `menu/low`
-  (the vanilla sizes; the vanilla ones live in `menu/{hi,low}/00_solo.tpfbhd`,
-  too big to ship): the large icon of the inventory's item detail panel.
+- `MENU_Knowledge_<id>`, the large icon of the inventory's item detail panel
+  (the vanilla ones live in `menu/{hi,low}/00_solo.tpfbhd`, too big to ship).
+  It is 160x160 as well, the small texture's own encode, so it looks blurrier
+  than the vanilla ones (1024x1024 in `hi`, 512x512 in `low`).
 
-`ItemIconPatcher` resizes the PNG to each size (a PNG smaller than 1024x1024
-is accepted, its `hi` large icon is then an upscale and looks blurry). Each
-texture is encoded in BC7, serially (BCnEncoder's parallel encode crashes under Wine):
-about 35 s per icon (its 160, 1024 and 512 textures), so building the overlay
-takes about 8 minutes (486 s under Wine on 2026-11-13).
+Each texture is encoded in BC7, serially (BCnEncoder's parallel encode crashes
+under Wine). At 160x160 the overlay builds in seconds; the vanilla large sizes
+took about 35 s per icon, about 8 minutes per bootstrap (486 s under Wine on
+2026-11-13), a cost judged too high for a panel few players open.
+`Variants` in `ItemIconPatcher` holds the large sizes to restore for sharper
+large icons.
 
 The icons ship in the shared `data/mods/speedfog-icons/` overlay, together with
 the Halloween icons (see [halloween-icons.md](halloween-icons.md)): one
 `05_dummy.tpf.dcx` per variant (`menu/hi`, `menu/low`), shipped when Halloween
-or race items is enabled. With the flat placeholders it weighs 1.4 MB per seed
-(0.97 MB in `hi`, 0.42 MB in `low`); authored art compresses less (a vanilla
-`MENU_Knowledge_*` weighs about 0.4 MB compressed in `hi`, 0.1 MB in `low`),
-so expect about 6.5 MB per seed for 13 drawn icons (an estimate from the
-vanilla sizes, not measured).
+or race items is enabled. With the flat placeholders it weighs 0.17 MB per
+seed (83 KB per variant).
 
 ## Calibration values
 
@@ -219,8 +220,8 @@ Passes on seed 603810141, 2026-11-13:
 - **Large icon.** The inventory's detail panel draws a separate texture,
   `MENU_Knowledge_<iconId>`, which the `05_dummy` overlay now ships too (see
   Replacing the icons). A test build showed it resolves by name like the small
-  icon; the shipped build (1024 in `hi`, 512 in `low`, from the 1024
-  placeholders) is still to check in game.
+  icon; the 1024x1024 build was checked in game (seed v7, 2026-11-13), the
+  shipped 160x160 one is still to check.
 
 To check on the next seed:
 

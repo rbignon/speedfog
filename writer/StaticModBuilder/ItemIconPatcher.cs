@@ -22,10 +22,13 @@ namespace StaticModBuilder;
 ///
 /// Each icon is one square PNG from which two textures are derived by
 /// resizing: MENU_ItemIcon_&lt;iconId&gt; (160x160, the inventory list and quick
-/// slots) and MENU_Knowledge_&lt;iconId&gt; (the inventory's item detail panel,
-/// at the vanilla size of each variant: 1024x1024 in hi, 512x512 in low;
+/// slots) and MENU_Knowledge_&lt;iconId&gt; (the inventory's item detail panel;
 /// vanilla keeps those in menu/{hi,low}/00_solo.tpfbhd, far too big to ship).
-/// Both resolve by name through the same TPF name fallback.
+/// Both resolve by name through the same TPF name fallback. The large one is
+/// 160x160 too and reuses the small texture's encode: at the vanilla sizes
+/// (1024x1024 in hi, 512x512 in low) the serial BC7 encode under Wine added
+/// about 8 minutes to every bootstrap. `Variants` holds the sizes to restore
+/// for sharper large icons.
 ///
 /// Unlike TitleScreenPatcher, these are standalone icons with no vanilla
 /// pixels to composite onto. There is still no icon-sized vanilla DDS to
@@ -43,8 +46,11 @@ public static class ItemIconPatcher
     private const int ICON_SIZE = 160; // vanilla item icon size
     private const byte TPF_FORMAT_BC7 = 102; // format byte used by the SB_* menu textures
     private const string TEMPLATE_TEXTURE_NAME = "MENU_DummyTransparent";
-    // menu/<Name> and the size of its large icons (vanilla MENU_Knowledge_* sizes)
-    private static readonly (string Name, int LargeIconSize)[] Variants = { ("hi", 1024), ("low", 512) };
+    // menu/<Name> and the size of its large icons. The vanilla MENU_Knowledge_*
+    // sizes are 1024 (hi) and 512 (low); a size equal to ICON_SIZE reuses the
+    // small encode.
+    private static readonly (string Name, int LargeIconSize)[] Variants =
+        { ("hi", ICON_SIZE), ("low", ICON_SIZE) };
 
     // The two Halloween icons. The per-seed injector repoints
     // EquipParamGoods.iconId to these numbers (see HalloweenIconInjector).
@@ -147,7 +153,7 @@ public static class ItemIconPatcher
             smallBlocks[i] = EncodeToBc7Blocks(image, iconSize);
             foreach (var size in largeSizes)
             {
-                largeBlocks[size][i] = EncodeToBc7Blocks(image, size);
+                largeBlocks[size][i] = size == iconSize ? smallBlocks[i] : EncodeToBc7Blocks(image, size);
             }
         }
 

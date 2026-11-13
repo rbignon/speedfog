@@ -82,8 +82,8 @@ the two Halloween icons.
    `race_items_icon_<icon>.png` for every distinct icon of the race items
    catalog's `[icons]`, read through `RaceItemsCatalog.Load`), checks that
    each is a square of at least 160x160, resizes each to the two texture
-   sizes (160x160 `MENU_ItemIcon_<id>`, `MENU_Knowledge_<id>` at 1024x1024
-   in `hi` and 512x512 in `low`, see
+   sizes (160x160 `MENU_ItemIcon_<id>` and `MENU_Knowledge_<id>`, the
+   large one reusing the small encode, see
    [race-items.md](race-items.md) "Replacing the icons") and encodes each
    texture once to raw BC7 blocks (BcEncoder, `Balanced`
    quality, `IsParallel = false`, same Wine-crash workaround as
@@ -149,10 +149,9 @@ ships the overlay either.
 liquid) are the user's AUTHORED 160x160 RGBA icons (landed 2026-09-01,
 replacing the original Pillow placeholders). 160x160 matches every
 vanilla item icon's size, so the small icon (`MENU_ItemIcon_<id>`) is the
-art as drawn, but the large icon of the inventory's detail panel
-(`MENU_Knowledge_<id>`, 1024x1024 in `hi`, 512x512 in `low`) is an upscale
-of it and looks blurry until the art is redrawn at 1024x1024, the size the
-race item art uses.
+art as drawn, and so is the large icon of the inventory's detail panel
+(`MENU_Knowledge_<id>`, 160x160 too, blurrier than the vanilla large icons;
+see race-items.md "Replacing the icons").
 `ItemIconPatcher` accepts any square PNG of at least 160x160 and derives
 both textures from it; it warns and skips the whole overlay if a PNG is
 missing, unreadable, not square or smaller than that.
@@ -166,7 +165,7 @@ mistake.
 To replace the art again:
 
 1. Overwrite the PNGs under `data/plugins/` with authored art (same
-   filenames, 1024x1024 RGBA).
+   filenames, square RGBA, at least 160x160).
 2. Re-run `tools/bootstrap.py`, or invoke `StaticModBuilder` directly
    with `--icons-dir data/mods/speedfog-icons --data-dir data`
    (same shape as the title screen re-run in title-screen.md).
@@ -180,8 +179,7 @@ resolves in the quick slots and in the inventory list. The large icon of the
 inventory's detail panel is a separate texture, `MENU_Knowledge_<iconId>`
 (vanilla: inside `menu/{hi,low}/00_solo.tpfbhd`); a test build that added it
 to this overlay showed it resolves by name too. The overlay now ships it for
-every icon, so the Halloween icons get a large icon as well, upscaled from
-their 160x160 art (blurry until redrawn, see above).
+every icon, so the Halloween icons get a large icon as well, at 160x160.
 
 The text below predates that check. Two things were unknown until it ran:
 

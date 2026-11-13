@@ -5,9 +5,9 @@ Standalone from the project venv: requires Pillow only
 (uv run --with pillow python tools/generate_race_item_icons.py). Draws one
 simple flat shape and colour per icon (shield, pouch, banana, red shell,
 mushroom, hammer, ink splash, blue shell, lightning bolt, stoppered flask,
-flower) on transparent 1024x1024 canvases, the size of the final art:
-ItemIconPatcher derives every in-game texture (160x160, and 1024x1024 or
-512x512 for the large icon) from each file. Outputs are committed in
+flower) on transparent 1024x1024 canvases, the size asked of the final art:
+ItemIconPatcher derives every in-game texture (160x160, the large icon
+included) from each file. Outputs are committed in
 data/plugins/ as race_items_icon_<icon>.png.
 
 The final art is authored by the graphic artist and simply overwrites these

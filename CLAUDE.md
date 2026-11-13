@@ -88,10 +88,10 @@ speedfog/
 │   │   ├── summer.toml      # Summer theme text catalogue (tracked)
 │   │   ├── halloween.toml   # Halloween theme text catalogue (tracked)
 │   │   ├── race_items.toml  # Race items catalog: icons, goods/SpEffect rows, flags, texts (tracked)
-│   │   ├── race_items_icon_<icon>.png  # Race item icon art (placeholders), 1024x1024 (the 160x160 small icon is derived), one per [icons] name (tracked)
+│   │   ├── race_items_icon_<icon>.png  # Race item icon art (placeholders), 1024x1024 (the 160x160 textures are derived), one per [icons] name (tracked)
 │   │   ├── halloween_decorations.toml  # Halloween gate decoration catalogue (bones, candelabras, candles; tracked)
-│   │   ├── halloween_icon_pumpkin_seed.png  # Golden Seed ("Pumpkin Seed") authored icon art, 160x160, its large icon (1024x1024 hi, 512x512 low) is an upscale (tracked)
-│   │   ├── halloween_icon_profane_tear.png  # Sacred Tear ("Profane Tear") authored icon art, 160x160, its large icon (1024x1024 hi, 512x512 low) is an upscale (tracked)
+│   │   ├── halloween_icon_pumpkin_seed.png  # Golden Seed ("Pumpkin Seed") authored icon art, 160x160 (tracked)
+│   │   ├── halloween_icon_profane_tear.png  # Sacred Tear ("Profane Tear") authored icon art, 160x160 (tracked)
 │   │   ├── winter_materials.toml  # Winter material catalogue: snow textures, templates, 40 conversion rules, retargets, terrain selectors (tracked)
 │   │   └── winter_textures.toml   # Winter frosted texture list: 138 TPF stems (foliage, plus the catacomb, base-game and Shadow Keep elevator, lever and staircase textures; the six Shadow Keep ones in heavy_tpfs get the heavy frost), each with its _l twin (tracked)
 │   ├── i18n/                # Localization
@@ -457,7 +457,7 @@ speedfog/
 | `WinterTextureBuilder` / `FrostEncoder` / `DdsImage` | Frost 276 TPFs (foliage, elevator, lever and staircase textures) at half resolution (albedos re-encoded BC1 1-bit alpha at the catalogue's `FrostStrength`, normal or heavy; other textures lose their top mip) |
 | `WinterOverlay` | Copies every file under `data/mods-src/speedfog-winter/` (the Torrent skin binders) verbatim into the winter build; optional folder, a collision with a built file fails the build |
 | `WinterReport` | Writes `data/mods/speedfog-winter.report.txt` (not shipped) |
-| `ItemIconPatcher` | Ships the Halloween icons (Golden Seed/Sacred Tear) and the 11 race item icons as one 05_dummy.tpf.dcx superset, a 160x160 `MENU_ItemIcon_<id>` and a `MENU_Knowledge_<id>` (inventory detail panel; 1024x1024 in menu/hi, 512x512 in menu/low, the vanilla sizes) per icon, both resized from one square PNG (`--icons-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md` and `docs/plugins/race-items.md`) |
+| `ItemIconPatcher` | Ships the Halloween icons (Golden Seed/Sacred Tear) and the 11 race item icons as one 05_dummy.tpf.dcx superset, a 160x160 `MENU_ItemIcon_<id>` and a `MENU_Knowledge_<id>` (inventory detail panel; 160x160 too, reusing the small encode: the vanilla 1024/512 sizes cost minutes of BC7 under Wine) per icon, both from one square PNG (`--icons-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md` and `docs/plugins/race-items.md`) |
 | `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |
 | `LayoutFile` | Menu .layout XML helpers (find/remove SubTexture entries) |
 

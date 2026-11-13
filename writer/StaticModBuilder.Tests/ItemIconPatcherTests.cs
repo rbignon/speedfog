@@ -152,10 +152,10 @@ public class ItemIconPatcherTests
     public void Patch_writes_a_small_and_a_large_texture_per_icon()
     {
         // Small sizes keep the serial BC7 encode fast, with each variant's own
-        // large size as in production (hi twice low). As in data/plugins/, the
-        // Halloween PNGs are at the small size (their large textures are
-        // upscales) and the race item PNGs at the hi large size (their small
-        // and low large textures are downscales).
+        // large size, as with the vanilla sizes (hi twice low). The Halloween
+        // PNGs are at the small size (their large textures are upscales) and
+        // the race item PNGs at the hi large size (their small and low large
+        // textures are downscales).
         const int small = 8;
         var variants = new[] { ("hi", 32), ("low", 16) };
         var root = MakeTempDir();
@@ -195,6 +195,37 @@ public class ItemIconPatcherTests
             ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants);
             var again = TPF.Read(Path.Combine(iconsDir, "menu", "hi", "05_dummy.tpf.dcx"));
             Assert.Equal(27, again.Textures.Count);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void Large_textures_at_the_small_size_reuse_its_encode()
+    {
+        // As in production: the large icon is the small texture again.
+        const int small = 8;
+        var variants = new[] { ("hi", small), ("low", small) };
+        var root = MakeTempDir();
+        try
+        {
+            var gameDir = MakeGameDir(root);
+            var (dataDir, colors) = MakeDataDir(root, halloweenSize: small, raceItemWidth: 32, raceItemHeight: 32);
+            var iconsDir = Path.Combine(root, "icons");
+            Directory.CreateDirectory(iconsDir);
+
+            Assert.Equal(52, ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants));
+            foreach (var (variant, _) in variants)
+            {
+                var tpf = TPF.Read(Path.Combine(iconsDir, "menu", variant, "05_dummy.tpf.dcx"));
+                var id = SpeedFogIds.HalloweenGoldenSeedIcon;
+                AssertTexture(tpf, $"MENU_Knowledge_{id}", small, colors["halloween_icon_pumpkin_seed.png"]);
+                var smallBytes = tpf.Textures.Single(t => t.Name == $"MENU_ItemIcon_{id}").Bytes;
+                var largeBytes = tpf.Textures.Single(t => t.Name == $"MENU_Knowledge_{id}").Bytes;
+                Assert.Equal(smallBytes, largeBytes);
+            }
         }
         finally
         {

@@ -887,7 +887,6 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> tuple[bool, b
             str(ICONS_MOD_DEST.resolve()),
         ]
     )
-    print_info("Item icon overlay: encoding the large icons takes about 8 minutes")
     if winter:
         cmd.extend(["--winter-dir", str(WINTER_MOD_DEST.resolve())])
         print_info(
