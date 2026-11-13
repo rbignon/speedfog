@@ -129,7 +129,8 @@ where the table above says none.
 The 11 icons ship as placeholder flat shapes. The art is replaced by dropping
 PNG files in, nothing else changes. For the graphic artist and for Roger:
 
-- **Format**: PNG, 160x160, RGBA with a transparent background.
+- **Format**: PNG, 1024x1024, RGBA with a transparent background. One file per
+  icon: every in-game size is derived from it by downscaling (below).
 - **Files**: `data/plugins/race_items_icon_<icon>.png`, `<icon>` being a name of
   the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
   `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
@@ -139,14 +140,36 @@ PNG files in, nothing else changes. For the graphic artist and for Roger:
   re-run `tools/bootstrap.py` on the generation host (it also needs a re-run
   after the rename to `speedfog-icons`; `speedfog` refuses to generate a
   Halloween or race items seed while the overlay is missing or older than the
-  icon PNGs or `race_items.toml`; a missing or non-160x160 file
-  makes `ItemIconPatcher` skip the whole overlay with a warning), regenerate the
-  pools, then in speedfog-racing run `tools/sync_race_item_icons.py` and release
-  the mod.
+  icon PNGs or `race_items.toml`; a missing or unreadable file, or one that is
+  not a square of at least 160x160, makes `ItemIconPatcher` skip the whole
+  overlay with a warning), regenerate the pools, then in speedfog-racing run
+  `uv run tools/sync_race_item_icons.py` and release the mod. A detailed
+  1024x1024 PNG can pass the 500 KB limit of the `check-added-large-files`
+  pre-commit hook: commit the drop with `SKIP=check-added-large-files`.
+
+Each PNG becomes two textures, both found by name like any texture of the
+overlay:
+
+- `MENU_ItemIcon_<id>`, 160x160 (the size of every vanilla item icon): the
+  inventory list and the quick slots.
+- `MENU_Knowledge_<id>`, 1024x1024 in `menu/hi` and 512x512 in `menu/low`
+  (the vanilla sizes; the vanilla ones live in `menu/{hi,low}/00_solo.tpfbhd`,
+  too big to ship): the large icon of the inventory's item detail panel.
+
+`ItemIconPatcher` resizes the PNG to each size (a PNG smaller than 1024x1024
+is accepted, its `hi` large icon is then an upscale and looks blurry). Each
+texture is encoded in BC7, serially (BCnEncoder's parallel encode crashes under Wine):
+about 35 s per icon (its 160, 1024 and 512 textures), so building the overlay
+takes about 8 minutes (486 s under Wine on 2026-11-13).
 
 The icons ship in the shared `data/mods/speedfog-icons/` overlay, together with
 the Halloween icons (see [halloween-icons.md](halloween-icons.md)): one
-`05_dummy.tpf.dcx`, shipped when Halloween or race items is enabled.
+`05_dummy.tpf.dcx` per variant (`menu/hi`, `menu/low`), shipped when Halloween
+or race items is enabled. With the flat placeholders it weighs 1.4 MB per seed
+(0.97 MB in `hi`, 0.42 MB in `low`); authored art compresses less (a vanilla
+`MENU_Knowledge_*` weighs about 0.4 MB compressed in `hi`, 0.1 MB in `low`),
+so expect about 6.5 MB per seed for 13 drawn icons (an estimate from the
+vanilla sizes, not measured).
 
 ## Calibration values
 
@@ -191,12 +214,11 @@ Passes on seed 603810141, 2026-11-13:
   player, the use event does not see it. No other event of the seed uses the
   event ids or the flags. Until this is solved, only the Rune Pouches are
   usable in a race: the other items never report their use.
-- **Large icon, experiment passed.** The inventory's detail panel draws a
-  separate texture, `MENU_Knowledge_<iconId>` (1024x1024 BC7 in vanilla, inside
-  `menu/{hi,low}/00_solo.tpfbhd`, whose `.tpfbdt` weighs 1.4 GB). Added to the
-  `05_dummy` overlay in a test build, it resolves by name like the small icon;
-  with the placeholders, the overlay grew from 0.12 MB to 2.9 MB. Not shipped
-  yet.
+- **Large icon.** The inventory's detail panel draws a separate texture,
+  `MENU_Knowledge_<iconId>`, which the `05_dummy` overlay now ships too (see
+  Replacing the icons). A test build showed it resolves by name like the small
+  icon; the shipped build (1024 in `hi`, 512 in `low`, from the 1024
+  placeholders) is still to check in game.
 
 To check on the next seed:
 

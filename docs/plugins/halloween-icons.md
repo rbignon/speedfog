@@ -1,7 +1,7 @@
 # Halloween Item Icons
 
 **Date:** 2026-09-01
-**Status:** EXPERIMENT, in-game check not yet performed (see below)
+**Status:** EXPERIMENT, partly checked in game on 2026-11-13 (see below)
 
 Gives Golden Seed and Sacred Tear custom jack-o'-lantern / burning-chalice inventory
 icons on Halloween seeds, matching the
@@ -80,7 +80,12 @@ the two Halloween icons.
    runs at bootstrap, not per-seed): reads the icon PNGs from
    `data/plugins/` (the two Halloween PNGs, then
    `race_items_icon_<icon>.png` for every distinct icon of the race items
-   catalog's `[icons]`, read through `RaceItemsCatalog.Load`), encodes each once to raw BC7 blocks (BcEncoder, `Balanced`
+   catalog's `[icons]`, read through `RaceItemsCatalog.Load`), checks that
+   each is a square of at least 160x160, resizes each to the two texture
+   sizes (160x160 `MENU_ItemIcon_<id>`, `MENU_Knowledge_<id>` at 1024x1024
+   in `hi` and 512x512 in `low`, see
+   [race-items.md](race-items.md) "Replacing the icons") and encodes each
+   texture once to raw BC7 blocks (BcEncoder, `Balanced`
    quality, `IsParallel = false`, same Wine-crash workaround as
    `TitleScreenPatcher`), then for each of `menu/{hi,low}`: reads the
    vanilla `05_dummy.tpf.dcx`, validates its `MENU_DummyTransparent`
@@ -90,8 +95,9 @@ the two Halloween icons.
    148-byte DX10 header as a template for `DdsAtlas.BuildStandaloneDds`
    (width, height and pixel data are fully replaced; there is no
    icon-sized vanilla DDS to splice a header from, unlike the title
-   patch's own sprite), adds or replaces the `MENU_ItemIcon_*`
-   textures by name (idempotent reruns), and writes the superset TPF to
+   patch's own sprite), adds or replaces the `MENU_ItemIcon_*` and
+   `MENU_Knowledge_*` textures by name (idempotent reruns), and writes
+   the superset TPF to
    `data/mods/speedfog-icons/menu/{hi,low}/05_dummy.tpf.dcx`. Invoked
    by `tools/bootstrap.py` via `--icons-dir`, unconditionally
    (`ICONS_MOD_DEST`), independent of whether any seed enables a plugin.
@@ -142,8 +148,14 @@ ships the overlay either.
 `data/plugins/halloween_icon_profane_tear.png` (a chalice of burning
 liquid) are the user's AUTHORED 160x160 RGBA icons (landed 2026-09-01,
 replacing the original Pillow placeholders). 160x160 matches every
-vanilla item icon's size; `ItemIconPatcher` warns and skips the
-whole overlay if a PNG is missing or not exactly that size.
+vanilla item icon's size, so the small icon (`MENU_ItemIcon_<id>`) is the
+art as drawn, but the large icon of the inventory's detail panel
+(`MENU_Knowledge_<id>`, 1024x1024 in `hi`, 512x512 in `low`) is an upscale
+of it and looks blurry until the art is redrawn at 1024x1024, the size the
+race item art uses.
+`ItemIconPatcher` accepts any square PNG of at least 160x160 and derives
+both textures from it; it warns and skips the whole overlay if a PNG is
+missing, unreadable, not square or smaller than that.
 
 `tools/generate_halloween_icons.py` regenerates the ORIGINAL flat
 placeholders (Pillow only, no fonts). Running it now OVERWRITES the
@@ -154,7 +166,7 @@ mistake.
 To replace the art again:
 
 1. Overwrite the PNGs under `data/plugins/` with authored art (same
-   filenames, 160x160 RGBA).
+   filenames, 1024x1024 RGBA).
 2. Re-run `tools/bootstrap.py`, or invoke `StaticModBuilder` directly
    with `--icons-dir data/mods/speedfog-icons --data-dir data`
    (same shape as the title screen re-run in title-screen.md).
@@ -165,9 +177,11 @@ To replace the art again:
 Partly checked in game on 2026-11-13 with the race items icons, which share
 this overlay and mechanism ([race-items.md](race-items.md)). The small icon
 resolves in the quick slots and in the inventory list. The large icon of the
-inventory's detail panel stays blank, for the Halloween icons too. That icon is
-a separate texture, `MENU_Knowledge_<iconId>.tpf.dcx` inside
-`menu/{hi,low}/00_solo.tpfbhd`, which this overlay does not provide.
+inventory's detail panel is a separate texture, `MENU_Knowledge_<iconId>`
+(vanilla: inside `menu/{hi,low}/00_solo.tpfbhd`); a test build that added it
+to this overlay showed it resolves by name too. The overlay now ships it for
+every icon, so the Halloween icons get a large icon as well, upscaled from
+their 160x160 art (blurry until redrawn, see above).
 
 The text below predates that check. Two things were unknown until it ran:
 

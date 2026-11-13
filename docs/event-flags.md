@@ -152,12 +152,12 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 
 ## Reserved Icon IDs
 
-Menu icon ids (a third namespace, not entity ids nor param rows). Vanilla icon ids top out around 8490.
+Menu icon ids (a third namespace, not entity ids nor param rows). Vanilla icon ids top out around 8490. Each id names two textures, `MENU_ItemIcon_<id>` (the small icon) and `MENU_Knowledge_<id>` (the inventory detail panel's large icon).
 
 | Range | Owner | Reference | Notes |
 |-------|-------|-----------|-------|
 | 60383-60384 | Halloween plugin | `SpeedFogIds.HalloweenGoldenSeedIcon`, `HalloweenSacredTearIcon` | Golden Seed pumpkin, corrupted Sacred Tear |
-| 60385-60399 | RaceItemsPlugin | `SpeedFogIds.RaceItemIconIdMin/Max`, `[icons]` in `data/plugins/race_items.toml` | One icon per item kind (`MENU_ItemIcon_<id>`) |
+| 60385-60399 | RaceItemsPlugin | `SpeedFogIds.RaceItemIconIdMin/Max`, `[icons]` in `data/plugins/race_items.toml` | One icon per item kind |
 
 ## Reserved FMG Entry IDs
 

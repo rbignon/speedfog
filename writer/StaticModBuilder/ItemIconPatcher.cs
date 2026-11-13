@@ -1,9 +1,11 @@
 using BCnEncoder.Encoder;
 using BCnEncoder.ImageSharp;
 using BCnEncoder.Shared;
+using FogModWrapper;
 using FogModWrapper.Plugins.RaceItems;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using SoulsFormats;
 
 namespace StaticModBuilder;
@@ -18,6 +20,13 @@ namespace StaticModBuilder;
 /// a file, so a second overlay shipping its own 05_dummy.tpf.dcx would hide the
 /// other's icons.
 ///
+/// Each icon is one square PNG from which two textures are derived by
+/// resizing: MENU_ItemIcon_&lt;iconId&gt; (160x160, the inventory list and quick
+/// slots) and MENU_Knowledge_&lt;iconId&gt; (the inventory's item detail panel,
+/// at the vanilla size of each variant: 1024x1024 in hi, 512x512 in low;
+/// vanilla keeps those in menu/{hi,low}/00_solo.tpfbhd, far too big to ship).
+/// Both resolve by name through the same TPF name fallback.
+///
 /// Unlike TitleScreenPatcher, these are standalone icons with no vanilla
 /// pixels to composite onto. There is still no icon-sized vanilla DDS to
 /// splice a header from, so each variant's own MENU_DummyTransparent entry
@@ -31,42 +40,53 @@ namespace StaticModBuilder;
 /// </summary>
 public static class ItemIconPatcher
 {
-    private const int ICON_SIZE = 160;
+    private const int ICON_SIZE = 160; // vanilla item icon size
     private const byte TPF_FORMAT_BC7 = 102; // format byte used by the SB_* menu textures
     private const string TEMPLATE_TEXTURE_NAME = "MENU_DummyTransparent";
-    private static readonly string[] Variants = { "hi", "low" };
+    // menu/<Name> and the size of its large icons (vanilla MENU_Knowledge_* sizes)
+    private static readonly (string Name, int LargeIconSize)[] Variants = { ("hi", 1024), ("low", 512) };
 
     // The two Halloween icons. The per-seed injector repoints
     // EquipParamGoods.iconId to these numbers (see HalloweenIconInjector).
-    private static readonly (string Name, string Png)[] HalloweenIcons =
+    private static readonly (int IconId, string Png)[] HalloweenIcons =
     {
-        ("MENU_ItemIcon_60383", "halloween_icon_pumpkin_seed.png"),
-        ("MENU_ItemIcon_60384", "halloween_icon_profane_tear.png"),
+        (SpeedFogIds.HalloweenGoldenSeedIcon, "halloween_icon_pumpkin_seed.png"),
+        (SpeedFogIds.HalloweenSacredTearIcon, "halloween_icon_profane_tear.png"),
     };
 
     /// <summary>
     /// The Halloween icons followed by the race item icons, one entry per
     /// distinct (icon, icon id) of the race items catalog
-    /// (dataDir/plugins/race_items.toml, [icons]): texture name and source PNG
+    /// (dataDir/plugins/race_items.toml, [icons]): icon id and source PNG
     /// (race_items_icon_&lt;icon&gt;.png) under dataDir/plugins.
     /// </summary>
-    private static (string Name, string Png)[] LoadIcons(string dataDir)
+    private static (int IconId, string Png)[] LoadIcons(string dataDir)
     {
         var catalog = RaceItemsCatalog.Load(Path.Combine(dataDir, "plugins", "race_items.toml"));
         var raceIcons = catalog
             .Select(item => (item.Icon, item.IconId))
             .Distinct()
             .OrderBy(icon => icon.IconId)
-            .Select(icon => ($"MENU_ItemIcon_{icon.IconId}", $"race_items_icon_{icon.Icon}.png"));
+            .Select(icon => (icon.IconId, $"race_items_icon_{icon.Icon}.png"));
         return HalloweenIcons.Concat(raceIcons).ToArray();
     }
 
     /// <summary>
     /// For menu/{hi,low}: read 05_dummy.tpf.dcx from gameDir, add (or
-    /// replace) the Halloween and race item icon textures, and write the
-    /// superset into iconsDir. Returns the number of textures written across variants.
+    /// replace) the small and large texture of every Halloween and race item
+    /// icon, and write the superset into iconsDir. Returns the number of
+    /// textures written across variants.
     /// </summary>
     public static int Patch(string gameDir, string iconsDir, string dataDir)
+        => Patch(gameDir, iconsDir, dataDir, ICON_SIZE, Variants);
+
+    /// <summary>
+    /// Patch with explicit texture sizes, so tests can run on small textures:
+    /// a serial BC7 encode of one 1024x1024 texture takes about 20 s.
+    /// </summary>
+    internal static int Patch(
+        string gameDir, string iconsDir, string dataDir,
+        int iconSize, IReadOnlyList<(string Name, int LargeIconSize)> variants)
     {
         var catalogPath = Path.Combine(dataDir, "plugins", "race_items.toml");
         if (!File.Exists(catalogPath))
@@ -83,25 +103,56 @@ public static class ItemIconPatcher
             return 0;
         }
 
-        // Encode each icon once to raw BC7 blocks; wrapping into a full DDS
+        // Every PNG is checked (header only) before any slow encode: a square
+        // of at least the small icon size. Smaller than the large size is
+        // accepted (older art), its large texture is then an upscale.
+        foreach (var path in pngPaths)
+        {
+            string? problem;
+            try
+            {
+                var info = Image.Identify(path);
+                problem = info.Width != info.Height || info.Width < iconSize
+                    ? $"is {info.Width}x{info.Height}, expected a square of at least {iconSize}x{iconSize}"
+                    : null;
+            }
+            catch (ImageFormatException e)
+            {
+                problem = $"is not a readable image ({e.Message})";
+            }
+            if (problem != null)
+            {
+                Console.WriteLine($"Warning: {path} {problem}; skipping item icon overlay");
+                return 0;
+            }
+        }
+
+        // Encode each texture once (each large size once, whatever the number
+        // of variants using it) to raw BC7 blocks; wrapping into a full DDS
         // (cheap header copy) happens per variant below, since each variant's
         // 05_dummy.tpf.dcx supplies its own header template.
-        var blocksByIcon = new byte[icons.Length][];
+        var largeSizes = variants.Select(v => v.LargeIconSize).Distinct().ToArray();
+        int maxLargeSize = largeSizes.Max();
+        var smallBlocks = new byte[icons.Length][];
+        var largeBlocks = largeSizes.ToDictionary(size => size, _ => new byte[icons.Length][]);
         for (int i = 0; i < icons.Length; i++)
         {
             using var image = Image.Load<Rgba32>(pngPaths[i]);
-            if (image.Width != ICON_SIZE || image.Height != ICON_SIZE)
+            if (image.Width < maxLargeSize)
             {
                 Console.WriteLine(
-                    $"Warning: {pngPaths[i]} is {image.Width}x{image.Height}, expected {ICON_SIZE}x{ICON_SIZE};"
-                    + " skipping item icon overlay");
-                return 0;
+                    $"Note: {pngPaths[i]} is {image.Width}x{image.Height},"
+                    + $" its {maxLargeSize}x{maxLargeSize} large icon is an upscale");
             }
-            blocksByIcon[i] = EncodeToBc7Blocks(image);
+            smallBlocks[i] = EncodeToBc7Blocks(image, iconSize);
+            foreach (var size in largeSizes)
+            {
+                largeBlocks[size][i] = EncodeToBc7Blocks(image, size);
+            }
         }
 
         int written = 0;
-        foreach (var variant in Variants)
+        foreach (var (variant, largeIconSize) in variants)
         {
             var dummySubPath = Path.Combine("menu", variant, "05_dummy.tpf.dcx");
             var dummyPath = Path.Combine(gameDir, dummySubPath);
@@ -126,23 +177,24 @@ public static class ItemIconPatcher
                 continue;
             }
 
-            byte[][] iconDds;
+            var textures = new List<(string Name, byte[] Dds)>(icons.Length * 2);
             try
             {
-                iconDds = blocksByIcon
-                    .Select(blocks => DdsAtlas.BuildStandaloneDds(template.Bytes, blocks, ICON_SIZE, ICON_SIZE))
-                    .ToArray();
+                for (int i = 0; i < icons.Length; i++)
+                {
+                    textures.Add((
+                        $"MENU_ItemIcon_{icons[i].IconId}",
+                        DdsAtlas.BuildStandaloneDds(template.Bytes, smallBlocks[i], iconSize, iconSize)));
+                    textures.Add((
+                        $"MENU_Knowledge_{icons[i].IconId}",
+                        DdsAtlas.BuildStandaloneDds(
+                            template.Bytes, largeBlocks[largeIconSize][i], largeIconSize, largeIconSize)));
+                }
             }
             catch (ArgumentException e)
             {
                 Console.WriteLine($"Warning: {templateContext}: {e.Message}, skipping");
                 continue;
-            }
-
-            var textures = new (string Name, byte[] Dds)[icons.Length];
-            for (int i = 0; i < icons.Length; i++)
-            {
-                textures[i] = (icons[i].Name, iconDds[i]);
             }
             int added = AddTexturesToTpf(tpf, textures);
 
@@ -155,7 +207,8 @@ public static class ItemIconPatcher
         if (written > 0)
         {
             Console.WriteLine(
-                $"Item icon overlay: added {icons.Length} icon texture(s) across {Variants.Length} variant(s)");
+                $"Item icon overlay: added {icons.Length} icon(s), small and large,"
+                + $" across {variants.Count} variant(s)");
         }
         return written;
     }
@@ -197,16 +250,19 @@ public static class ItemIconPatcher
         return count;
     }
 
-    private static byte[] EncodeToBc7Blocks(Image<Rgba32> icon)
+    /// <summary>The image resized to size x size (unless it already is), as raw BC7 blocks.</summary>
+    private static byte[] EncodeToBc7Blocks(Image<Rgba32> source, int size)
     {
+        using var resized = source.Width == size ? null : source.Clone(x => x.Resize(size, size));
         var encoder = new BcEncoder(CompressionFormat.Bc7);
         encoder.OutputOptions.GenerateMipMaps = false;
         encoder.OutputOptions.Quality = CompressionQuality.Balanced;
         // Same Wine constraint as TitleScreenPatcher.CompositeAndEncode:
         // BCnEncoder's Parallel.For encode loop crashes non-deterministically
         // under Wine's .NET runtime; serial is the only known-stable mode
-        // there, and a single 160x160 icon encodes in well under a second.
+        // there. A 160x160 texture encodes in well under a second, a
+        // 1024x1024 one in about 20 s (Fast quality is barely faster for BC7).
         encoder.Options.IsParallel = false;
-        return encoder.EncodeToRawBytes(icon)[0];
+        return encoder.EncodeToRawBytes(resized ?? source)[0];
     }
 }

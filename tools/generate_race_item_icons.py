@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Generate placeholder race item icons (the 11 icons of race_items.toml).
 
-Standalone from the project venv: requires Pillow only. Draws one simple flat
-shape and colour per icon (shield, pouch, banana, red shell, mushroom, hammer,
-ink splash, blue shell, lightning bolt, stoppered flask, flower) on
-transparent 160x160 canvases. Outputs are committed in data/plugins/ as
-race_items_icon_<icon>.png.
+Standalone from the project venv: requires Pillow only
+(uv run --with pillow python tools/generate_race_item_icons.py). Draws one
+simple flat shape and colour per icon (shield, pouch, banana, red shell,
+mushroom, hammer, ink splash, blue shell, lightning bolt, stoppered flask,
+flower) on transparent 1024x1024 canvases, the size of the final art:
+ItemIconPatcher derives every in-game texture (160x160, and 1024x1024 or
+512x512 for the large icon) from each file. Outputs are committed in
+data/plugins/ as race_items_icon_<icon>.png.
 
 The final art is authored by the graphic artist and simply overwrites these
 files: once it has landed, never re-run this script, it would overwrite the
@@ -14,12 +17,15 @@ re-run tools/bootstrap.py (or StaticModBuilder directly) to rebuild
 data/mods/speedfog-icons/. See docs/plugins/race-items.md.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any
 
 from PIL import Image, ImageDraw
 
-SIZE = 160
+SIZE = 1024
+# The shapes below are drawn on a DESIGN x DESIGN grid, scaled to SIZE.
+DESIGN = 160
 PLUGINS_DIR = Path(__file__).resolve().parent.parent / "data" / "plugins"
 
 OUTLINE = (30, 24, 28, 255)
@@ -52,7 +58,31 @@ FLOWER_CENTER = (250, 214, 64, 255)
 STEM_GREEN = (70, 150, 70, 255)
 
 
-def draw_shield(draw: ImageDraw.ImageDraw) -> None:
+class ScaledDraw:
+    """ImageDraw calls in design units: coordinates, widths and radii scaled."""
+
+    def __init__(self, draw: ImageDraw.ImageDraw, scale: float) -> None:
+        self._draw = draw
+        self._scale = scale
+
+    def __getattr__(self, name: str) -> Callable[..., None]:
+        method = getattr(self._draw, name)
+        scale = self._scale
+
+        def scaled(xy: Sequence[Any], *args: Any, **kwargs: Any) -> None:
+            if isinstance(xy[0], int | float):
+                points: list[Any] = [v * scale for v in xy]
+            else:
+                points = [(x * scale, y * scale) for x, y in xy]
+            kwargs["width"] = round(kwargs.get("width", 1) * scale)
+            if "radius" in kwargs:
+                kwargs["radius"] *= scale
+            method(points, *args, **kwargs)
+
+        return scaled
+
+
+def draw_shield(draw: ScaledDraw) -> None:
     """A heater shield with a gold boss."""
     outline = [(24, 28), (136, 28), (136, 84), (80, 148), (24, 84)]
     draw.polygon(outline, fill=STEEL, outline=OUTLINE, width=4)
@@ -61,7 +91,7 @@ def draw_shield(draw: ImageDraw.ImageDraw) -> None:
     draw.ellipse((60, 56, 100, 96), fill=GOLD, outline=OUTLINE, width=4)
 
 
-def draw_rune_pouch(draw: ImageDraw.ImageDraw) -> None:
+def draw_rune_pouch(draw: ScaledDraw) -> None:
     """A drawstring pouch with a golden rune coin on it."""
     draw.ellipse((26, 52, 134, 146), fill=LEATHER, outline=OUTLINE, width=4)
     draw.polygon(
@@ -74,7 +104,7 @@ def draw_rune_pouch(draw: ImageDraw.ImageDraw) -> None:
     draw.line((80, 90, 80, 110), fill=OUTLINE, width=4)
 
 
-def draw_banana(draw: ImageDraw.ImageDraw) -> None:
+def draw_banana(draw: ScaledDraw) -> None:
     """A crescent banana: a thick yellow arc with a brown tip and stem."""
     draw.arc((18, 14, 142, 138), start=20, end=160, fill=OUTLINE, width=34)
     draw.arc((18, 14, 142, 138), start=22, end=158, fill=BANANA_YELLOW, width=26)
@@ -82,7 +112,7 @@ def draw_banana(draw: ImageDraw.ImageDraw) -> None:
     draw.rectangle((22, 88, 36, 106), fill=BANANA_TIP, outline=OUTLINE, width=2)
 
 
-def draw_red_shell(draw: ImageDraw.ImageDraw) -> None:
+def draw_red_shell(draw: ScaledDraw) -> None:
     """A red turtle shell: a dome with a white rim and a pale belly band."""
     draw.pieslice(
         (18, 28, 142, 156), start=180, end=360, fill=RED, outline=OUTLINE, width=4
@@ -92,7 +122,7 @@ def draw_red_shell(draw: ImageDraw.ImageDraw) -> None:
     draw.arc((34, 44, 126, 136), start=200, end=250, fill=WHITE, width=5)
 
 
-def draw_mushroom(draw: ImageDraw.ImageDraw) -> None:
+def draw_mushroom(draw: ScaledDraw) -> None:
     """A red-capped, white-spotted mushroom on a cream stem."""
     draw.rounded_rectangle(
         (56, 84, 104, 140), radius=10, fill=STEM_CREAM, outline=OUTLINE, width=4
@@ -106,7 +136,7 @@ def draw_mushroom(draw: ImageDraw.ImageDraw) -> None:
         draw.ellipse((x - r, y - r, x + r, y + r), fill=WHITE)
 
 
-def draw_hammer(draw: ImageDraw.ImageDraw) -> None:
+def draw_hammer(draw: ScaledDraw) -> None:
     """A war hammer: a heavy steel head on a diagonal wooden haft."""
     draw.line((44, 128, 112, 54), fill=OUTLINE, width=22)
     draw.line((44, 128, 112, 54), fill=WOOD, width=14)
@@ -119,7 +149,7 @@ def draw_hammer(draw: ImageDraw.ImageDraw) -> None:
     draw.polygon([(70, 22), (142, 62), (136, 72), (62, 34)], fill=STEEL)
 
 
-def draw_ink(draw: ImageDraw.ImageDraw) -> None:
+def draw_ink(draw: ScaledDraw) -> None:
     """An ink splash: a blob with droplets around it."""
     draw.ellipse((34, 40, 126, 126), fill=INK, outline=OUTLINE, width=3)
     for x0, y0, x1, y1 in (
@@ -133,7 +163,7 @@ def draw_ink(draw: ImageDraw.ImageDraw) -> None:
     draw.ellipse((52, 58, 72, 78), fill=INK_SHINE)
 
 
-def draw_blue_shell(draw: ImageDraw.ImageDraw) -> None:
+def draw_blue_shell(draw: ScaledDraw) -> None:
     """A blue turtle shell with spikes, to stay distinct from the red one."""
     draw.pieslice(
         (18, 36, 142, 164), start=180, end=360, fill=BLUE, outline=OUTLINE, width=4
@@ -144,14 +174,14 @@ def draw_blue_shell(draw: ImageDraw.ImageDraw) -> None:
     draw.ellipse((62, 76, 98, 96), fill=BLUE_DARK)
 
 
-def draw_lightning(draw: ImageDraw.ImageDraw) -> None:
+def draw_lightning(draw: ScaledDraw) -> None:
     """A jagged yellow lightning bolt."""
     bolt = [(92, 10), (36, 88), (72, 88), (56, 150), (126, 64), (88, 64), (112, 10)]
     draw.polygon(bolt, fill=BOLT_YELLOW)
     draw.line(bolt + [bolt[0]], fill=OUTLINE, width=4, joint="curve")
 
 
-def draw_flask_stopper(draw: ImageDraw.ImageDraw) -> None:
+def draw_flask_stopper(draw: ScaledDraw) -> None:
     """A round flask of green liquid sealed with a cork stopper."""
     draw.rectangle((64, 30, 96, 62), fill=GLASS, outline=OUTLINE, width=4)
     draw.ellipse((26, 54, 134, 148), fill=GLASS, outline=OUTLINE, width=4)
@@ -160,7 +190,7 @@ def draw_flask_stopper(draw: ImageDraw.ImageDraw) -> None:
     draw.line((120, 96, 40, 96), fill=OUTLINE, width=3)
 
 
-def draw_toxic_blossom(draw: ImageDraw.ImageDraw) -> None:
+def draw_toxic_blossom(draw: ScaledDraw) -> None:
     """A five-petal flower on a green stem."""
     draw.line((80, 100, 80, 150), fill=STEM_GREEN, width=10)
     draw.ellipse((84, 120, 124, 142), fill=STEM_GREEN, outline=OUTLINE, width=2)
@@ -171,7 +201,7 @@ def draw_toxic_blossom(draw: ImageDraw.ImageDraw) -> None:
     draw.ellipse((62, 46, 98, 82), fill=FLOWER_CENTER, outline=PETAL_DARK, width=3)
 
 
-ICONS: dict[str, Callable[[ImageDraw.ImageDraw], None]] = {
+ICONS: dict[str, Callable[[ScaledDraw], None]] = {
     "shield": draw_shield,
     "rune_pouch": draw_rune_pouch,
     "banana": draw_banana,
@@ -189,7 +219,7 @@ ICONS: dict[str, Callable[[ImageDraw.ImageDraw], None]] = {
 def main() -> None:
     for icon, painter in ICONS.items():
         img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-        painter(ImageDraw.Draw(img))
+        painter(ScaledDraw(ImageDraw.Draw(img), SIZE / DESIGN))
         out = PLUGINS_DIR / f"race_items_icon_{icon}.png"
         img.save(out)
         print(f"wrote {out}")
