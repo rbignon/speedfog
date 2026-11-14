@@ -20,8 +20,8 @@ namespace StaticModBuilder;
 /// a file, so a second overlay shipping its own 05_dummy.tpf.dcx would hide the
 /// other's icons.
 ///
-/// Each icon is one square PNG from which two textures are derived by
-/// resizing: MENU_ItemIcon_&lt;iconId&gt; (160x160, the inventory list and quick
+/// Each icon is one PNG (a non-square one centered on a transparent square)
+/// from which two textures are derived by resizing: MENU_ItemIcon_&lt;iconId&gt; (160x160, the inventory list and quick
 /// slots) and MENU_Knowledge_&lt;iconId&gt; (the inventory's item detail panel;
 /// vanilla keeps those in menu/{hi,low}/00_solo.tpfbhd, far too big to ship).
 /// Both resolve by name through the same TPF name fallback. The large one is
@@ -109,17 +109,19 @@ public static class ItemIconPatcher
             return 0;
         }
 
-        // Every PNG is checked (header only) before any slow encode: a square
-        // of at least the small icon size. Smaller than the large size is
-        // accepted (older art), its large texture is then an upscale.
+        // Every PNG is checked (header only) before any slow encode: its longer
+        // side at least the small icon size. Any shape is accepted (the race
+        // item art is downloaded as is), centered on a transparent square
+        // below. Smaller than the large size is accepted too, its large
+        // texture is then an upscale.
         foreach (var path in pngPaths)
         {
             string? problem;
             try
             {
                 var info = Image.Identify(path);
-                problem = info.Width != info.Height || info.Width < iconSize
-                    ? $"is {info.Width}x{info.Height}, expected a square of at least {iconSize}x{iconSize}"
+                problem = Math.Max(info.Width, info.Height) < iconSize
+                    ? $"is {info.Width}x{info.Height}, expected at least {iconSize} pixels on its longer side"
                     : null;
             }
             catch (ImageFormatException e)
@@ -144,6 +146,11 @@ public static class ItemIconPatcher
         for (int i = 0; i < icons.Length; i++)
         {
             using var image = Image.Load<Rgba32>(pngPaths[i]);
+            if (image.Width != image.Height)
+            {
+                int side = Math.Max(image.Width, image.Height);
+                image.Mutate(x => x.Pad(side, side, Color.Transparent));
+            }
             if (image.Width < maxLargeSize)
             {
                 Console.WriteLine(

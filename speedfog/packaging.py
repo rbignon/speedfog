@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import tomllib
 from pathlib import Path
 
 
@@ -61,7 +62,10 @@ def stale_icon_overlay(
     data/plugins/halloween_icon_*.png and race_items_icon_*.png (the item ids
     come from race_items.toml). A host that has not re-run bootstrap since an
     icon or the catalog changed (or since the overlay was renamed) would ship
-    stale placeholders or no icons, with nothing to show for it. Nothing to
+    stale icons or no icons, with nothing to show for it. The race item icons
+    are downloaded by bootstrap (tools/fetch_race_item_icons.py), not tracked:
+    one missing for an [icons] name of the catalog means bootstrap has not
+    run since they left the repository, or its download failed. Nothing to
     check when neither the Halloween nor the race items plugin is enabled.
     """
     if not (halloween_enabled or race_items_enabled):
@@ -72,13 +76,29 @@ def stale_icon_overlay(
     rel_overlay = overlay.relative_to(project_root).as_posix()
     if not built:
         return [f"{rel_overlay}/ is missing or empty (icons overlay not built)"]
+    problems: list[str] = []
+    if race_items_enabled:
+        try:
+            with (plugins / "race_items.toml").open("rb") as fp:
+                icons = tomllib.load(fp).get("icons", {})
+        except (OSError, tomllib.TOMLDecodeError):
+            icons = {}
+        if not isinstance(icons, dict):
+            icons = {}  # malformed: load_race_items_catalog reports it
+        for icon in icons:
+            png = plugins / f"race_items_icon_{icon}.png"
+            if not png.is_file():
+                problems.append(
+                    f"{png.relative_to(project_root).as_posix()} is missing"
+                    " (downloaded by tools/bootstrap.py)"
+                )
     sources = [
         *plugins.glob("halloween_icon_*.png"),
         *plugins.glob("race_items_icon_*.png"),
         plugins / "race_items.toml",
     ]
     built_mtime = max(p.stat().st_mtime for p in built)
-    return [
+    return problems + [
         f"{rel_overlay}/ is older than its source "
         f"{source.relative_to(project_root).as_posix()}"
         for source in sorted(sources)

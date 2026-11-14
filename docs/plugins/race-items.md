@@ -123,30 +123,40 @@ where the table above says none.
 }
 ```
 
-## Replacing the icons
+## Icons
 
-The 11 icons ship as placeholder flat shapes. The art is replaced by dropping
-PNG files in, nothing else changes. For the graphic artist and for Roger:
+The 11 icons are images downloaded at bootstrap, not files of the repository.
+`tools/fetch_race_item_icons.py` lists one source per icon (`ICON_SOURCES`:
+URL and SHA-256) and downloads each into
+`data/plugins/race_items_icon_<icon>.png` (gitignored), `<icon>` being a name
+of the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`,
+`red_shell`, `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`,
+`flask_stopper`, `toxic_blossom` (ids 60385-60395; the three Rune Pouches
+share one icon).
 
-- **Format**: PNG, RGBA with a transparent background, square, at least
-  160x160; 1024x1024 asked of the artist, so sharper large icons stay one
-  setting away (below). One file per icon: every in-game texture is derived
-  from it by resizing.
-- **Files**: `data/plugins/race_items_icon_<icon>.png`, `<icon>` being a name of
-  the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
-  `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
-  `toxic_blossom` (ids 60385-60395; the three Rune Pouches share one icon).
-- **After the drop**: overwrite the files (never re-run
-  `tools/generate_race_item_icons.py` afterwards, it would overwrite the art),
-  re-run `tools/bootstrap.py` on the generation host (it also needs a re-run
-  after the rename to `speedfog-icons`; `speedfog` refuses to generate a
+- **When**: `tools/bootstrap.py` downloads them right before StaticModBuilder;
+  an icon already on disk with the expected hash is not downloaded again. A
+  failed download, or a file whose hash differs (the source changed), leaves
+  that icon's file as it was: the overlay is then built from the previous art,
+  or skipped when the file is missing. The rest of the bootstrap goes on (it
+  does not need the icons) and its last line says the icons are not ready;
+  rerun the bootstrap once the download works. `python
+  tools/fetch_race_item_icons.py` alone only refreshes the PNGs, not the
+  overlay (StaticModBuilder builds it, see halloween-icons.md for a direct
+  run).
+- **Format**: any PNG whose longer side is at least 160 pixels, ideally with
+  a transparent background. `ItemIconPatcher` centers each one on a
+  transparent square, then derives every in-game texture from it by
+  resizing. A missing or unreadable file, or one too small, makes
+  `ItemIconPatcher` skip the whole overlay with a warning.
+- **Changing an icon**: put the new URL and its SHA-256 (`sha256sum` of the
+  downloaded file) in `ICON_SOURCES`, re-run `tools/bootstrap.py` on the
+  generation host and regenerate the pools. `speedfog` refuses to generate a
   Halloween or race items seed while the overlay is missing or older than the
-  icon PNGs or `race_items.toml`; a missing or unreadable file, or one that is
-  not a square of at least 160x160, makes `ItemIconPatcher` skip the whole
-  overlay with a warning), regenerate the pools, then in speedfog-racing run
-  `uv run tools/sync_race_item_icons.py` and release the mod. A detailed
-  1024x1024 PNG can pass the 500 KB limit of the `check-added-large-files`
-  pre-commit hook: commit the drop with `SKIP=check-added-large-files`.
+  icon PNGs or `race_items.toml`, and a race items seed while an icon of the
+  catalog is missing (a host that pulled without re-running the bootstrap). speedfog-racing's own
+  `tools/fetch_race_item_icons.py` lists the same images for the racing mod's
+  overlay: change both, then release the mod.
 
 Each PNG becomes two textures, both found by name like any texture of the
 overlay:
@@ -168,8 +178,9 @@ large icons.
 The icons ship in the shared `data/mods/speedfog-icons/` overlay, together with
 the Halloween icons (see [halloween-icons.md](halloween-icons.md)): one
 `05_dummy.tpf.dcx` per variant (`menu/hi`, `menu/low`), shipped when Halloween
-or race items is enabled. With the flat placeholders it weighs 0.17 MB per
-seed (83 KB per variant).
+or race items is enabled. With the downloaded art it weighs 0.4 MB per seed
+(199 KB per variant, 2026-11-14; 83 KB with the former flat placeholders:
+the DCX compression of the BC7 textures depends on the art).
 
 ## Calibration values
 
@@ -219,7 +230,7 @@ Passes on seed 603810141, 2026-11-13:
   worked.
 - **Large icon.** The inventory's detail panel draws a separate texture,
   `MENU_Knowledge_<iconId>`, which the `05_dummy` overlay now ships too (see
-  Replacing the icons). A test build showed it resolves by name like the small
+  Icons). A test build showed it resolves by name like the small
   icon; the 1024x1024 build was checked in game (seed v7, 2026-11-13), the
   shipped 160x160 one is still to check.
 

@@ -233,9 +233,40 @@ public class ItemIconPatcherTests
         }
     }
 
+    [Fact]
+    public void A_non_square_icon_is_centered_on_a_transparent_square()
+    {
+        // Downloaded art comes in any shape: a 16x32 PNG becomes a 32x32
+        // texture with transparent 8-pixel bars left and right.
+        const int small = 32;
+        var variants = new[] { ("hi", small), ("low", small) };
+        var root = MakeTempDir();
+        try
+        {
+            var gameDir = MakeGameDir(root);
+            var (dataDir, colors) = MakeDataDir(root, halloweenSize: small, raceItemWidth: 16, raceItemHeight: 32);
+            var iconsDir = Path.Combine(root, "icons");
+            Directory.CreateDirectory(iconsDir);
+
+            Assert.Equal(52, ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants));
+            var tpf = TPF.Read(Path.Combine(iconsDir, "menu", "hi", "05_dummy.tpf.dcx"));
+            var banana = RaceItemsCatalog.Load(FindRaceItemsToml()).First(i => i.Icon == "banana");
+            var name = $"MENU_ItemIcon_{banana.IconId}";
+            AssertTexture(tpf, name, small, colors["race_items_icon_banana.png"]);
+            using var image = FrostEncoder.DecodeLevel(tpf.Textures.Single(t => t.Name == name).Bytes, 0);
+            Assert.Equal(0, image[1, small / 2].A);
+            Assert.Equal(0, image[small - 2, small / 2].A);
+            Assert.Equal(255, image[small / 2, 1].A);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
     [Theory]
     [InlineData(128, 128)] // below the 160x160 small icon
-    [InlineData(1024, 512)] // not square
+    [InlineData(100, 150)] // longer side still below it
     public void Patch_skips_the_whole_overlay_when_a_race_item_icon_has_a_bad_size(int width, int height)
     {
         var root = MakeTempDir();

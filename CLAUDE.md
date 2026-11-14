@@ -88,7 +88,7 @@ speedfog/
 │   │   ├── summer.toml      # Summer theme text catalogue (tracked)
 │   │   ├── halloween.toml   # Halloween theme text catalogue (tracked)
 │   │   ├── race_items.toml  # Race items catalog: icons, goods/SpEffect rows, flags, texts (tracked)
-│   │   ├── race_items_icon_<icon>.png  # Race item icon art (placeholders), 1024x1024 (the 160x160 textures are derived), one per [icons] name (tracked)
+│   │   ├── race_items_icon_<icon>.png  # Race item icon art, one per [icons] name, downloaded by tools/fetch_race_item_icons.py at bootstrap (gitignored; the 160x160 textures are derived)
 │   │   ├── halloween_decorations.toml  # Halloween gate decoration catalogue (bones, candelabras, candles; tracked)
 │   │   ├── halloween_icon_pumpkin_seed.png  # Golden Seed ("Pumpkin Seed") authored icon art, 160x160 (tracked)
 │   │   ├── halloween_icon_profane_tear.png  # Sacred Tear ("Profane Tear") authored icon art, 160x160 (tracked)
@@ -215,7 +215,7 @@ speedfog/
 │   ├── port_boss_arena_tags.py  # Port BAR data → data/boss_arena_tags.json
 │   ├── generate_title_screen.py  # Generate data/title_screen_overlay.png (title badge)
 │   ├── generate_halloween_icons.py  # Generate the placeholder Halloween item icon PNGs (data/plugins/)
-│   ├── generate_race_item_icons.py  # Generate the placeholder race item icon PNGs (data/plugins/; one-shot, never re-run over real art)
+│   ├── fetch_race_item_icons.py  # Download the race item icon PNGs (data/plugins/) from their pinned URL + SHA-256 (run by bootstrap.py)
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── diff_vanilla_snapshot.py  # Hash-diff an unpacked game dir against eldendata/Vanilla (game patch triage)
 │   ├── refresh_vanilla_snapshot.py  # Refresh the FogMod snapshot (eldendata/Vanilla) from the game dir (run automatically by bootstrap.py; manual runs for game-patch triage)
