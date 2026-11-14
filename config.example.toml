@@ -419,3 +419,11 @@ enabled = false
 # snowfall, enable [plugin.weather] with weather = "snow" and freeze_time = false.
 [plugin.winter]
 enabled = false
+
+# Race items: Mario Kart style items for speedfog-racing (goods, SpEffects,
+# EMEVD events and texts from data/plugins/race_items.toml, ids exported in
+# graph.json). The racing server and mod hand them out; on its own the seed
+# only defines them, nothing grants them. Their icons are downloaded at
+# bootstrap. enabled is the only setting.
+[plugin.race_items]
+enabled = false
