@@ -94,8 +94,8 @@ public static class SpeedFogIds
     public static readonly IdRange HalloweenJumpscareEvents =
         new("HalloweenJumpscareInjector", 755865600, 100);
 
-    /// <summary>One event per race item that has a use flag (slot n = goods id
-    /// - 1450800), plus the removal events at slot 50 + n.</summary>
+    /// <summary>A use event per usable race item goods (slot n = goods id
+    /// - 1450800) and a removal event per goods (slot 50 + n).</summary>
     public static readonly IdRange RaceItemEvents =
         new("RaceItemsPlugin", 755865700, 100);
 
@@ -175,9 +175,14 @@ public static class SpeedFogIds
     public const int RaceItemParamIdMin = 1450800;
     public const int RaceItemParamIdMax = 1450899;
 
+    /// <summary>Highest race item goods id: the goods rows and their marker
+    /// SpEffects (same id) sit below the effect slice, so a marker never takes
+    /// an effect's id.</summary>
+    public const int RaceItemGoodsIdMax = 1450819;
+
     /// <summary>SpEffectParam ids of the race items' effect rows (applied by
-    /// the racing mod): a slice of the param range above, the goods rows and
-    /// their markers taking the ids below it.</summary>
+    /// the racing mod): a slice of the param range above, right after the
+    /// goods ids.</summary>
     public const int RaceItemEffectIdMin = 1450820;
     public const int RaceItemEffectIdMax = 1450849;
 

@@ -105,7 +105,7 @@ public sealed record RaceItemsCatalog(IReadOnlyList<RaceItemGoods> Goods, IReadO
         var (icon, iconId) = ParseIcon(e, key, icons);
 
         int goodsId = TomlHelpers.ToInt(e, "goods_id", Prefix);
-        CheckRange("goods_id", key, goodsId, SpeedFogIds.RaceItemParamIdMin, SpeedFogIds.RaceItemParamIdMax);
+        CheckRange("goods_id", key, goodsId, SpeedFogIds.RaceItemParamIdMin, SpeedFogIds.RaceItemGoodsIdMax);
 
         int removeFlag = TomlHelpers.ToInt(e, "remove_flag", Prefix);
         CheckRange("remove_flag", key, removeFlag,

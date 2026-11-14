@@ -14,6 +14,9 @@ from typing import Any
 
 # Reserved ranges, see docs/event-flags.md.
 ID_RANGE = range(1450800, 1450900)  # EquipParamGoods and SpEffectParam
+# Goods ids (and their marker SpEffects) sit below the item effect SpEffects,
+# so a marker never takes an effect's id.
+GOODS_ID_RANGE = range(1450800, 1450820)
 EFFECT_ID_RANGE = range(1450820, 1450850)  # Item effect SpEffects
 USE_FLAG_RANGE = range(1050290100, 1050290200)
 REMOVE_FLAG_RANGE = range(1050290200, 1050290300)
@@ -44,10 +47,10 @@ def load_race_items_catalog(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
     ``icon_id``, ``goods``, ``effect_speffect``, ``duration_ms``).
 
     Raises:
-        ValueError: on a malformed catalog (duplicate key, goods id or effect
-            id, id or flag outside its reserved range, use_flag without marker
-            or the reverse, unknown icon or goods, effect on a goods that
-            cannot be used).
+        ValueError: on a malformed catalog (missing field, duplicate key,
+            goods id or effect id, id or flag outside its reserved range,
+            use_flag without marker or the reverse, unknown icon or goods,
+            effect on a goods that cannot be used).
     """
     with path.open("rb") as fp:
         data = tomllib.load(fp)
@@ -77,8 +80,10 @@ def load_race_items_catalog(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
     goods: dict[str, dict[str, Any]] = {}
     goods_ids: set[int] = set()
     for entry in goods_entries:
-        key, icon, goods_id, remove_flag = _required(
-            entry, "key", "icon", "goods_id", "remove_flag"
+        # name, info and caption are the goods' texts, written by the C#
+        # plugin: required here too, so both loaders reject the same catalogs.
+        key, icon, goods_id, remove_flag, *_texts = _required(
+            entry, "key", "icon", "goods_id", "remove_flag", "name", "info", "caption"
         )
         if key in goods:
             raise ValueError(f"race_items: duplicate goods key '{key}'")
@@ -86,7 +91,7 @@ def load_race_items_catalog(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
             raise ValueError(f"race_items: {key}: duplicate goods_id {goods_id}")
         if icon not in icons:
             raise ValueError(f"race_items: {key}: unknown icon '{icon}'")
-        _check_range("goods_id", key, goods_id, ID_RANGE)
+        _check_range("goods_id", key, goods_id, GOODS_ID_RANGE)
         _check_range("remove_flag", key, remove_flag, REMOVE_FLAG_RANGE)
 
         use_flag = entry.get("use_flag")

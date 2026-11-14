@@ -113,6 +113,9 @@ public class SpeedFogIdsTests
         Assert.True(SpeedFogIds.RaceItemEffectIdMin <= SpeedFogIds.RaceItemEffectIdMax);
         Assert.True(SpeedFogIds.RaceItemEffectIdMin >= SpeedFogIds.RaceItemParamIdMin);
         Assert.True(SpeedFogIds.RaceItemEffectIdMax <= SpeedFogIds.RaceItemParamIdMax);
+        // Goods ids (and their marker SpEffects) sit below the effect slice.
+        Assert.True(SpeedFogIds.RaceItemGoodsIdMax < SpeedFogIds.RaceItemEffectIdMin);
+        Assert.True(SpeedFogIds.RaceItemGoodsIdMax >= SpeedFogIds.RaceItemParamIdMin);
     }
 
     [Fact]

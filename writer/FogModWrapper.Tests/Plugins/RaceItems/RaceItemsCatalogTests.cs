@@ -114,6 +114,14 @@ public class RaceItemsCatalogTests
     }
 
     [Fact]
+    public void Rejects_goods_id_in_the_effect_slice()
+    {
+        // A usable goods at 1450820 would give a marker id an item effect can take.
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(Icons + Goods("a", 1450820)));
+        Assert.Contains("goods_id 1450820 outside 1450800-1450819", ex.Message);
+    }
+
+    [Fact]
     public void Rejects_use_flag_without_marker_and_marker_without_use_flag()
     {
         Assert.Throws<InvalidDataException>(() =>

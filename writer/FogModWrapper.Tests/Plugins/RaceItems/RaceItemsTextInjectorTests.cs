@@ -37,8 +37,8 @@ public class RaceItemsTextInjectorTests : IDisposable
         return dir;
     }
 
-    private static RaceItemGoods Item(int goodsId, string name, string info, string caption) =>
-        new("hammer", "hammer", 60390, name, info, caption, goodsId, 1050290107, 1050290207, null);
+    private static RaceItemGoods Goods(int goodsId, string name, string info, string caption) =>
+        new("race_item", "item_box", 60396, name, info, caption, goodsId, 1050290101, 1050290201, null);
 
     private static string ShippedCatalogPath()
     {
@@ -67,16 +67,16 @@ public class RaceItemsTextInjectorTests : IDisposable
         WriteVanillaBnd(gameDir, "engus");
         WriteVanillaBnd(gameDir, "frafr");
 
-        RaceItemsTextInjector.Apply(modDir, gameDir, new[] { Item(1450807, "Hammer", "Heavier.", "A hammer.") });
+        RaceItemsTextInjector.Apply(modDir, gameDir, new[] { Goods(1450801, "Race Item", "Held.", "A box.") });
 
         foreach (var lang in new[] { "engus", "frafr" })
         {
             var path = Path.Combine(modDir, "msg", lang, BndName);
-            Assert.Equal("Hammer", ReadFmg(path, "GoodsName.fmg").Entries.Single(e => e.ID == 1450807).Text);
-            Assert.Equal("Heavier.", ReadFmg(path, "GoodsInfo.fmg").Entries.Single(e => e.ID == 1450807).Text);
-            Assert.Equal("A hammer.", ReadFmg(path, "GoodsCaption.fmg").Entries.Single(e => e.ID == 1450807).Text);
+            Assert.Equal("Race Item", ReadFmg(path, "GoodsName.fmg").Entries.Single(e => e.ID == 1450801).Text);
+            Assert.Equal("Held.", ReadFmg(path, "GoodsInfo.fmg").Entries.Single(e => e.ID == 1450801).Text);
+            Assert.Equal("A box.", ReadFmg(path, "GoodsCaption.fmg").Entries.Single(e => e.ID == 1450801).Text);
             foreach (var other in new[] { "GoodsName_dlc01.fmg", "GoodsName_dlc02.fmg", "GoodsInfo_dlc01.fmg", "GoodsCaption_dlc01.fmg" })
-                Assert.DoesNotContain(ReadFmg(path, other).Entries, e => e.ID == 1450807);
+                Assert.DoesNotContain(ReadFmg(path, other).Entries, e => e.ID == 1450801);
         }
     }
 
@@ -104,12 +104,12 @@ public class RaceItemsTextInjectorTests : IDisposable
         var gameDir = Path.Combine(_root, "game");
         var modDir = Path.Combine(_root, "mod");
         WriteVanillaBnd(gameDir, "engus");
-        var items = new[] { Item(1450807, "Hammer", "a", "b") };
+        var goods = new[] { Goods(1450801, "Race Item", "a", "b") };
 
-        RaceItemsTextInjector.Apply(modDir, gameDir, items);
-        RaceItemsTextInjector.Apply(modDir, gameDir, new[] { Item(1450807, "Hammer 2", "a", "b") });
+        RaceItemsTextInjector.Apply(modDir, gameDir, goods);
+        RaceItemsTextInjector.Apply(modDir, gameDir, new[] { Goods(1450801, "Race Item 2", "a", "b") });
 
         var fmg = ReadFmg(Path.Combine(modDir, "msg", "engus", BndName), "GoodsName.fmg");
-        Assert.Equal("Hammer 2", fmg.Entries.Single(e => e.ID == 1450807).Text);
+        Assert.Equal("Race Item 2", fmg.Entries.Single(e => e.ID == 1450801).Text);
     }
 }

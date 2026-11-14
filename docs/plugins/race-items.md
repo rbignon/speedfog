@@ -37,10 +37,11 @@ warning.
   is enabled.
 
 The ranges are reserved in `SpeedFogIds` and documented in
-`docs/event-flags.md`: goods and SpEffect ids 1450800-1450899 (item effect
-SpEffects in 1450820-1450849), use flags 1050290100-1050290199, removal flags
-1050290200-1050290299 (saved category 1050290), common.emevd events
-755865700-755865799, icon ids 60385-60399.
+`docs/event-flags.md`: goods and SpEffect ids 1450800-1450899 (goods ids and
+their markers in 1450800-1450819, item effect SpEffects in 1450820-1450849),
+use flags 1050290100-1050290199, removal flags 1050290200-1050290299 (saved
+category 1050290), common.emevd events 755865700-755865799, icon ids
+60385-60399.
 
 ## Goods and items
 
@@ -141,8 +142,8 @@ or, for the Mushroom and the Rune Pouches, to the sender.
 Present only when the plugin is enabled (`GRAPH_JSON_VERSION` 4.12; 4.11
 had one goods per item). `goods` has one entry per goods key, `items` one per
 item key, each item naming its goods by key; `use_flag`, `effect_speffect`
-and `duration_ms` are `null` where the tables above say none. Excerpt (every
-item is listed):
+and `duration_ms` are `null` where the tables above say none. The real value
+lists every item; this excerpt shows two:
 
 ```json
 "race_items": {
@@ -204,8 +205,8 @@ large icons.
 The icons ship in the shared `data/mods/speedfog-icons/` overlay, together with
 the Halloween icons (see [halloween-icons.md](halloween-icons.md)): one
 `05_dummy.tpf.dcx` per variant (`menu/hi`, `menu/low`), shipped when Halloween
-or race items is enabled. With the flat placeholders it weighs 0.17 MB per
-seed (83 KB per variant).
+or race items is enabled. With the flat placeholders it weighs about 0.17 MB
+per seed (83 KB per variant), measured with 11 icons, before the item box.
 
 ## Calibration values
 

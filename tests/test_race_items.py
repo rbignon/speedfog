@@ -68,9 +68,8 @@ def test_shipped_catalog_ids_follow_the_numbering():
 
 # Vanilla SpEffects an effect row cycles, with their effectEndurance read from
 # the 1.17 regulation (re-check after a game patch): 102360 is the Viridian
-# Hidden Tear. A cycled row missing here adds no tail: 4101 (Lightning's slow
-# walk) lasts 0.1 s.
-VANILLA_ENDURANCE = {102360: 15}
+# Hidden Tear. 4101 (Lightning's slow walk) lasts 0.1 s, a negligible tail.
+VANILLA_ENDURANCE = {102360: 15, 4101: 0}
 
 
 def test_duration_matches_the_speffect_that_carries_it():
@@ -80,7 +79,11 @@ def test_duration_matches_the_speffect_that_carries_it():
         if "effectEndurance" in fields:
             # A cycled vanilla row lasts its own endurance after its last
             # application.
-            tail = VANILLA_ENDURANCE.get(fields.get("cycleOccurrenceSpEffectId"), 0)
+            tail = 0
+            cycled = fields.get("cycleOccurrenceSpEffectId")
+            if cycled is not None:
+                assert cycled in VANILLA_ENDURANCE, item["key"]
+                tail = VANILLA_ENDURANCE[cycled]
             assert fields["effectEndurance"] + tail == duration, item["key"]
         elif item["key"] == "ink":
             # Overlay only: no SpEffect row.
@@ -171,6 +174,23 @@ def test_loader_rejects_duplicate_goods_id(tmp_path):
 def test_loader_rejects_id_outside_reserved_range(tmp_path):
     path = _write_catalog(tmp_path, _goods(goods_id=1450900))
     with pytest.raises(ValueError, match="outside"):
+        load_race_items_catalog(path)
+
+
+def test_loader_rejects_a_goods_id_in_the_effect_slice(tmp_path):
+    # A usable goods at 1450820 would give a marker id an item effect can take.
+    path = _write_catalog(tmp_path, _goods(goods_id=1450820))
+    with pytest.raises(ValueError, match="goods_id 1450820 outside 1450800-1450819"):
+        load_race_items_catalog(path)
+
+
+@pytest.mark.parametrize("field", ["name", "info", "caption"])
+def test_loader_rejects_a_goods_without_its_texts(tmp_path, field):
+    goods = "\n".join(
+        line for line in _goods().split("\n") if not line.startswith(f"{field} =")
+    )
+    path = _write_catalog(tmp_path, goods)
+    with pytest.raises(ValueError, match=f"missing required field '{field}'"):
         load_race_items_catalog(path)
 
 

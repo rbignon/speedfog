@@ -50,10 +50,10 @@ public static class RaceItemsRegulationInjector
             $"race_items: injected {catalog.Goods.Count} goods row(s) and {effects} effect SpEffect row(s)");
     }
 
-    private static void AddGoodsRow(PARAM goods, RaceItemGoods item)
+    private static void AddGoodsRow(PARAM goods, RaceItemGoods g)
     {
-        var row = GameEditor.AddRow(goods, item.GoodsId, GoodsTemplateId);
-        bool usable = item.Marker != null;
+        var row = GameEditor.AddRow(goods, g.GoodsId, GoodsTemplateId);
+        bool usable = g.Marker != null;
 
         Set(row, "EquipParamGoods", "goodsType", 0);
         Set(row, "EquipParamGoods", "replaceItemId", -1);
@@ -63,9 +63,9 @@ public static class RaceItemsRegulationInjector
         Set(row, "EquipParamGoods", "isDeposit", 0);
         Set(row, "EquipParamGoods", "isDrop", 0);
         Set(row, "EquipParamGoods", "sellValue", -1);
-        Set(row, "EquipParamGoods", "iconId", item.IconId);
+        Set(row, "EquipParamGoods", "iconId", g.IconId);
         Set(row, "EquipParamGoods", "refCategory", usable ? 2 : 0);
-        Set(row, "EquipParamGoods", "refId_default", usable ? item.Marker!.Id : -1);
+        Set(row, "EquipParamGoods", "refId_default", usable ? g.Marker!.Id : -1);
         Set(row, "EquipParamGoods", "isConsume", usable ? 1 : 0);
         Set(row, "EquipParamGoods", "isAutoEquip", usable ? 1 : 0);
         // The Physick template refills at a grace and shows a tutorial: a used
