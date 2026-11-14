@@ -45,9 +45,6 @@ obj/
 *~
 
 # SpeedFog specific
-# Race item icons, downloaded by tools/fetch_race_item_icons.py (bootstrap)
-data/plugins/race_items_icon_*.png
-data/plugins/race_items_icon_*.png.part
 seeds/
 config.toml
 graph.json

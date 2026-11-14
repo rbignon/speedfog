@@ -22,8 +22,6 @@ This script extracts:
   - extracted to tools/witchybnd/ (downloaded lazily when scripts need repacking)
   - repacks data/mods-src/speedfog/script/*-luabnd-dcx/ into data/mods/speedfog/script/
 - Winter mod (StaticModBuilder --winter-dir): data/mods/speedfog-winter/, skip with --no-winter
-- Race item icons: downloaded into data/plugins/ (tools/fetch_race_item_icons.py,
-  pinned URL + SHA-256), then built into data/mods/speedfog-icons/
 
 Prerequisites:
 - sfextract (dotnet tool): dotnet tool install -g sfextract
@@ -50,7 +48,6 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-import fetch_race_item_icons
 import refresh_vanilla_snapshot
 
 # Project root (parent of tools/)
@@ -90,12 +87,6 @@ WINTER_OVERLAY_ABSENT = (
 WINTER_NOT_BUILT = (
     "Winter mod not built (see WINTER FAILED above); seeds enabling "
     "[plugin.winter] will refuse to package"
-)
-ICONS_NOT_READY = (
-    "Race item icons not all downloaded (see above): the icons overlay lacks "
-    "them or carries their previous art; rerun the bootstrap once the download "
-    "works (seeds enabling [plugin.race_items] refuse to generate while an "
-    "icon is missing)"
 )
 
 # Files to extract from eldendata/Base/ to data/
@@ -848,26 +839,6 @@ def copy_oodle_dll(game_dir: Path, force: bool = False) -> bool:
     return True
 
 
-def download_race_item_icons() -> bool:
-    """Download the race item icons ItemIconPatcher reads (gitignored art).
-
-    False when an icon could not be downloaded or does not match its hash:
-    that icon's file stays as it was. StaticModBuilder then builds the icons
-    overlay from the previous art, or skips it entirely (Halloween icons
-    included) when the file is missing, and seed generation refuses a race
-    items pool while an icon is missing (stale_icon_overlay). The rest of the
-    bootstrap does not need the icons, so main() carries on and repeats
-    ICONS_NOT_READY as the last line.
-    """
-    downloaded, problems = fetch_race_item_icons.fetch_icons(DATA_DEST / "plugins")
-    for line in problems:
-        print_error(line)
-    if problems:
-        return False
-    print_ok(f"Race item icons ready ({downloaded} downloaded)")
-    return True
-
-
 def run_static_mod_builder(game_dir: Path, winter: bool = True) -> tuple[bool, bool]:
     """Run StaticModBuilder to generate the static mod (e.g., patched animations).
 
@@ -1256,9 +1227,7 @@ def main() -> int:
 
     # Run StaticModBuilder and WitchyBND to generate the static mod
     winter_not_built = False
-    icons_not_ready = False
     if success and not args.skip_static_mod:
-        icons_not_ready = not download_race_item_icons()
         static_ok, winter_not_built = run_static_mod_builder(
             args.game_dir, winter=not args.no_winter
         )
@@ -1291,20 +1260,15 @@ def main() -> int:
         print()
         print("You can now generate runs with:")
         print("  uv run speedfog config.toml --logs")
-        if winter_not_built or icons_not_ready:
-            print()
         if winter_not_built:
+            print()
             print_error(WINTER_NOT_BUILT)
-        if icons_not_ready:
-            print_error(ICONS_NOT_READY)
         return 0
     else:
         print()
         print_error("Setup failed")
         if winter_not_built:
             print_error(WINTER_NOT_BUILT)
-        if icons_not_ready:
-            print_error(ICONS_NOT_READY)
         return 1
 
 

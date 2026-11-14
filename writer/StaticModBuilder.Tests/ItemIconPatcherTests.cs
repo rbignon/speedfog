@@ -135,11 +135,7 @@ public class ItemIconPatcherTests
         return (Path.Combine(root, "data"), colors);
     }
 
-    /// <summary>
-    /// The texture exists, decodes at size x size, and carries the source PNG's
-    /// colour at its centre (alpha within BC7's loss: a block mixing the
-    /// transparent margin with opaque pixels decodes at about 253).
-    /// </summary>
+    /// <summary>The texture exists, decodes at size x size, and carries the source PNG's colour.</summary>
     private static void AssertTexture(TPF tpf, string name, int size, Rgba32 color)
     {
         var texture = Assert.Single(tpf.Textures, t => t.Name == name);
@@ -148,7 +144,7 @@ public class ItemIconPatcherTests
         var pixel = image[size / 2, size / 2];
         Assert.True(
             Math.Abs(pixel.R - color.R) <= 2 && Math.Abs(pixel.G - color.G) <= 2
-                && Math.Abs(pixel.B - color.B) <= 2 && pixel.A >= 250,
+                && Math.Abs(pixel.B - color.B) <= 2 && pixel.A == 255,
             $"{name}: {pixel} instead of {color}");
     }
 
@@ -237,79 +233,9 @@ public class ItemIconPatcherTests
         }
     }
 
-    [Fact]
-    public void A_race_item_icon_gets_a_margin_and_a_halloween_one_does_not()
-    {
-        // Downloaded art fills its canvas: a 16x32 opaque race item PNG becomes
-        // a 40x40 square (its 32 px side spans 80%), so at 32x32 transparent
-        // bars of 9.6 px left and right and 3.2 px top and bottom. The
-        // Halloween PNGs (opaque squares) keep their edge-to-edge art.
-        const int small = 32;
-        var variants = new[] { ("hi", small), ("low", small) };
-        var root = MakeTempDir();
-        try
-        {
-            var gameDir = MakeGameDir(root);
-            var (dataDir, colors) = MakeDataDir(root, halloweenSize: small, raceItemWidth: 16, raceItemHeight: 32);
-            var iconsDir = Path.Combine(root, "icons");
-            Directory.CreateDirectory(iconsDir);
-
-            Assert.Equal(52, ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants));
-            var tpf = TPF.Read(Path.Combine(iconsDir, "menu", "hi", "05_dummy.tpf.dcx"));
-            var banana = RaceItemsCatalog.Load(FindRaceItemsToml()).First(i => i.Icon == "banana");
-            var name = $"MENU_ItemIcon_{banana.IconId}";
-            AssertTexture(tpf, name, small, colors["race_items_icon_banana.png"]);
-            using (var image = FrostEncoder.DecodeLevel(tpf.Textures.Single(t => t.Name == name).Bytes, 0))
-            {
-                // Near zero, not zero: a BC7 block holding the margin's edge
-                // mixes it with opaque pixels.
-                Assert.True(image[1, small / 2].A < 16);
-                Assert.True(image[small - 2, small / 2].A < 16);
-                Assert.True(image[small / 2, 1].A < 16);
-                Assert.True(image[small / 2, small - 2].A < 16);
-            }
-            var seed = $"MENU_ItemIcon_{SpeedFogIds.HalloweenGoldenSeedIcon}";
-            using (var image = FrostEncoder.DecodeLevel(tpf.Textures.Single(t => t.Name == seed).Bytes, 0))
-            {
-                Assert.Equal(255, image[1, 1].A);
-            }
-        }
-        finally
-        {
-            Directory.Delete(root, true);
-        }
-    }
-
-    [Fact]
-    public void FitToSquare_crops_to_the_visible_pixels_before_the_margin()
-    {
-        // A 10x4 opaque bar inside a mostly empty 100x60 canvas: only the bar
-        // counts, so the square is 13x13 (10 / 0.8, rounded up).
-        using var image = new Image<Rgba32>(100, 60, new Rgba32(0, 0, 0, 0));
-        for (int y = 30; y < 34; y++)
-        {
-            for (int x = 70; x < 80; x++)
-            {
-                image[x, y] = new Rgba32(200, 10, 10, 255);
-            }
-        }
-
-        ItemIconPatcher.FitToSquare(image, 0.8);
-
-        Assert.Equal((13, 13), (image.Width, image.Height));
-        Assert.Equal(255, image[6, 6].A);
-        Assert.Equal(0, image[0, 6].A);
-        Assert.Equal(0, image[6, 0].A);
-
-        // Nothing visible: nothing to fit.
-        using var empty = new Image<Rgba32>(20, 10, new Rgba32(0, 0, 0, 0));
-        ItemIconPatcher.FitToSquare(empty, 0.8);
-        Assert.Equal((20, 10), (empty.Width, empty.Height));
-    }
-
     [Theory]
     [InlineData(128, 128)] // below the 160x160 small icon
-    [InlineData(100, 150)] // longer side still below it
+    [InlineData(1024, 512)] // not square
     public void Patch_skips_the_whole_overlay_when_a_race_item_icon_has_a_bad_size(int width, int height)
     {
         var root = MakeTempDir();

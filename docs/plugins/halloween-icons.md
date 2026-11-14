@@ -80,15 +80,11 @@ the two Halloween icons.
    runs at bootstrap, not per-seed): reads the icon PNGs from
    `data/plugins/` (the two Halloween PNGs, then
    `race_items_icon_<icon>.png` for every distinct icon of the race items
-   catalog's `[icons]`, read through `RaceItemsCatalog.Load`, downloaded by
-   the bootstrap), checks that each one's longer side is at least 160
-   pixels, centers each non-square one on a transparent square (a race
-   item icon is first cropped to its visible pixels and given a margin,
-   see race-items.md "Icons"), resizes
-   each to the two texture
+   catalog's `[icons]`, read through `RaceItemsCatalog.Load`), checks that
+   each is a square of at least 160x160, resizes each to the two texture
    sizes (160x160 `MENU_ItemIcon_<id>` and `MENU_Knowledge_<id>`, the
    large one reusing the small encode, see
-   [race-items.md](race-items.md) "Icons") and encodes each
+   [race-items.md](race-items.md) "Replacing the icons") and encodes each
    texture once to raw BC7 blocks (BcEncoder, `Balanced`
    quality, `IsParallel = false`, same Wine-crash workaround as
    `TitleScreenPatcher`), then for each of `menu/{hi,low}`: reads the
@@ -155,11 +151,10 @@ replacing the original Pillow placeholders). 160x160 matches every
 vanilla item icon's size, so the small icon (`MENU_ItemIcon_<id>`) is the
 art as drawn, and so is the large icon of the inventory's detail panel
 (`MENU_Knowledge_<id>`, 160x160 too, blurrier than the vanilla large icons;
-see race-items.md "Icons").
-`ItemIconPatcher` accepts any PNG whose longer side is at least 160 pixels
-(a non-square one is centered on a transparent square) and derives both
-textures from it; it warns and skips the whole overlay if a PNG is missing,
-unreadable or smaller than that.
+see race-items.md "Replacing the icons").
+`ItemIconPatcher` accepts any square PNG of at least 160x160 and derives
+both textures from it; it warns and skips the whole overlay if a PNG is
+missing, unreadable, not square or smaller than that.
 
 `tools/generate_halloween_icons.py` regenerates the ORIGINAL flat
 placeholders (Pillow only, no fonts). Running it now OVERWRITES the
@@ -170,8 +165,7 @@ mistake.
 To replace the art again:
 
 1. Overwrite the PNGs under `data/plugins/` with authored art (same
-   filenames, RGBA, at least 160 pixels on the longer side; square avoids
-   the transparent bars a non-square one gets).
+   filenames, square RGBA, at least 160x160).
 2. Re-run `tools/bootstrap.py`, or invoke `StaticModBuilder` directly
    with `--icons-dir data/mods/speedfog-icons --data-dir data`
    (same shape as the title screen re-run in title-screen.md).

@@ -476,7 +476,6 @@ def test_main_ends_with_the_winter_line_when_the_winter_mod_is_not_built(
     )
     monkeypatch.setattr(bootstrap, "copy_oodle_dll", lambda game_dir, force: True)
     monkeypatch.setattr(bootstrap, "ensure_modengine", lambda force: True)
-    monkeypatch.setattr(bootstrap, "download_race_item_icons", lambda: True)
     monkeypatch.setattr(
         bootstrap, "run_static_mod_builder", lambda game_dir, winter: (True, True)
     )
@@ -488,40 +487,3 @@ def test_main_ends_with_the_winter_line_when_the_winter_mod_is_not_built(
     lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
     assert bootstrap.WINTER_NOT_BUILT in lines[-1]
     assert ("Setup complete!" in "\n".join(lines)) is scripts_ok
-
-
-def test_main_carries_on_without_the_race_item_icons_and_says_so_last(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    # The icons only feed the icons overlay: a failed download must not skip
-    # the static mod, the script repack or the cache warm.
-    ran: list[str] = []
-    monkeypatch.setattr(
-        "sys.argv", ["bootstrap.py", "--game-dir", "Game", "--no-refresh"]
-    )
-    monkeypatch.setattr(bootstrap, "copy_oodle_dll", lambda game_dir, force: True)
-    monkeypatch.setattr(bootstrap, "ensure_modengine", lambda force: True)
-    monkeypatch.setattr(bootstrap, "download_race_item_icons", lambda: False)
-    monkeypatch.setattr(
-        bootstrap,
-        "run_static_mod_builder",
-        lambda game_dir, winter: ran.append("static") or (True, False),
-    )
-    monkeypatch.setattr(
-        bootstrap,
-        "build_static_mod_scripts",
-        lambda force: ran.append("scripts") or True,
-    )
-    monkeypatch.setattr(
-        bootstrap,
-        "warm_itemrando_cache",
-        lambda game_dir: ran.append("cache") or True,
-    )
-
-    assert bootstrap.main() == 0
-
-    assert ran == ["static", "scripts", "cache"]
-    lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
-    assert bootstrap.ICONS_NOT_READY in lines[-1]
-    assert bootstrap.WINTER_NOT_BUILT not in "\n".join(lines)

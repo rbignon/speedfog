@@ -554,8 +554,6 @@ def _make_icon_tree(root: Path, overlay_mtime: float, source_mtime: float) -> No
     for source in sources:
         source.write_bytes(b"x")
         os.utime(source, (source_mtime, source_mtime))
-    (plugins / "race_items.toml").write_text("[icons]\nbanana = 60387\n")
-    os.utime(plugins / "race_items.toml", (source_mtime, source_mtime))
     if overlay_mtime:
         tpf = root / "data" / "mods" / "speedfog-icons" / "menu" / "05_dummy.tpf.dcx"
         tpf.parent.mkdir(parents=True)
@@ -589,44 +587,6 @@ def test_stale_icon_overlay_flags_an_overlay_older_than_an_icon(
     assert len(problems) == 3
     assert any("race_items_icon_banana.png" in p and "older" in p for p in problems)
     assert any("race_items.toml" in p for p in problems)
-
-
-def test_stale_icon_overlay_flags_a_race_item_icon_not_downloaded(
-    tmp_path: Path,
-) -> None:
-    # A host pulled the commit that untracked the icons without rerunning
-    # bootstrap: its old overlay is newer than every remaining source.
-    _make_icon_tree(tmp_path, overlay_mtime=3_000, source_mtime=2_000)
-    (tmp_path / "data" / "plugins" / "race_items_icon_banana.png").unlink()
-
-    problems = stale_icon_overlay(
-        tmp_path, halloween_enabled=False, race_items_enabled=True
-    )
-
-    assert problems == [
-        "data/plugins/race_items_icon_banana.png is missing"
-        " (downloaded by tools/bootstrap.py)"
-    ]
-    # Only the race items plugin needs them.
-    assert (
-        stale_icon_overlay(tmp_path, halloween_enabled=True, race_items_enabled=False)
-        == []
-    )
-
-
-@pytest.mark.parametrize("catalog", ["[icons", "icons = 5", 'icons = "ab"'])
-def test_stale_icon_overlay_leaves_a_malformed_catalog_to_the_catalog_load(
-    tmp_path: Path, catalog: str
-) -> None:
-    _make_icon_tree(tmp_path, overlay_mtime=3_000, source_mtime=2_000)
-    toml = tmp_path / "data" / "plugins" / "race_items.toml"
-    toml.write_text(catalog + "\n")
-    os.utime(toml, (2_000, 2_000))
-
-    assert (
-        stale_icon_overlay(tmp_path, halloween_enabled=False, race_items_enabled=True)
-        == []
-    )
 
 
 def test_stale_icon_overlay_accepts_a_fresh_overlay_and_ignores_unneeded_ones(
