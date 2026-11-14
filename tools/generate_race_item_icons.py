@@ -68,6 +68,9 @@ CILIA = (234, 244, 200, 255)
 TOXIC = (156, 222, 64, 255)
 STEM_GREEN = (70, 150, 70, 255)
 LEAF_DARK = (44, 104, 50, 255)
+BOX_FRONT = (36, 76, 196, 255)
+BOX_SIDE = (22, 46, 132, 255)
+BOX_TOP = (74, 120, 232, 255)
 
 
 class ScaledDraw:
@@ -357,6 +360,31 @@ def draw_toxic_blossom(draw: ScaledDraw) -> None:
         draw.ellipse((x - r / 2, y - r / 2, x - r / 6, y - r / 6), fill=WHITE)
 
 
+def draw_item_box(draw: ScaledDraw) -> None:
+    """A closed mystery box seen from above: gold rim, blue faces, a white "?"."""
+    front = [(24, 54), (108, 54), (108, 132), (24, 132)]
+    side = [(108, 54), (136, 34), (136, 112), (108, 132)]
+    top = [(24, 54), (52, 34), (136, 34), (108, 54)]
+    outlined(draw, side, BOX_SIDE)
+    outlined(draw, front, BOX_FRONT)
+    outlined(draw, top, BOX_TOP)
+    # gold rim: a lid band and a base band, wrapping the front and the side
+    outlined(draw, [(24, 54), (108, 54), (108, 68), (24, 68)], GOLD, width=3)
+    outlined(draw, [(108, 54), (136, 34), (136, 48), (108, 68)], GOLD_DARK, width=3)
+    outlined(draw, [(24, 120), (108, 120), (108, 132), (24, 132)], GOLD, width=3)
+    outlined(draw, [(108, 120), (136, 100), (136, 112), (108, 132)], GOLD_DARK, width=3)
+    draw.line([(28, 59), (104, 59)], fill=GOLD_LIGHT, width=3)
+    hook = [*ellipse_arc((65, 87), (17, 10), 180, 430, steps=40), (66, 99)]
+    ends = (hook[0], hook[-1])
+    draw.line(hook, fill=OUTLINE, width=15, joint="curve")
+    for x, y in ends:
+        draw.ellipse((x - 7.5, y - 7.5, x + 7.5, y + 7.5), fill=OUTLINE)
+    draw.line(hook, fill=WHITE, width=9, joint="curve")
+    for x, y in ends:
+        draw.ellipse((x - 4.5, y - 4.5, x + 4.5, y + 4.5), fill=WHITE)
+    draw.ellipse((60, 108, 72, 120), fill=WHITE, outline=OUTLINE, width=3)
+
+
 ICONS: dict[str, Callable[[ScaledDraw], None]] = {
     "shield": draw_shield,
     "rune_pouch": draw_rune_pouch,
@@ -369,6 +397,7 @@ ICONS: dict[str, Callable[[ScaledDraw], None]] = {
     "lightning": draw_lightning,
     "flask_stopper": draw_flask_stopper,
     "toxic_blossom": draw_toxic_blossom,
+    "item_box": draw_item_box,
 }
 
 
