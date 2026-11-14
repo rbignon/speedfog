@@ -49,8 +49,9 @@ Two goods carry every item. A runner holds at most one item, so at most one of
 the two goods is ever in the inventory. A single usable goods keeps the quick
 slots clean: one goods per item filled a slot with each item ever granted.
 The Race Item shows its own icon, the item box, until the racing mod writes
-the held item's icon id into its EquipParamGoods row (in memory, at each grant
-and each game load); the race overlay names the held item.
+the held item's icon id into its EquipParamGoods row (in memory, before each
+grant's spawn and before each inventory report, which a loading exit or a
+reconnection while connected triggers); the race overlay names the held item.
 
 ### Goods
 
