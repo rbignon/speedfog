@@ -145,10 +145,13 @@ share one icon).
   overlay (StaticModBuilder builds it, see halloween-icons.md for a direct
   run).
 - **Format**: any PNG whose longer side is at least 160 pixels, ideally with
-  a transparent background. `ItemIconPatcher` centers each one on a
-  transparent square, then derives every in-game texture from it by
-  resizing. A missing or unreadable file, or one too small, makes
-  `ItemIconPatcher` skip the whole overlay with a warning.
+  a transparent background. `ItemIconPatcher` crops each one to its visible
+  pixels and centers them on a transparent square with a margin, their longer
+  side spanning 80% of it (`RACE_ICON_FILL`: the downloaded art fills its
+  whole canvas, which the game crops when drawn edge to edge; the former
+  placeholders spanned 71-90%, median 78%), then derives every in-game
+  texture from it by resizing. A missing or unreadable file, or one too
+  small, makes `ItemIconPatcher` skip the whole overlay with a warning.
 - **Changing an icon**: put the new URL and its SHA-256 (`sha256sum` of the
   downloaded file) in `ICON_SOURCES`, re-run `tools/bootstrap.py` on the
   generation host and regenerate the pools. `speedfog` refuses to generate a
@@ -178,8 +181,8 @@ large icons.
 The icons ship in the shared `data/mods/speedfog-icons/` overlay, together with
 the Halloween icons (see [halloween-icons.md](halloween-icons.md)): one
 `05_dummy.tpf.dcx` per variant (`menu/hi`, `menu/low`), shipped when Halloween
-or race items is enabled. With the downloaded art it weighs 0.4 MB per seed
-(199 KB per variant, 2026-11-14; 83 KB with the former flat placeholders:
+or race items is enabled. With the downloaded art it weighs 0.3 MB per seed
+(153 KB per variant, 2026-11-14; 83 KB with the former flat placeholders:
 the DCX compression of the BC7 textures depends on the art).
 
 ## Calibration values

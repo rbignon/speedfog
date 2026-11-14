@@ -20,8 +20,9 @@ namespace StaticModBuilder;
 /// a file, so a second overlay shipping its own 05_dummy.tpf.dcx would hide the
 /// other's icons.
 ///
-/// Each icon is one PNG (a non-square one centered on a transparent square)
-/// from which two textures are derived by resizing: MENU_ItemIcon_&lt;iconId&gt; (160x160, the inventory list and quick
+/// Each icon is one PNG (a non-square one centered on a transparent square; a
+/// race item one cropped to its visible pixels and given a margin first) from
+/// which two textures are derived by resizing: MENU_ItemIcon_&lt;iconId&gt; (160x160, the inventory list and quick
 /// slots) and MENU_Knowledge_&lt;iconId&gt; (the inventory's item detail panel;
 /// vanilla keeps those in menu/{hi,low}/00_solo.tpfbhd, far too big to ship).
 /// Both resolve by name through the same TPF name fallback. The large one is
@@ -51,29 +52,36 @@ public static class ItemIconPatcher
     // small encode.
     private static readonly (string Name, int LargeIconSize)[] Variants =
         { ("hi", ICON_SIZE), ("low", ICON_SIZE) };
+    // Downloaded race item art fills its whole canvas, and the game crops the
+    // edges of an icon drawn edge to edge. Each race item icon is cropped to
+    // its visible pixels, then centered so its longer side spans this share
+    // of the square (the former placeholders spanned 71-90%, median 78%).
+    // The authored Halloween icons keep their own margins.
+    private const double RACE_ICON_FILL = 0.8;
 
     // The two Halloween icons. The per-seed injector repoints
     // EquipParamGoods.iconId to these numbers (see HalloweenIconInjector).
-    private static readonly (int IconId, string Png)[] HalloweenIcons =
+    private static readonly (int IconId, string Png, bool Fit)[] HalloweenIcons =
     {
-        (SpeedFogIds.HalloweenGoldenSeedIcon, "halloween_icon_pumpkin_seed.png"),
-        (SpeedFogIds.HalloweenSacredTearIcon, "halloween_icon_profane_tear.png"),
+        (SpeedFogIds.HalloweenGoldenSeedIcon, "halloween_icon_pumpkin_seed.png", false),
+        (SpeedFogIds.HalloweenSacredTearIcon, "halloween_icon_profane_tear.png", false),
     };
 
     /// <summary>
     /// The Halloween icons followed by the race item icons, one entry per
     /// distinct (icon, icon id) of the race items catalog
-    /// (dataDir/plugins/race_items.toml, [icons]): icon id and source PNG
-    /// (race_items_icon_&lt;icon&gt;.png) under dataDir/plugins.
+    /// (dataDir/plugins/race_items.toml, [icons]): icon id, source PNG
+    /// (race_items_icon_&lt;icon&gt;.png) under dataDir/plugins, and whether the
+    /// art is refitted with a margin (FitToSquare, race item icons only).
     /// </summary>
-    private static (int IconId, string Png)[] LoadIcons(string dataDir)
+    private static (int IconId, string Png, bool Fit)[] LoadIcons(string dataDir)
     {
         var catalog = RaceItemsCatalog.Load(Path.Combine(dataDir, "plugins", "race_items.toml"));
         var raceIcons = catalog
             .Select(item => (item.Icon, item.IconId))
             .Distinct()
             .OrderBy(icon => icon.IconId)
-            .Select(icon => (icon.IconId, $"race_items_icon_{icon.Icon}.png"));
+            .Select(icon => (icon.IconId, $"race_items_icon_{icon.Icon}.png", true));
         return HalloweenIcons.Concat(raceIcons).ToArray();
     }
 
@@ -146,7 +154,11 @@ public static class ItemIconPatcher
         for (int i = 0; i < icons.Length; i++)
         {
             using var image = Image.Load<Rgba32>(pngPaths[i]);
-            if (image.Width != image.Height)
+            if (icons[i].Fit)
+            {
+                FitToSquare(image, RACE_ICON_FILL);
+            }
+            else if (image.Width != image.Height)
             {
                 int side = Math.Max(image.Width, image.Height);
                 image.Mutate(x => x.Pad(side, side, Color.Transparent));
@@ -261,6 +273,35 @@ public static class ItemIconPatcher
             count++;
         }
         return count;
+    }
+
+    /// <summary>
+    /// Crop the image to its visible pixels (alpha above zero) and center them
+    /// on a transparent square sized so their longer side spans
+    /// <paramref name="fill"/> of it. A fully transparent image is left as is.
+    /// </summary>
+    internal static void FitToSquare(Image<Rgba32> image, double fill)
+    {
+        int left = image.Width, top = image.Height, right = -1, bottom = -1;
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height; y++)
+            {
+                var row = accessor.GetRowSpan(y);
+                for (int x = 0; x < row.Length; x++)
+                {
+                    if (row[x].A == 0) continue;
+                    left = Math.Min(left, x);
+                    right = Math.Max(right, x);
+                    top = Math.Min(top, y);
+                    bottom = Math.Max(bottom, y);
+                }
+            }
+        });
+        if (right < 0) return;
+        var content = new Rectangle(left, top, right - left + 1, bottom - top + 1);
+        int side = (int)Math.Ceiling(Math.Max(content.Width, content.Height) / fill);
+        image.Mutate(x => x.Crop(content).Pad(side, side, Color.Transparent));
     }
 
     /// <summary>The image resized to size x size (unless it already is), as raw BC7 blocks.</summary>

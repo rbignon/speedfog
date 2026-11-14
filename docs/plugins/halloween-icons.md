@@ -82,7 +82,9 @@ the two Halloween icons.
    `race_items_icon_<icon>.png` for every distinct icon of the race items
    catalog's `[icons]`, read through `RaceItemsCatalog.Load`, downloaded by
    the bootstrap), checks that each one's longer side is at least 160
-   pixels, centers each non-square one on a transparent square, resizes
+   pixels, centers each non-square one on a transparent square (a race
+   item icon is first cropped to its visible pixels and given a margin,
+   see race-items.md "Icons"), resizes
    each to the two texture
    sizes (160x160 `MENU_ItemIcon_<id>` and `MENU_Knowledge_<id>`, the
    large one reusing the small encode, see
