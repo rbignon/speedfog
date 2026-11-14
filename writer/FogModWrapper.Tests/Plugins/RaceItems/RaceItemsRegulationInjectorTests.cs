@@ -38,19 +38,21 @@ public class RaceItemsRegulationInjectorTests
     }
 
     [Fact]
-    public void Goods_row_drops_flask_fields()
+    public void Race_item_goods_is_usable_and_auto_equipped()
     {
-        var (goods, _) = Inject();
-        var row = goods[1450807]!;
+        var (goods, sp) = Inject();
+        var row = goods[1450801]!;
         Assert.Equal((byte)0, row["goodsType"].Value);
         Assert.Equal(-1, row["replaceItemId"].Value);
         Assert.Equal((byte)2, row["refCategory"].Value);
-        Assert.Equal(1450807, row["refId_default"].Value);
+        Assert.Equal(1450801, row["refId_default"].Value);
         Assert.Equal((byte)1, row["isAutoEquip"].Value);
         Assert.Equal((byte)1, row["isConsume"].Value);
-        Assert.Equal((ushort)60390, row["iconId"].Value);
+        Assert.Equal((ushort)60396, row["iconId"].Value);
         Assert.Equal((short)1, row["maxNum"].Value);
         Assert.Equal((byte)0, row["isDrop"].Value);
+        // Its neutral marker, which the use event waits on.
+        Assert.Equal(1f, sp[1450801]!["effectEndurance"].Value);
     }
 
     [Fact]
@@ -65,7 +67,7 @@ public class RaceItemsRegulationInjectorTests
         var sp = SpEffectTemplates();
         RaceItemsRegulationInjector.Apply(goods, sp, RaceItemsCatalog.Load(ShippedCatalogPath()));
 
-        foreach (var id in new[] { 1450800, 1450807 })
+        foreach (var id in new[] { 1450800, 1450801 })
         {
             var row = goods[id]!;
             Assert.Equal((byte)0, row["isFullSuppleItem"].Value);
@@ -79,13 +81,14 @@ public class RaceItemsRegulationInjectorTests
     {
         var goods = BuildParamFromDef("EquipParamGoods", 250);
         var sp = BuildParamFromDef("SpEffect", 10600);
-        var items = new[]
-        {
-            new RaceItem("x", "i", 60385, "X", "i", "c", 1450850, 1050290150, 1050290250,
-                new RaceItemSpEffect(1450850, 10600, new Dictionary<string, double> { ["noSuchField"] = 1 }),
-                null),
-        };
-        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsRegulationInjector.Apply(goods, sp, items));
+        var catalog = new RaceItemsCatalog(
+            new[]
+            {
+                new RaceItemGoods("x", "i", 60385, "X", "i", "c", 1450850, 1050290150, 1050290250,
+                    new RaceItemSpEffect(1450850, 10600, new Dictionary<string, double> { ["noSuchField"] = 1 })),
+            },
+            Array.Empty<RaceItem>());
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsRegulationInjector.Apply(goods, sp, catalog));
         Assert.Contains("noSuchField", ex.Message);
         Assert.Contains("1450850", ex.Message);
         Assert.Contains("SpEffectParam", ex.Message);
@@ -99,22 +102,36 @@ public class RaceItemsRegulationInjectorTests
         Assert.Equal((byte)0, row["isAutoEquip"].Value);
         Assert.Equal((byte)0, row["isConsume"].Value);
         Assert.Equal(-1, row["refId_default"].Value);
+        Assert.Equal((ushort)60385, row["iconId"].Value);
         Assert.Null(sp[1450800]);
     }
 
     [Fact]
-    public void Effect_rows_carry_their_fields()
+    public void Item_effect_rows_carry_their_fields()
     {
         var (_, sp) = Inject();
+        Assert.Equal(102360, sp[1450826]!["cycleOccurrenceSpEffectId"].Value);
+        Assert.Equal(15f, sp[1450826]!["effectEndurance"].Value);
+        Assert.Equal(0.5f, sp[1450826]!["motionInterval"].Value);
+        Assert.Equal(20000, sp[1450822]!["soul"].Value);
         Assert.Equal(0.5f, sp[1450829]!["maxHpRate"].Value);
         Assert.Equal(15f, sp[1450829]!["effectEndurance"].Value);
         Assert.Equal(99999, sp[1450832]!["poizonAttackPower"].Value);
-        Assert.Equal(102360, sp[1450806]!["cycleOccurrenceSpEffectId"].Value);
-        Assert.Equal(0.5f, sp[1450806]!["motionInterval"].Value);
-        Assert.Equal(40000, sp[1450803]!["soul"].Value);
         Assert.Equal(4101, sp[1450830]!["cycleOccurrenceSpEffectId"].Value);
         Assert.Equal(15f, sp[1450830]!["effectEndurance"].Value);
-        Assert.Equal(1f, sp[1450807]!["effectEndurance"].Value);
+    }
+
+    [Fact]
+    public void No_goods_row_per_item()
+    {
+        // Two goods carry every item: no row (nor marker) for the v1 per-item
+        // goods ids.
+        var (goods, sp) = Inject();
+        for (int id = 1450802; id <= 1450812; id++)
+        {
+            Assert.Null(goods[id]);
+            Assert.Null(sp[id]);
+        }
     }
 
     [Fact]
@@ -122,9 +139,9 @@ public class RaceItemsRegulationInjectorTests
     {
         var goods = BuildParamFromDef("EquipParamGoods", 250);
         var sp = SpEffectTemplates();
-        var items = RaceItemsCatalog.Load(ShippedCatalogPath());
-        RaceItemsRegulationInjector.Apply(goods, sp, items);
+        var catalog = RaceItemsCatalog.Load(ShippedCatalogPath());
+        RaceItemsRegulationInjector.Apply(goods, sp, catalog);
         // GameEditor.AddRow refuses an existing id: the plugin runs once per build.
-        Assert.Throws<ArgumentException>(() => RaceItemsRegulationInjector.Apply(goods, sp, items));
+        Assert.Throws<ArgumentException>(() => RaceItemsRegulationInjector.Apply(goods, sp, catalog));
     }
 }

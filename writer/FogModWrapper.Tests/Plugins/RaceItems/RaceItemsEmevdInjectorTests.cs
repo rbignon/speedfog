@@ -52,7 +52,7 @@ public class RaceItemsEmevdInjectorTests
     {
         var commonEmevd = new EMEVD();
         commonEmevd.Events.Add(new EMEVD.Event(0));
-        RaceItemsEmevdInjector.Inject(commonEmevd, events, RaceItemsCatalog.Load(ShippedCatalogPath()));
+        RaceItemsEmevdInjector.Inject(commonEmevd, events, RaceItemsCatalog.Load(ShippedCatalogPath()).Goods);
         return commonEmevd;
     }
 
@@ -62,7 +62,7 @@ public class RaceItemsEmevdInjectorTests
     private static long RemoveId(int n) => SpeedFogIds.RaceItemEvents.Base + 50 + n;
 
     [Fact]
-    public void Adds_one_use_event_per_usable_item_and_one_removal_event_per_item()
+    public void Adds_one_use_event_for_the_race_item_and_one_removal_event_per_goods()
     {
         var events = BuildEvents();
         if (events == null)
@@ -70,21 +70,17 @@ public class RaceItemsEmevdInjectorTests
 
         var emevd = RunInject(events);
 
-        for (int n = 1; n <= 12; n++)
-            Assert.Single(emevd.Events, e => e.ID == UseId(n));
-        for (int n = 0; n <= 12; n++)
-            Assert.Single(emevd.Events, e => e.ID == RemoveId(n));
-        // The Shield (n = 0) is not usable: no use event.
-        Assert.DoesNotContain(emevd.Events, e => e.ID == UseId(0));
-        Assert.Equal(1 + 12 + 13, emevd.Events.Count);
+        // The Race Item (n = 1) has a use event; the Shield (n = 0) is never
+        // used. Both goods have a removal event.
+        var expectedIds = new long[] { UseId(1), RemoveId(0), RemoveId(1) };
+        var range = SpeedFogIds.RaceItemEvents;
+        Assert.Equal(expectedIds,
+            emevd.Events.Select(e => e.ID).Where(id => id >= range.Base && id < range.Base + range.Capacity).Order());
+        Assert.Equal(1 + 3, emevd.Events.Count);
 
         var inits = Evt(emevd, 0).Instructions.Where(i => i.Bank == 2000 && i.ID == 0).ToList();
-        Assert.Equal(25, inits.Count);
-        var expectedIds = Enumerable.Range(1, 12).Select(UseId)
-            .Concat(Enumerable.Range(0, 13).Select(RemoveId)).Select(id => (int)id).ToHashSet();
-        var initIds = inits.Select(i => BitConverter.ToInt32(i.ArgData, 4)).ToList();
-        Assert.Equal(25, initIds.Distinct().Count());
-        Assert.True(expectedIds.SetEquals(initIds));
+        var initIds = inits.Select(i => (long)BitConverter.ToInt32(i.ArgData, 4)).Order();
+        Assert.Equal(expectedIds, initIds);
     }
 
     [Fact]
@@ -94,21 +90,21 @@ public class RaceItemsEmevdInjectorTests
         if (events == null)
             return;
 
-        var mushroom = Evt(RunInject(events), UseId(6));
+        var use = Evt(RunInject(events), UseId(1));
 
         // IF Character Has SpEffect, Set Event Flag, IF Character Has SpEffect
         // (not), END Unconditionally; ids from data/er-common.emedf.json.
         Assert.Equal(
             new[] { (4, 5), (2003, 66), (4, 5), (1000, 4) },
-            mushroom.Instructions.Select(i => (i.Bank, i.ID)).ToArray());
+            use.Instructions.Select(i => (i.Bank, i.ID)).ToArray());
         // Has-SpEffect layout: entity @4, SpEffect @8, should-have @12,
         // comparison type @13, number of characters (float) @16.
-        AssertHasSpEffect(mushroom.Instructions[0], 1450806, shouldHave: 1);
-        AssertHasSpEffect(mushroom.Instructions[2], 1450806, shouldHave: 0);
+        AssertHasSpEffect(use.Instructions[0], 1450801, shouldHave: 1);
+        AssertHasSpEffect(use.Instructions[2], 1450801, shouldHave: 0);
         // Set Event Flag: flag @4, state @8 (ON = 1).
-        Assert.Equal(1050290106u, BitConverter.ToUInt32(mushroom.Instructions[1].ArgData, 4));
-        Assert.Equal(1, mushroom.Instructions[1].ArgData[8]);
-        AssertRestart(mushroom.Instructions[3]);
+        Assert.Equal(1050290101u, BitConverter.ToUInt32(use.Instructions[1].ArgData, 4));
+        Assert.Equal(1, use.Instructions[1].ArgData[8]);
+        AssertRestart(use.Instructions[3]);
     }
 
     [Fact]

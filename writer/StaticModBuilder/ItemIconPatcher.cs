@@ -62,15 +62,15 @@ public static class ItemIconPatcher
 
     /// <summary>
     /// The Halloween icons followed by the race item icons, one entry per
-    /// distinct (icon, icon id) of the race items catalog
+    /// distinct (icon, icon id) of the race items catalog's goods and items
     /// (dataDir/plugins/race_items.toml, [icons]): icon id and source PNG
     /// (race_items_icon_&lt;icon&gt;.png) under dataDir/plugins.
     /// </summary>
     private static (int IconId, string Png)[] LoadIcons(string dataDir)
     {
         var catalog = RaceItemsCatalog.Load(Path.Combine(dataDir, "plugins", "race_items.toml"));
-        var raceIcons = catalog
-            .Select(item => (item.Icon, item.IconId))
+        var raceIcons = catalog.Goods.Select(g => (g.Icon, g.IconId))
+            .Concat(catalog.Items.Select(item => (item.Icon, item.IconId)))
             .Distinct()
             .OrderBy(icon => icon.IconId)
             .Select(icon => (icon.IconId, $"race_items_icon_{icon.Icon}.png"));

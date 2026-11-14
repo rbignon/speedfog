@@ -2,26 +2,36 @@
 # Consumed by the Python loader (speedfog/race_items.py, exported as graph.json
 # race_items) and by the C# RaceItems plugin, when [plugin.race_items] is enabled.
 #
-# Numbering (n = goods_id - 1450800): marker SpEffect id = goods_id, effect
-# SpEffect id = goods_id + 20, use_flag = 1050290100 + n, remove_flag =
-# 1050290200 + n. Templates: 10600 is neutral (every rate at 1); 3269 is Golden
-# Rune [1]; 3370 is a self-targeted poison row. `fields` maps SpEffect paramdef
-# field names to numbers. Amounts and rates are starting values to calibrate in
-# game.
+# Two goods carry every item: the passive Shield and one usable "Race Item",
+# whose icon the racing mod rewrites at runtime to the item it holds. Each
+# [[item]] points at one goods; its effect SpEffect, when it has one, is
+# applied by the racing mod (to its targets, or to the sender for the Mushroom
+# and the Rune Pouches).
+#
+# Numbering (n = goods_id - 1450800): marker SpEffect id = goods_id, use_flag =
+# 1050290100 + n, remove_flag = 1050290200 + n. Item effect SpEffect ids sit in
+# 1450820-1450849, at 1450820 + the item's index in the v1 catalog (one goods
+# per item, 1450800 + index). Templates: 10600 is neutral (every rate at 1);
+# 3269 is Golden Rune [1]; 3370 is a self-targeted poison row. `fields` maps
+# SpEffect paramdef field names to numbers. Amounts and rates are starting
+# values to calibrate in game.
 #
 # Some behaviors live in the player's c0000.hks, keyed on a vanilla SpEffect id
 # (102360 makes rolls and sprints free, 4101 forces a slow walk), so a copy
 # under another id does not get them. An item reaches them by cycling the
 # vanilla row (cycleOccurrenceSpEffectId, applied every motionInterval
-# seconds), as vanilla row 20011920 does with 4101.
+# seconds), as vanilla row 20011920 does with 4101. A cycled row lasts its own
+# endurance after its last application: 102360 adds 15 s to the Mushroom's
+# row.
 #
-# Neutral markers set effectEndurance = 1 rather than the template's one-frame
-# 0, a margin for the use event (every use flag rises in game).
+# The neutral marker sets effectEndurance = 1 rather than the template's
+# one-frame 0, a margin for the use event (the use flag rises in game).
 #
 # The Hammer's equipWeightChangeRate is a fallback: the racing mod rewrites it
 # per target before applying the effect, from the target's equip load.
 
 [icons]
+item_box = 60396
 shield = 60385
 rune_pouch = 60386
 banana = 60387
@@ -34,7 +44,7 @@ lightning = 60393
 flask_stopper = 60394
 toxic_blossom = 60395
 
-[[item]]
+[[goods]]
 key = "shield"
 icon = "shield"
 name = "Shield"
@@ -43,145 +53,106 @@ caption = "A race item. It cannot be used: it sits in your inventory and absorbs
 goods_id = 1450800
 remove_flag = 1050290200
 
-[[item]]
-key = "rune_pouch_1"
-icon = "rune_pouch"
-name = "Small Rune Pouch"
-info = "A small handful of runes."
-caption = "A race item. Using it grants 10000 runes."
+[[goods]]
+key = "race_item"
+icon = "item_box"
+name = "Race Item"
+info = "The item your last boss kill earned you."
+caption = "A race item. The race overlay names the item it holds; using it unleashes that item."
 goods_id = 1450801
 use_flag = 1050290101
 remove_flag = 1050290201
-marker = { template = 3269, fields = { soul = 10000 } }
+marker = { template = 10600, fields = { effectEndurance = 1 } }
+
+[[item]]
+key = "shield"
+goods = "shield"
+icon = "shield"
+name = "Shield"
+
+[[item]]
+key = "rune_pouch_1"
+goods = "race_item"
+icon = "rune_pouch"
+name = "Small Rune Pouch"
+effect = { id = 1450821, template = 3269, fields = { soul = 10000 } }
 
 [[item]]
 key = "rune_pouch_2"
+goods = "race_item"
 icon = "rune_pouch"
 name = "Rune Pouch"
-info = "A decent bag of runes."
-caption = "A race item. Using it grants 20000 runes."
-goods_id = 1450802
-use_flag = 1050290102
-remove_flag = 1050290202
-marker = { template = 3269, fields = { soul = 20000 } }
+effect = { id = 1450822, template = 3269, fields = { soul = 20000 } }
 
 [[item]]
 key = "rune_pouch_3"
+goods = "race_item"
 icon = "rune_pouch"
 name = "Large Rune Pouch"
-info = "A heavy bag of runes."
-caption = "A race item. Using it grants 40000 runes."
-goods_id = 1450803
-use_flag = 1050290103
-remove_flag = 1050290203
-marker = { template = 3269, fields = { soul = 40000 } }
+effect = { id = 1450823, template = 3269, fields = { soul = 40000 } }
 
 [[item]]
 key = "banana"
+goods = "race_item"
 icon = "banana"
 name = "Banana"
-info = "The runner just behind you slips."
-caption = "A race item. Using it drops a banana peel in the path of the runner just behind you."
-goods_id = 1450804
-use_flag = 1050290104
-remove_flag = 1050290204
-marker = { template = 10600, fields = { effectEndurance = 1 } }
 
 [[item]]
 key = "red_shell"
+goods = "race_item"
 icon = "red_shell"
 name = "Red Shell"
-info = "Hits the runner just ahead of you."
-caption = "A race item. Using it launches a shell at the runner just ahead of you."
-goods_id = 1450805
-use_flag = 1050290105
-remove_flag = 1050290205
-marker = { template = 10600, fields = { effectEndurance = 1 } }
 
 [[item]]
 key = "mushroom"
+goods = "race_item"
 icon = "mushroom"
 name = "Mushroom"
-info = "Free stamina for 15 seconds."
-caption = "A race item. Using it removes your stamina cost for 15 seconds."
-goods_id = 1450806
-use_flag = 1050290106
-remove_flag = 1050290206
-duration_s = 15
-marker = { template = 10600, fields = { effectEndurance = 1, motionInterval = 0.5, cycleOccurrenceSpEffectId = 102360 } }
+duration_s = 30
+effect = { id = 1450826, template = 10600, fields = { effectEndurance = 15, motionInterval = 0.5, cycleOccurrenceSpEffectId = 102360 } }
 
 [[item]]
 key = "hammer"
+goods = "race_item"
 icon = "hammer"
 name = "Hammer"
-info = "Everyone else fat-rolls for 15 seconds."
-caption = "A race item. Using it makes every other runner overweight for 15 seconds."
-goods_id = 1450807
-use_flag = 1050290107
-remove_flag = 1050290207
 duration_s = 15
-marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450827, template = 10600, fields = { equipWeightChangeRate = 0.35, effectEndurance = 15 } }
 
 [[item]]
 key = "ink"
+goods = "race_item"
 icon = "ink"
 name = "Ink"
-info = "Everyone else cannot see their exits for 15 seconds."
-caption = "A race item. Using it hides the exits and their location text from every other runner for 15 seconds."
-goods_id = 1450808
-use_flag = 1050290108
-remove_flag = 1050290208
 duration_s = 15
-marker = { template = 10600, fields = { effectEndurance = 1 } }
 
 [[item]]
 key = "blue_shell"
+goods = "race_item"
 icon = "blue_shell"
 name = "Blue Shell"
-info = "The leader loses half their health for 15 seconds."
-caption = "A race item. Using it halves the maximum health of the race leader for 15 seconds."
-goods_id = 1450809
-use_flag = 1050290109
-remove_flag = 1050290209
 duration_s = 15
-marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450829, template = 10600, fields = { maxHpRate = 0.5, effectEndurance = 15 } }
 
 [[item]]
 key = "lightning"
+goods = "race_item"
 icon = "lightning"
 name = "Lightning"
-info = "Everyone else is slowed for 15 seconds."
-caption = "A race item. Using it slows every other runner for 15 seconds."
-goods_id = 1450810
-use_flag = 1050290110
-remove_flag = 1050290210
 duration_s = 15
-marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450830, template = 10600, fields = { effectEndurance = 15, motionInterval = 0.06, cycleOccurrenceSpEffectId = 4101 } }
 
 [[item]]
 key = "flask_stopper"
+goods = "race_item"
 icon = "flask_stopper"
 name = "Flask Stopper"
-info = "Everyone else cannot drink flasks for 15 seconds."
-caption = "A race item. Using it stops every other runner from drinking flasks for 15 seconds."
-goods_id = 1450811
-use_flag = 1050290111
-remove_flag = 1050290211
 duration_s = 15
-marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450831, template = 10600, fields = { stateInfo = 154, effectEndurance = 15 } }
 
 [[item]]
 key = "toxic_blossom"
+goods = "race_item"
 icon = "toxic_blossom"
 name = "Toxic Blossom"
-info = "Poisons everyone else."
-caption = "A race item. Using it poisons every other runner."
-goods_id = 1450812
-use_flag = 1050290112
-remove_flag = 1050290212
-marker = { template = 10600, fields = { effectEndurance = 1 } }
 effect = { id = 1450832, template = 3370, fields = { poizonAttackPower = 99999 } }

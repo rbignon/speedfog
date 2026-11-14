@@ -37,8 +37,21 @@ public class RaceItemsTextInjectorTests : IDisposable
         return dir;
     }
 
-    private static RaceItem Item(int goodsId, string name, string info, string caption) =>
-        new("hammer", "hammer", 60390, name, info, caption, goodsId, 1050290107, 1050290207, null, null);
+    private static RaceItemGoods Item(int goodsId, string name, string info, string caption) =>
+        new("hammer", "hammer", 60390, name, info, caption, goodsId, 1050290107, 1050290207, null);
+
+    private static string ShippedCatalogPath()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            var candidate = Path.Combine(dir.FullName, "data", "plugins", "race_items.toml");
+            if (File.Exists(candidate))
+                return candidate;
+            dir = dir.Parent;
+        }
+        throw new FileNotFoundException("data/plugins/race_items.toml not found above " + AppContext.BaseDirectory);
+    }
 
     private static FMG ReadFmg(string path, string fileName)
     {
@@ -65,6 +78,24 @@ public class RaceItemsTextInjectorTests : IDisposable
             foreach (var other in new[] { "GoodsName_dlc01.fmg", "GoodsName_dlc02.fmg", "GoodsInfo_dlc01.fmg", "GoodsCaption_dlc01.fmg" })
                 Assert.DoesNotContain(ReadFmg(path, other).Entries, e => e.ID == 1450807);
         }
+    }
+
+    [Fact]
+    public void Writes_one_entry_per_goods_of_the_shipped_catalog()
+    {
+        var gameDir = Path.Combine(_root, "game");
+        var modDir = Path.Combine(_root, "mod");
+        WriteVanillaBnd(gameDir, "engus");
+
+        RaceItemsTextInjector.Apply(modDir, gameDir, RaceItemsCatalog.Load(ShippedCatalogPath()).Goods);
+
+        // The items have no text of their own: only the two goods get entries.
+        var path = Path.Combine(modDir, "msg", "engus", BndName);
+        foreach (var fmgName in new[] { "GoodsName.fmg", "GoodsInfo.fmg", "GoodsCaption.fmg" })
+            Assert.Equal(new[] { 1, 1450800, 1450801 }, ReadFmg(path, fmgName).Entries.Select(e => e.ID).Order());
+        var names = ReadFmg(path, "GoodsName.fmg").Entries;
+        Assert.Equal("Shield", names.Single(e => e.ID == 1450800).Text);
+        Assert.Equal("Race Item", names.Single(e => e.ID == 1450801).Text);
     }
 
     [Fact]

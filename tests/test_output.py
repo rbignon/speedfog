@@ -2684,20 +2684,31 @@ class TestDagToDictRaceItems:
     def test_dag_to_dict_writes_race_items_when_given(self):
         dag = make_test_dag()
         catalog = {
-            "hammer": {
-                "name": "Hammer",
-                "icon": "hammer",
-                "goods_id": 1450807,
-                "use_flag": 1050290107,
-                "remove_flag": 1050290207,
-                "effect_speffect": 1450827,
-                "duration_ms": 15000,
-            }
+            "goods": {
+                "race_item": {
+                    "goods_id": 1450801,
+                    "use_flag": 1050290101,
+                    "remove_flag": 1050290201,
+                    "icon": "item_box",
+                    "icon_id": 60396,
+                }
+            },
+            "items": {
+                "hammer": {
+                    "name": "Hammer",
+                    "icon": "hammer",
+                    "icon_id": 60390,
+                    "goods": "race_item",
+                    "effect_speffect": 1450827,
+                    "duration_ms": 15000,
+                }
+            },
         }
         result = dag_to_dict(
             dag, self._clusters(dag), GraphExportOptions(race_items=catalog)
         )
         assert result["race_items"] == catalog
+        assert result["version"] == "4.12"
         validate_graph_dict(result)
 
     def test_dag_to_dict_omits_race_items_when_disabled(self):

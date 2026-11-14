@@ -56,7 +56,7 @@ SpeedFog uses a **dedicated base `1050290000`**, in map coordinates m60_50_29_00
 | 1050294000-1050294999 | 4xxx offsets 0-999 | Saved (persistent) | Zone tracking, finish event, death markers | ZoneTrackingInjector, RunCompleteInjector, DeathMarkerInjector |
 
 Both ranges use saved flags (persist across area reloads):
-- Category 1050290 (offset 0-299): persistent mod state (items given, etc.) and the race item use/removal flags
+- Category 1050290 (offset 0-299): persistent mod state (items given, etc.) and the race item goods' use/removal flags
 - Category 1050294 (offset 0-999): zone tracking, cleared by racing mod after capture
   (so generator EMEVD must never wait on these: features needing "player entered
   cluster X" set their own 1050290xxx mirror flags, see the Halloween jumpscares)
@@ -70,8 +70,8 @@ Both ranges use saved flags (persist across area reloads):
 | 1050290010-1050290019 | 10-19 | Halloween jumpscare layer played (one per chosen layer, ascending) | HalloweenJumpscareInjector |
 | 1050290020-1050290029 | 20-29 | Halloween jumpscare "left layer" mirror flags, set before warps into the next layer | ZoneTrackingInjector (via RegionToFlags) |
 | 1050290030-1050290099 | 30-99 | Halloween jumpscare "entered cluster" mirror flags, set before warps into an armed cluster | ZoneTrackingInjector (via RegionToFlags) |
-| 1050290100-1050290199 | 100-199 | Race item use flags (`1050290100 + n`, n = goods id - 1450800): set by the racing mod when the player uses the item | RaceItemsPlugin (waits on them) |
-| 1050290200-1050290299 | 200-299 | Race item removal flags (`1050290200 + n`): set by the racing mod to take the goods back | RaceItemsPlugin (waits on them) |
+| 1050290100-1050290199 | 100-199 | Race item use flags (`1050290100 + n`, n = goods id - 1450800; only the Race Item goods, 1050290101, has one): set by the plugin's use event when the player uses the goods, read and cleared by the racing mod | RaceItemsPlugin |
+| 1050290200-1050290299 | 200-299 | Race item removal flags (`1050290200 + n`, one per goods: 1050290200 the Shield, 1050290201 the Race Item): set by the racing mod to take the goods back | RaceItemsPlugin (waits on them) |
 
 ### Zone Tracking Flags (1050294xxx)
 
@@ -126,7 +126,7 @@ Event ID ranges and auxiliary flags are declared centrally in
 | 755865100 | GateDecorInjector | map emevds | Halloween decoration SFX (sequential, capacity 400) |
 | 755865500 | HalloweenDarknessInjector | common.emevd | Re-apply the evergaol gparam override (opt-in) |
 | 755865600 | HalloweenJumpscareInjector | map emevds | Halloween jumpscare actors (one event per actor, capacity 100) |
-| 755865700 | RaceItemsPlugin | common.emevd | Race items (opt-in): use events at `base + n`, removal events at `base + 50 + n`, n = goods id - 1450800 (capacity 100) |
+| 755865700 | RaceItemsPlugin | common.emevd | Race items (opt-in): use events at `base + n` (usable goods only), removal events at `base + 50 + n`, n = goods id - 1450800 (capacity 100) |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0),
 built by `EmevdHelper.InitializeEvent`.
@@ -138,7 +138,7 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 | Range | Param(s) | Owner | Reference | Notes |
 |-------|----------|-------|-----------|-------|
 | 1450700-1450799 | PhantomParam, SpEffectVfxParam, SpEffectParam | Phantom skins catalog | `docs/phantom-skins.md` | |
-| 1450800-1450899 | EquipParamGoods, SpEffectParam | RaceItemsPlugin | `SpeedFogIds.RaceItemParamIdMin/Max`, `data/plugins/race_items.toml` | Race items: goods id = marker SpEffect id, effect SpEffect id = goods id + 20; vanilla has neither (checked 2026-11-12) |
+| 1450800-1450899 | EquipParamGoods, SpEffectParam | RaceItemsPlugin | `SpeedFogIds.RaceItemParamIdMin/Max`, `RaceItemEffectIdMin/Max`, `data/plugins/race_items.toml` | Race items: goods id = marker SpEffect id (1450800 Shield, 1450801 Race Item); item effect SpEffects in 1450820-1450849; vanilla has neither (checked 2026-11-12) |
 | 755890000 | NpcParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossNpcRow` | Boss clone; outside 5280-band to avoid nerflantern patching |
 | 755890000 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossSpEffectRow` | Partial damage-cut state for boss |
 | 755890000 | NpcThinkParam | AmbientSpawnInjector | `SpeedFogIds.HostileGreeterThinkRow` | Greeter think row (species basis: untouchable 52800000 or wormface 45700100, perception capped at `GREETER_AGGRO_DIST`) |
@@ -157,7 +157,7 @@ Menu icon ids (a third namespace, not entity ids nor param rows). Vanilla icon i
 | Range | Owner | Reference | Notes |
 |-------|-------|-----------|-------|
 | 60383-60384 | Halloween plugin | `SpeedFogIds.HalloweenGoldenSeedIcon`, `HalloweenSacredTearIcon` | Golden Seed pumpkin, corrupted Sacred Tear |
-| 60385-60399 | RaceItemsPlugin | `SpeedFogIds.RaceItemIconIdMin/Max`, `[icons]` in `data/plugins/race_items.toml` | One icon per item kind |
+| 60385-60399 | RaceItemsPlugin | `SpeedFogIds.RaceItemIconIdMin/Max`, `[icons]` in `data/plugins/race_items.toml` | One icon per item kind (60385-60395) and the Race Item goods' item box (60396) |
 
 ## Reserved FMG Entry IDs
 
@@ -166,7 +166,7 @@ ids, per FMG file).
 
 | Range | FMG | Owner | Reference | Notes |
 |-------|-----|-------|-----------|-------|
-| 1450800-1450899 | GoodsName, GoodsInfo, GoodsCaption (engus + frafr) | RaceItemsPlugin | `data/plugins/race_items.toml` | Entry id = goods id |
+| 1450800-1450899 | GoodsName, GoodsInfo, GoodsCaption (engus + frafr) | RaceItemsPlugin | `data/plugins/race_items.toml` | Entry id = goods id (the Shield and the Race Item; items have no texts of their own) |
 | 755890000-755890099 | NpcName (item_dlc02.msgbnd.dcx, engus + frafr) | BossNameInjector | `SpeedFogIds.BossNameFmgIds` | Healthbar names of relocated enemies with no vanilla NpcName entry of that text, one id per distinct name (`docs/boss-healthbar-names.md`). Vanilla NpcName ids sit in the 9xxxxxxxx band; the Item Randomizer's `editnames` allocator (off) starts at 907770000 |
 
 ## Risks & Constraints

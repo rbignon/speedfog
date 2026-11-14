@@ -56,7 +56,7 @@ class GraphExportOptions:
     class_loadout: dict[str, Any] | None = None
     torrent_skins: dict[str, Any] | None = None
     tarnished_pack: bool = False
-    race_items: dict[str, dict[str, Any]] | None = None
+    race_items: dict[str, dict[str, dict[str, Any]]] | None = None
 
 
 def load_phantom_skins_catalog(path: Path) -> dict[str, int]:

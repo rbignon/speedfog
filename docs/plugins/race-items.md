@@ -20,46 +20,72 @@ warning.
 ## What it adds
 
 - **Goods and SpEffects** (`RaceItemsRegulationInjector`, regulation.bin):
-  one EquipParamGoods row per item, cloned from goods 250 (Flask of Wondrous
-  Physick) and forced to a single auto-equipped consumable that is not
-  droppable, sellable or depositable; one marker SpEffect per usable item
-  (the goods row points at it), plus an effect SpEffect for the items that
-  need one.
+  two EquipParamGoods rows, the passive Shield and the usable Race Item that
+  carries every other item, cloned from goods 250 (Flask of Wondrous Physick)
+  and forced to a single consumable that is not droppable, sellable or
+  depositable. The Race Item is auto-equipped and points at its marker
+  SpEffect; the Shield is neither. One effect SpEffect per item that needs
+  one, applied by the racing mod.
 - **EMEVD events** (`RaceItemsEmevdInjector`, common.emevd): one use event
-  and one removal event per item.
-- **Texts** (`RaceItemsTextInjector`): name, info and caption in the base
-  `GoodsName.fmg`, `GoodsInfo.fmg` and `GoodsCaption.fmg` of
-  `item_dlc02.msgbnd.dcx`, for `engus` and `frafr` (English in both). The
-  `_dlc01` / `_dlc02` FMG variants are left alone.
+  (the Race Item) and one removal event per goods.
+- **Texts** (`RaceItemsTextInjector`): each goods' name, info and caption in
+  the base `GoodsName.fmg`, `GoodsInfo.fmg` and `GoodsCaption.fmg` of
+  `item_dlc02.msgbnd.dcx`, for `engus` and `frafr` (English in both); the
+  items have no texts of their own. The `_dlc01` / `_dlc02` FMG variants are
+  left alone.
 - **graph.json**: the `race_items` key (below), written only when the plugin
   is enabled.
 
 The ranges are reserved in `SpeedFogIds` and documented in
-`docs/event-flags.md`: goods and SpEffect ids 1450800-1450899, use flags
-1050290100-1050290199, removal flags 1050290200-1050290299 (saved category
-1050290), common.emevd events 755865700-755865799, icon ids 60385-60399.
+`docs/event-flags.md`: goods and SpEffect ids 1450800-1450899 (item effect
+SpEffects in 1450820-1450849), use flags 1050290100-1050290199, removal flags
+1050290200-1050290299 (saved category 1050290), common.emevd events
+755865700-755865799, icon ids 60385-60399.
 
-## Items
+## Goods and items
 
-n = goods id - 1450800. The marker SpEffect id is the goods id; the effect
-SpEffect id is the goods id + 20; the use flag is 1050290100 + n; the removal
-flag is 1050290200 + n.
+Two goods carry every item. A runner holds at most one item, so at most one of
+the two goods is ever in the inventory. A single usable goods keeps the quick
+slots clean: one goods per item filled a slot with each item ever granted.
+The Race Item shows its own icon, the item box, until the racing mod writes
+the held item's icon id into its EquipParamGoods row (in memory, at each grant
+and each game load); the race overlay names the held item.
 
-| n | key | name | goods id | marker | effect | duration |
-|---|---|---|---|---|---|---|
-| 0 | `shield` | Shield | 1450800 | none (not usable, no use flag) | none | none |
-| 1 | `rune_pouch_1` | Small Rune Pouch | 1450801 | 3269, `soul = 10000` | none | none |
-| 2 | `rune_pouch_2` | Rune Pouch | 1450802 | 3269, `soul = 20000` | none | none |
-| 3 | `rune_pouch_3` | Large Rune Pouch | 1450803 | 3269, `soul = 40000` | none | none |
-| 4 | `banana` | Banana | 1450804 | 10600, `effectEndurance = 1` | none | none |
-| 5 | `red_shell` | Red Shell | 1450805 | 10600, `effectEndurance = 1` | none | none |
-| 6 | `mushroom` | Mushroom | 1450806 | 10600, `effectEndurance = 1`, cycles 102360 every 0.5 s | none (the marker applies it) | 15 s |
-| 7 | `hammer` | Hammer | 1450807 | 10600, `effectEndurance = 1` | 1450827, 10600, `equipWeightChangeRate = 0.35` (rewritten per target by the racing mod), `effectEndurance = 15` | 15 s |
-| 8 | `ink` | Ink | 1450808 | 10600, `effectEndurance = 1` | none (overlay only) | 15 s |
-| 9 | `blue_shell` | Blue Shell | 1450809 | 10600, `effectEndurance = 1` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
-| 10 | `lightning` | Lightning | 1450810 | 10600, `effectEndurance = 1` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
-| 11 | `flask_stopper` | Flask Stopper | 1450811 | 10600, `effectEndurance = 1` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
-| 12 | `toxic_blossom` | Toxic Blossom | 1450812 | 10600, `effectEndurance = 1` | 1450832, 3370, `poizonAttackPower = 99999` | none |
+### Goods
+
+n = goods id - 1450800. The marker SpEffect id is the goods id; the use flag
+is 1050290100 + n; the removal flag is 1050290200 + n.
+
+| n | key | name | goods id | icon | marker | use flag | removal flag |
+|---|---|---|---|---|---|---|---|
+| 0 | `shield` | Shield | 1450800 | `shield` (60385) | none (not usable, not auto-equipped) | none | 1050290200 |
+| 1 | `race_item` | Race Item | 1450801 | `item_box` (60396) | 10600, `effectEndurance = 1` | 1050290101 | 1050290201 |
+
+### Items
+
+Each item points at one goods and has a name and an icon of its own (the icon
+the racing mod writes into the Race Item). An item's effect SpEffect sits in
+1450820-1450849, at 1450820 + the item's index in the v1 catalog (one goods
+per item, 1450800 + index), so the v1 effect ids keep their meaning.
+
+| key | name | goods | icon | effect | duration |
+|---|---|---|---|---|---|
+| `shield` | Shield | `shield` | `shield` | none | none |
+| `rune_pouch_1` | Small Rune Pouch | `race_item` | `rune_pouch` | 1450821, 3269, `soul = 10000` | none |
+| `rune_pouch_2` | Rune Pouch | `race_item` | `rune_pouch` | 1450822, 3269, `soul = 20000` | none |
+| `rune_pouch_3` | Large Rune Pouch | `race_item` | `rune_pouch` | 1450823, 3269, `soul = 40000` | none |
+| `banana` | Banana | `race_item` | `banana` | none | none |
+| `red_shell` | Red Shell | `race_item` | `red_shell` | none | none |
+| `mushroom` | Mushroom | `race_item` | `mushroom` | 1450826, 10600, `effectEndurance = 15`, cycles 102360 every 0.5 s | 30 s |
+| `hammer` | Hammer | `race_item` | `hammer` | 1450827, 10600, `equipWeightChangeRate = 0.35` (rewritten per target by the racing mod), `effectEndurance = 15` | 15 s |
+| `ink` | Ink | `race_item` | `ink` | none (overlay only) | 15 s |
+| `blue_shell` | Blue Shell | `race_item` | `blue_shell` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
+| `lightning` | Lightning | `race_item` | `lightning` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
+| `flask_stopper` | Flask Stopper | `race_item` | `flask_stopper` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
+| `toxic_blossom` | Toxic Blossom | `race_item` | `toxic_blossom` | 1450832, 3370, `poizonAttackPower = 99999` | none |
+
+An effect on an item of the Shield goods is rejected when the catalog loads:
+the Shield is never used, so nothing would apply it.
 
 Templates: 10600 is FogRando's Bell of Return marker (neutral, every rate at
 1, self-targeted; `GameDataWriterE.cs:3857-3871`), 3269 is Golden Rune [1]
@@ -77,13 +103,14 @@ Some behaviors are not in the SpEffect row but in the player's behavior script
 
 An item reaches those behaviors by cycling the vanilla row:
 `cycleOccurrenceSpEffectId` applies it every `motionInterval` seconds while the
-item's row lasts, as vanilla row 20011920 does with 4101. The Mushroom marker
-lasts 1 s and cycles 102360 every 0.5 s; 102360 lasts 15 s from its last
-application, so about 15 to 16 s in all. The Lightning effect cycles 4101
-(0.1 s each) for 15 s.
+item's row lasts, as vanilla row 20011920 does with 4101. The Mushroom effect
+lasts 15 s and cycles 102360 every 0.5 s; 102360 lasts 15 s from its last
+application, so 30 s in all. The Lightning effect cycles 4101 (0.1 s each) for
+15 s.
 
-Neutral markers set `effectEndurance = 1` rather than the template's one-frame
-0, a margin for the use event; every use flag rises in game.
+The Race Item's neutral marker sets `effectEndurance = 1` rather than the
+template's one-frame 0, a margin for the use event; its use flag rises in
+game.
 
 Dead ends from the in-game passes: `consumeStaminaRate` only scales the stamina
 cost of weapon attacks; `stateInfo` 286 / 287 ("movement slow" in the
@@ -96,36 +123,43 @@ behaviors.
 Both shapes are adapted from FogRando's `common_bellofreturn`
 (`data/fogevents.txt:389-406`) and restart themselves when they end.
 
-- **Use event** (one per usable item, id `755865700 + n`): wait for the
-  marker SpEffect on the player, set the use flag, wait for the marker to
-  end, restart, so one use is one flag raise.
-- **Removal event** (one per item, id `755865750 + n`): wait for the removal
-  flag, remove one of the goods from the player, clear the flag, restart. The
-  racing mod raises the flag; the event clears it, so the flag is a one-shot
-  request.
+- **Use event** (one per usable goods, id `755865700 + n`: only the Race
+  Item, 755865701): wait for the marker SpEffect on the player, set the use
+  flag, wait for the marker to end, restart, so one use is one flag raise.
+- **Removal event** (one per goods, id `755865750 + n`: 755865750 for the
+  Shield, 755865751 for the Race Item): wait for the removal flag, remove one
+  of the goods from the player, clear the flag, restart. The racing mod
+  raises the flag; the event clears it, so the flag is a one-shot request.
 
-Items with an effect SpEffect (Hammer, Blue Shell, Lightning, Flask Stopper,
-Toxic Blossom) are not applied by an event: when the server resolves a use,
-the target's racing mod applies the effect SpEffect itself. The Mushroom and
-the Rune Pouches take effect through the game's own use: the Pouch marker is
-the effect, the Mushroom marker applies 102360.
+No item takes effect through an event or the game's own use: the Race Item's
+use flag tells the racing server which item was used (the one the runner
+holds), and the racing mod applies the item's effect SpEffect, to its targets
+or, for the Mushroom and the Rune Pouches, to the sender.
 
 ## graph.json `race_items`
 
-Present only when the plugin is enabled (`GRAPH_JSON_VERSION` 4.11). One
-entry per item key; `use_flag`, `effect_speffect` and `duration_ms` are `null`
-where the table above says none.
+Present only when the plugin is enabled (`GRAPH_JSON_VERSION` 4.12; 4.11
+had one goods per item). `goods` has one entry per goods key, `items` one per
+item key, each item naming its goods by key; `use_flag`, `effect_speffect`
+and `duration_ms` are `null` where the tables above say none. Excerpt (every
+item is listed):
 
 ```json
 "race_items": {
-  "hammer": {"name": "Hammer", "icon": "hammer", "goods_id": 1450807, "use_flag": 1050290107,
-             "remove_flag": 1050290207, "effect_speffect": 1450827, "duration_ms": 15000}
+  "goods": {
+    "race_item": {"goods_id": 1450801, "use_flag": 1050290101, "remove_flag": 1050290201, "icon": "item_box", "icon_id": 60396},
+    "shield":    {"goods_id": 1450800, "use_flag": null,       "remove_flag": 1050290200, "icon": "shield",   "icon_id": 60385}
+  },
+  "items": {
+    "hammer": {"name": "Hammer", "icon": "hammer", "icon_id": 60390, "goods": "race_item", "effect_speffect": 1450827, "duration_ms": 15000},
+    "shield": {"name": "Shield", "icon": "shield", "icon_id": 60385, "goods": "shield", "effect_speffect": null, "duration_ms": null}
+  }
 }
 ```
 
 ## Replacing the icons
 
-The 11 icons ship as placeholder flat shapes. The art is replaced by dropping
+The 12 icons ship as placeholder flat shapes. The art is replaced by dropping
 PNG files in, nothing else changes. For the graphic artist and for Roger:
 
 - **Format**: PNG, RGBA with a transparent background, square, at least
@@ -135,7 +169,9 @@ PNG files in, nothing else changes. For the graphic artist and for Roger:
 - **Files**: `data/plugins/race_items_icon_<icon>.png`, `<icon>` being a name of
   the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
   `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
-  `toxic_blossom` (ids 60385-60395; the three Rune Pouches share one icon).
+  `toxic_blossom`, `item_box` (ids 60385-60396; the three Rune Pouches share
+  one icon; `item_box` is the Race Item's own icon, shown until the racing
+  mod writes the held item's icon).
 - **After the drop**: overwrite the files (never re-run
   `tools/generate_race_item_icons.py` afterwards, it would overwrite the art),
   re-run `tools/bootstrap.py` on the generation host (it also needs a re-run
@@ -190,7 +226,7 @@ How to run them, on a test seed without the racing mod: Cheat Engine with The
 Grand Archives table (`ER_TGA_v1.17.0.CT`).
 
 - `Scripts > Build Creation > ItemGib` gives an item: `Item` is
-  `0x40000000 | goods id` in hex (`40162337` for the Hammer), then
+  `0x40000000 | goods id` in hex (`40162331` for the Race Item), then
   `> Spawn Item`. The practice tool's item spawner cannot give these items, its
   list is fixed.
 - `Event Flags > Event Flags by ID` reads and writes a use or removal flag.
@@ -201,7 +237,8 @@ Grand Archives table (`ER_TGA_v1.17.0.CT`).
   then `> Add SpEffect`). In a race the effects land on the other runners, so
   this is the only way to see them alone.
 
-Passes on seed 603810141, 2026-11-13:
+Passes on seed 603810141, 2026-11-13 (v1 catalog: one goods per item, the
+Mushroom and the Rune Pouches applied by their use markers):
 
 - **Passed.**
   - **Inventory.** The item lands in a quick slot (with every quick slot full,
@@ -225,9 +262,14 @@ Passes on seed 603810141, 2026-11-13:
 
 To check on the next seed:
 
-- the large icon of every item in the inventory's detail panel;
-- the Mushroom: buff icon, how long rolls stay free, and no flicker or repeated
-  sound from the 102360 re-applications; a second Mushroom during the first;
+- the large icon of every item in the inventory's detail panel, the item box
+  included;
+- the Race Item: one quick slot only after many grants and uses, its use flag
+  raised on every use; the Shield goods out of the quick slots;
+- the Mushroom effect (1450826, applied with ApplyEffect): buff icon, rolls
+  free for 30 s, and no flicker or repeated sound from the 102360
+  re-applications; a second Mushroom during the first;
 - Lightning: its effect ending at 15 s, and no hitch over its 250 re-applications
   of 4101;
-- each Rune Pouch still raising its flag and granting its runes once.
+- each Rune Pouch effect (1450821-1450823, applied with ApplyEffect) granting
+  its runes once.

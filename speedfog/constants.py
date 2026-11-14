@@ -20,7 +20,8 @@ from __future__ import annotations
 #       Tarnished Pack owners see, see docs/tarnished-showcase.md)
 # 4.11: optional race_items (catalog of the race items plugin, written when
 #       [plugin.race_items] is enabled)
-GRAPH_JSON_VERSION = "4.11"
+# 4.12: race_items split into goods and items
+GRAPH_JSON_VERSION = "4.12"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.

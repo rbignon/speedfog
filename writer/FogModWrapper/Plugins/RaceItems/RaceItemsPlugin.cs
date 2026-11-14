@@ -13,7 +13,7 @@ namespace FogModWrapper.Plugins.RaceItems;
 /// </summary>
 internal sealed class RaceItemsPlugin : SpeedFogPlugin
 {
-    private IReadOnlyList<RaceItem>? _items;
+    private RaceItemsCatalog? _catalog;
 
     public RaceItemsPlugin(PluginConfig config)
     {
@@ -21,15 +21,15 @@ internal sealed class RaceItemsPlugin : SpeedFogPlugin
             throw new InvalidDataException($"race_items: unknown parameter '{key}'");
     }
 
-    private IReadOnlyList<RaceItem> Items(Context ctx) =>
-        _items ??= RaceItemsCatalog.Load(Path.Combine(ctx.Config.DataDir, "plugins", "race_items.toml"));
+    private RaceItemsCatalog Catalog(Context ctx) =>
+        _catalog ??= RaceItemsCatalog.Load(Path.Combine(ctx.Config.DataDir, "plugins", "race_items.toml"));
 
     public override void OnRegulation(Context ctx, RegulationEditor reg) =>
-        RaceItemsRegulationInjector.Inject(reg, Items(ctx));
+        RaceItemsRegulationInjector.Inject(reg, Catalog(ctx));
 
     public override void OnCommonEmevd(Context ctx) =>
-        RaceItemsEmevdInjector.Inject(ctx.CommonEmevd, ctx.Events, Items(ctx));
+        RaceItemsEmevdInjector.Inject(ctx.CommonEmevd, ctx.Events, Catalog(ctx).Goods);
 
     public override void OnModDirLate(Context ctx) =>
-        RaceItemsTextInjector.Apply(ctx.ModDir, ctx.Config.GameDir, Items(ctx));
+        RaceItemsTextInjector.Apply(ctx.ModDir, ctx.Config.GameDir, Catalog(ctx).Goods);
 }

@@ -121,7 +121,9 @@ public class ItemIconPatcherTests
         var toml = FindRaceItemsToml();
         File.Copy(toml, Path.Combine(plugins, "race_items.toml"));
         var names = new List<string> { "halloween_icon_pumpkin_seed.png", "halloween_icon_profane_tear.png" };
-        names.AddRange(RaceItemsCatalog.Load(toml).Select(i => $"race_items_icon_{i.Icon}.png").Distinct());
+        var catalog = RaceItemsCatalog.Load(toml);
+        names.AddRange(catalog.Goods.Select(g => g.Icon).Concat(catalog.Items.Select(i => i.Icon))
+            .Distinct().Select(icon => $"race_items_icon_{icon}.png"));
         var colors = new Dictionary<string, Rgba32>();
         foreach (var (name, k) in names.Select((name, k) => (name, k)))
         {
@@ -168,18 +170,22 @@ public class ItemIconPatcherTests
 
             int written = ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants);
 
-            // 13 icons (2 Halloween + 11 race item), 2 textures each, 2 variants.
-            Assert.Equal(52, written);
+            // 14 icons (2 Halloween + 12 race item: the Race Item's item box
+            // and the 11 item icons), 2 textures each, 2 variants.
+            Assert.Equal(56, written);
             var pngById = new Dictionary<int, string>
             {
                 [SpeedFogIds.HalloweenGoldenSeedIcon] = "halloween_icon_pumpkin_seed.png",
                 [SpeedFogIds.HalloweenSacredTearIcon] = "halloween_icon_profane_tear.png",
             };
-            foreach (var item in RaceItemsCatalog.Load(FindRaceItemsToml()))
+            var catalog = RaceItemsCatalog.Load(FindRaceItemsToml());
+            foreach (var (icon, iconId) in catalog.Goods.Select(g => (g.Icon, g.IconId))
+                .Concat(catalog.Items.Select(i => (i.Icon, i.IconId))))
             {
-                pngById[item.IconId] = $"race_items_icon_{item.Icon}.png";
+                pngById[iconId] = $"race_items_icon_{icon}.png";
             }
-            Assert.Equal(new[] { 60383, 60384 }.Concat(Enumerable.Range(60385, 11)), pngById.Keys.Order());
+            Assert.Equal(new[] { 60383, 60384 }.Concat(Enumerable.Range(60385, 12)), pngById.Keys.Order());
+            Assert.Equal("race_items_icon_item_box.png", pngById[60396]);
             foreach (var (variant, large) in variants)
             {
                 var tpf = TPF.Read(Path.Combine(iconsDir, "menu", variant, "05_dummy.tpf.dcx"));
@@ -191,10 +197,10 @@ public class ItemIconPatcherTests
                 Assert.Contains(tpf.Textures, t => t.Name == "MENU_DummyTransparent");
             }
 
-            // A rerun replaces by name: still 26 icon textures + the template.
+            // A rerun replaces by name: still 28 icon textures + the template.
             ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants);
             var again = TPF.Read(Path.Combine(iconsDir, "menu", "hi", "05_dummy.tpf.dcx"));
-            Assert.Equal(27, again.Textures.Count);
+            Assert.Equal(29, again.Textures.Count);
         }
         finally
         {
@@ -216,7 +222,7 @@ public class ItemIconPatcherTests
             var iconsDir = Path.Combine(root, "icons");
             Directory.CreateDirectory(iconsDir);
 
-            Assert.Equal(52, ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants));
+            Assert.Equal(56, ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants));
             foreach (var (variant, _) in variants)
             {
                 var tpf = TPF.Read(Path.Combine(iconsDir, "menu", variant, "05_dummy.tpf.dcx"));

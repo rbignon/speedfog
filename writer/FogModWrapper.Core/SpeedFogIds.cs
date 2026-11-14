@@ -163,7 +163,7 @@ public static class SpeedFogIds
 
     /// <summary>Saved flags of the race items (category 1050290, never polled
     /// by anything else): the plugin's use event sets use flag base + n when
-    /// the player uses the item with goods id 1450800 + n, and the racing mod
+    /// the player uses the goods with id 1450800 + n, and the racing mod
     /// reads and clears it; the racing mod raises removal flag base + n, on
     /// which the plugin's removal event takes the goods back and clears it.
     /// Each range holds 100 flags.</summary>
@@ -174,6 +174,12 @@ public static class SpeedFogIds
     /// items (vanilla has neither, adjacent to the phantom skins range).</summary>
     public const int RaceItemParamIdMin = 1450800;
     public const int RaceItemParamIdMax = 1450899;
+
+    /// <summary>SpEffectParam ids of the race items' effect rows (applied by
+    /// the racing mod): a slice of the param range above, the goods rows and
+    /// their markers taking the ids below it.</summary>
+    public const int RaceItemEffectIdMin = 1450820;
+    public const int RaceItemEffectIdMax = 1450849;
 
     // --- MSB entity ID bases (not EMEVD event ids; a separate id space) ---
 

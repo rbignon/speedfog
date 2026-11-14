@@ -4,7 +4,7 @@ using SoulsFormats;
 namespace FogModWrapper.Plugins.RaceItems;
 
 /// <summary>
-/// Writes the race items' name, info and caption (FMG entry id = goods id)
+/// Writes the race item goods' name, info and caption (FMG entry id = goods id)
 /// into the base GoodsName / GoodsInfo / GoodsCaption FMGs of
 /// item_dlc02.msgbnd.dcx, for engus and frafr (the languages MsgBndEditor
 /// authors). The text is English in both. Same add-or-replace pattern as
@@ -14,7 +14,7 @@ public static class RaceItemsTextInjector
 {
     private const string BndName = "item_dlc02.msgbnd.dcx";
 
-    public static void Apply(string modDir, string gameDir, IReadOnlyList<RaceItem> items)
+    public static void Apply(string modDir, string gameDir, IReadOnlyList<RaceItemGoods> goods)
     {
         var gameMsgDir = Path.Combine(gameDir, "msg");
         if (!Directory.Exists(gameMsgDir))
@@ -32,16 +32,16 @@ public static class RaceItemsTextInjector
             MsgBndEditor.EditBnd(modDir, langDir, lang, BndName, bnd =>
             {
                 int n = 0;
-                n += SetEntries(bnd, "GoodsName.fmg", items, i => i.Name);
-                n += SetEntries(bnd, "GoodsInfo.fmg", items, i => i.Info);
-                n += SetEntries(bnd, "GoodsCaption.fmg", items, i => i.Caption);
+                n += SetEntries(bnd, "GoodsName.fmg", goods, g => g.Name);
+                n += SetEntries(bnd, "GoodsInfo.fmg", goods, g => g.Info);
+                n += SetEntries(bnd, "GoodsCaption.fmg", goods, g => g.Caption);
                 return n;
             });
         }
     }
 
-    private static int SetEntries(BND4 bnd, string fmgName, IReadOnlyList<RaceItem> items,
-        Func<RaceItem, string> text)
+    private static int SetEntries(BND4 bnd, string fmgName, IReadOnlyList<RaceItemGoods> goods,
+        Func<RaceItemGoods, string> text)
     {
         // Exact file name: GoodsName_dlc01.fmg / _dlc02.fmg also contain "GoodsName".
         var file = bnd.Files.Find(f =>
@@ -50,15 +50,15 @@ public static class RaceItemsTextInjector
             return 0;
 
         var fmg = FMG.Read(file.Bytes);
-        foreach (var item in items)
+        foreach (var g in goods)
         {
-            var existing = fmg.Entries.Find(e => e.ID == item.GoodsId);
+            var existing = fmg.Entries.Find(e => e.ID == g.GoodsId);
             if (existing != null)
-                existing.Text = text(item);
+                existing.Text = text(g);
             else
-                fmg.Entries.Add(new FMG.Entry(item.GoodsId, text(item)));
+                fmg.Entries.Add(new FMG.Entry(g.GoodsId, text(g)));
         }
         file.Bytes = fmg.Write();
-        return items.Count;
+        return goods.Count;
     }
 }

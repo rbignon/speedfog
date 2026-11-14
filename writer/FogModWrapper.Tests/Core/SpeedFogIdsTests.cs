@@ -108,6 +108,14 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
+    public void RaceItemEffectRange_SitsInsideTheParamRange()
+    {
+        Assert.True(SpeedFogIds.RaceItemEffectIdMin <= SpeedFogIds.RaceItemEffectIdMax);
+        Assert.True(SpeedFogIds.RaceItemEffectIdMin >= SpeedFogIds.RaceItemParamIdMin);
+        Assert.True(SpeedFogIds.RaceItemEffectIdMax <= SpeedFogIds.RaceItemParamIdMax);
+    }
+
+    [Fact]
     public void JumpscareMirrorFlags_AreSavedModStateFlagsDisjointFromTheLayerFlags()
     {
         // The mirror flags replace the zone-tracking flags the racing mod

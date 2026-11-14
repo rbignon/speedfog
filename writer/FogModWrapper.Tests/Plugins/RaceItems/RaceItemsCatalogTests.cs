@@ -21,29 +21,40 @@ public class RaceItemsCatalogTests
     [Fact]
     public void Loads_shipped_catalog()
     {
-        var items = RaceItemsCatalog.Load(ShippedCatalogPath());
+        var catalog = RaceItemsCatalog.Load(ShippedCatalogPath());
 
-        Assert.Equal(13, items.Count);
-        Assert.Equal(items.OrderBy(i => i.GoodsId).Select(i => i.GoodsId), items.Select(i => i.GoodsId));
+        Assert.Equal(2, catalog.Goods.Count);
+        Assert.Equal(13, catalog.Items.Count);
+        Assert.Equal(catalog.Goods.OrderBy(g => g.GoodsId).Select(g => g.GoodsId), catalog.Goods.Select(g => g.GoodsId));
 
-        var hammer = items.Single(i => i.Key == "hammer");
+        var raceItem = catalog.Goods.Single(g => g.Key == "race_item");
+        Assert.Equal(1450801, raceItem.GoodsId);
+        Assert.Equal(1050290101, raceItem.UseFlag);
+        Assert.Equal(1050290201, raceItem.RemoveFlag);
+        Assert.Equal(60396, raceItem.IconId);
+        Assert.Equal(1450801, raceItem.Marker!.Id);
+        Assert.Equal(10600, raceItem.Marker.Template);
+
+        var shield = catalog.Goods.Single(g => g.Key == "shield");
+        Assert.Null(shield.UseFlag);
+        Assert.Null(shield.Marker);
+
+        var hammer = catalog.Items.Single(i => i.Key == "hammer");
+        Assert.Equal("race_item", hammer.Goods);
         Assert.Equal(60390, hammer.IconId);
-        Assert.Equal(1450807, hammer.Marker!.Id);
-        Assert.Equal(10600, hammer.Marker.Template);
         Assert.Equal(1450827, hammer.Effect!.Id);
         Assert.Equal(10600, hammer.Effect.Template);
         Assert.Equal(0.35, hammer.Effect.Fields["equipWeightChangeRate"]);
         Assert.Equal(15, hammer.Effect.Fields["effectEndurance"]);
 
-        var shield = items.Single(i => i.Key == "shield");
-        Assert.Null(shield.UseFlag);
-        Assert.Null(shield.Marker);
+        Assert.Equal("shield", catalog.Items.Single(i => i.Key == "shield").Goods);
     }
 
     private const string Icons = "[icons]\nshield = 60385\n";
+    private const string Marker = "marker = { template = 10600, fields = {} }";
 
-    private static string Item(string key, int goodsId, string extra = "") => $"""
-        [[item]]
+    private static string Goods(string key, int goodsId, string extra = "") => $"""
+        [[goods]]
         key = "{key}"
         icon = "shield"
         name = "N"
@@ -55,56 +66,109 @@ public class RaceItemsCatalogTests
 
         """;
 
+    /// <summary>A usable goods (use flag and marker) keyed "g".</summary>
+    private static string UsableGoods() =>
+        Goods("g", 1450801, Marker + "\nuse_flag = 1050290101").Replace("1050290200", "1050290201");
+
+    private static string Item(string key, string goods = "g", string extra = "") => $"""
+        [[item]]
+        key = "{key}"
+        goods = "{goods}"
+        icon = "shield"
+        name = "N"
+        {extra}
+
+        """;
+
+    private static string Effect(int id) => $"effect = {{ id = {id}, template = 10600, fields = {{}} }}";
+
     [Fact]
     public void Rejects_duplicate_goods_id()
     {
-        var toml = Icons + Item("a", 1450800) + Item("b", 1450800);
-        Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
+        var toml = Icons + Goods("a", 1450800) + Goods("b", 1450800);
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
+        Assert.Contains("duplicate goods_id", ex.Message);
     }
 
     [Fact]
     public void Rejects_duplicate_key()
     {
-        var toml = Icons + Item("a", 1450800) + Item("a", 1450801);
-        Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
+        Assert.Throws<InvalidDataException>(() =>
+            RaceItemsCatalog.Parse(Icons + Goods("a", 1450800) + Goods("a", 1450802)));
+        Assert.Throws<InvalidDataException>(() =>
+            RaceItemsCatalog.Parse(Icons + UsableGoods() + Item("a") + Item("a")));
+    }
+
+    [Fact]
+    public void Goods_and_items_keys_are_separate_namespaces()
+    {
+        // The shipped catalog has a "shield" goods and a "shield" item.
+        var catalog = RaceItemsCatalog.Parse(Icons + Goods("shield", 1450800) + Item("shield", "shield"));
+        Assert.Equal("shield", catalog.Items.Single().Goods);
     }
 
     [Fact]
     public void Rejects_goods_id_outside_reserved_range()
     {
-        Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(Icons + Item("a", 1450900)));
+        Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(Icons + Goods("a", 1450900)));
     }
 
     [Fact]
     public void Rejects_use_flag_without_marker_and_marker_without_use_flag()
     {
         Assert.Throws<InvalidDataException>(() =>
-            RaceItemsCatalog.Parse(Icons + Item("a", 1450800, "use_flag = 1050290100")));
+            RaceItemsCatalog.Parse(Icons + Goods("a", 1450800, "use_flag = 1050290100")));
         Assert.Throws<InvalidDataException>(() =>
-            RaceItemsCatalog.Parse(Icons + Item("a", 1450800, "marker = { template = 10600, fields = {} }")));
+            RaceItemsCatalog.Parse(Icons + Goods("a", 1450800, Marker)));
     }
 
     [Fact]
     public void Rejects_flags_outside_their_ranges()
     {
-        const string marker = "marker = { template = 10600, fields = {} }\n";
         Assert.Throws<InvalidDataException>(() =>
-            RaceItemsCatalog.Parse(Icons + Item("a", 1450800, marker + "use_flag = 1050290200")));
-        var badRemove = Icons + Item("a", 1450800).Replace("remove_flag = 1050290200", "remove_flag = 1050290100");
+            RaceItemsCatalog.Parse(Icons + Goods("a", 1450800, Marker + "\nuse_flag = 1050290200")));
+        var badRemove = Icons + Goods("a", 1450800).Replace("remove_flag = 1050290200", "remove_flag = 1050290100");
         Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(badRemove));
     }
 
     [Fact]
-    public void Rejects_effect_id_outside_reserved_range()
+    public void Rejects_effect_id_outside_the_effect_range()
     {
-        Assert.Throws<InvalidDataException>(() =>
-            RaceItemsCatalog.Parse(Icons + Item("a", 1450800, "effect = { id = 1450900, template = 10600, fields = {} }")));
+        // 1450819 is a reserved param id, but below the item effect range.
+        var ex = Assert.Throws<InvalidDataException>(() =>
+            RaceItemsCatalog.Parse(Icons + UsableGoods() + Item("a", extra: Effect(1450819))));
+        Assert.Contains("effect id 1450819 outside", ex.Message);
+    }
+
+    [Fact]
+    public void Rejects_duplicate_effect_id()
+    {
+        var toml = Icons + UsableGoods() + Item("a", extra: Effect(1450820)) + Item("b", extra: Effect(1450820));
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
+        Assert.Contains("duplicate effect id", ex.Message);
+    }
+
+    [Fact]
+    public void Rejects_item_on_unknown_goods()
+    {
+        var ex = Assert.Throws<InvalidDataException>(() =>
+            RaceItemsCatalog.Parse(Icons + UsableGoods() + Item("a", "nope")));
+        Assert.Contains("unknown goods 'nope'", ex.Message);
+    }
+
+    [Fact]
+    public void Rejects_effect_on_goods_without_use()
+    {
+        // The Shield goods is never used: nothing would apply the effect.
+        var toml = Icons + Goods("shield", 1450800) + Item("a", "shield", Effect(1450820));
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
+        Assert.Contains("cannot be used", ex.Message);
     }
 
     [Fact]
     public void Rejects_icon_id_outside_the_reserved_range()
     {
-        var toml = "[icons]\nshield = 60400\n" + Item("a", 1450800);
+        var toml = "[icons]\nshield = 60400\n" + Goods("a", 1450800);
         var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
         Assert.Contains("icon id", ex.Message);
     }
@@ -112,7 +176,7 @@ public class RaceItemsCatalogTests
     [Fact]
     public void Rejects_duplicate_icon_id()
     {
-        var toml = "[icons]\nshield = 60385\nbanana = 60385\n" + Item("a", 1450800);
+        var toml = "[icons]\nshield = 60385\nbanana = 60385\n" + Goods("a", 1450800);
         var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
         Assert.Contains("share id", ex.Message);
     }
@@ -120,7 +184,9 @@ public class RaceItemsCatalogTests
     [Fact]
     public void Rejects_unknown_icon()
     {
-        var toml = Icons + Item("a", 1450800).Replace("icon = \"shield\"", "icon = \"nope\"");
-        Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
+        var badGoods = Icons + Goods("a", 1450800).Replace("icon = \"shield\"", "icon = \"nope\"");
+        Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(badGoods));
+        var badItem = Icons + UsableGoods() + Item("a").Replace("icon = \"shield\"", "icon = \"nope\"");
+        Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(badItem));
     }
 }

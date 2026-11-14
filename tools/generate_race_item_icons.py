@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Generate placeholder race item icons (the 11 icons of race_items.toml).
+"""Generate placeholder race item icons (the 12 icons of race_items.toml).
 
 Standalone from the project venv: requires Pillow only
 (uv run --with pillow python tools/generate_race_item_icons.py). Draws one
 flat, outlined drawing per icon (war horn, rune coin, banana, red shell,
 mushroom, hammer, squid, blue shell, lightning bolt, ghost holding a cork,
-flytrap) on transparent 1024x1024 canvases, the size asked of the final art:
-ItemIconPatcher derives every in-game texture (160x160, the large icon
-included) from each file. Outputs are committed in
+flytrap, item box) on transparent 1024x1024 canvases, the size asked of the
+final art: ItemIconPatcher derives every in-game texture (160x160, the large
+icon included) from each file. Outputs are committed in
 data/plugins/ as race_items_icon_<icon>.png.
 
 The final art is authored by the graphic artist and simply overwrites these

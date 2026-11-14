@@ -5,7 +5,9 @@ using SoulsIds;
 namespace FogModWrapper.Plugins.RaceItems;
 
 /// <summary>
-/// Writes the race items' EquipParamGoods and SpEffectParam rows.
+/// Writes the race items' EquipParamGoods and SpEffectParam rows: one goods
+/// row per catalog goods (with its marker SpEffect when it can be used) and
+/// one SpEffect row per item effect.
 /// Adapted from FogRando's Bell of Return, which adds a goods row and a
 /// SpEffect row sharing one id
 /// (reference/fogrando-src/GameDataWriterE.cs:3857-3871:
@@ -14,33 +16,41 @@ namespace FogModWrapper.Plugins.RaceItems;
 /// </summary>
 public static class RaceItemsRegulationInjector
 {
-    /// <summary>Goods row cloned for every item: Flask of Wondrous Physick.</summary>
+    /// <summary>Goods row cloned for every goods: Flask of Wondrous Physick.</summary>
     private const int GoodsTemplateId = 250;
 
-    public static void Inject(RegulationEditor reg, IReadOnlyList<RaceItem> items)
+    public static void Inject(RegulationEditor reg, RaceItemsCatalog catalog)
     {
         var goods = reg.GetParam("EquipParamGoods");
         var sp = reg.GetParam("SpEffectParam", "SpEffect");
         if (goods == null || sp == null)
             throw new InvalidOperationException("race_items: EquipParamGoods or SpEffectParam missing from regulation.bin");
-        Apply(goods, sp, items);
+        Apply(goods, sp, catalog);
     }
 
     /// <summary>Lower-level entry point used by tests; operates on loaded PARAMs.</summary>
-    public static void Apply(PARAM goods, PARAM sp, IReadOnlyList<RaceItem> items)
+    public static void Apply(PARAM goods, PARAM sp, RaceItemsCatalog catalog)
     {
-        foreach (var item in items)
+        foreach (var g in catalog.Goods)
         {
-            AddGoodsRow(goods, item);
-            if (item.Marker != null)
-                AddSpEffectRow(sp, item.Marker);
-            if (item.Effect != null)
-                AddSpEffectRow(sp, item.Effect);
+            AddGoodsRow(goods, g);
+            if (g.Marker != null)
+                AddSpEffectRow(sp, g.Marker);
         }
-        Console.WriteLine($"race_items: injected {items.Count} goods row(s) into EquipParamGoods/SpEffectParam");
+        int effects = 0;
+        foreach (var item in catalog.Items)
+        {
+            if (item.Effect != null)
+            {
+                AddSpEffectRow(sp, item.Effect);
+                effects++;
+            }
+        }
+        Console.WriteLine(
+            $"race_items: injected {catalog.Goods.Count} goods row(s) and {effects} effect SpEffect row(s)");
     }
 
-    private static void AddGoodsRow(PARAM goods, RaceItem item)
+    private static void AddGoodsRow(PARAM goods, RaceItemGoods item)
     {
         var row = GameEditor.AddRow(goods, item.GoodsId, GoodsTemplateId);
         bool usable = item.Marker != null;

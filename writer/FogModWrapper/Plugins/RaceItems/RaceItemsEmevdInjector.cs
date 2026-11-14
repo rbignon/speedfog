@@ -5,9 +5,9 @@ using SoulsIds;
 namespace FogModWrapper.Plugins.RaceItems;
 
 /// <summary>
-/// Adds the race items' common.emevd events: one use event per usable item
+/// Adds the race items' common.emevd events: one use event per usable goods
 /// (marker SpEffect applied, raise the use flag, wait for the marker to end,
-/// restart) and one removal event per item (the racing mod raises the removal
+/// restart) and one removal event per goods (the racing mod raises the removal
 /// flag, the event removes the goods and clears the flag).
 /// Adapted from FogRando's common_bellofreturn
 /// (data/fogevents.txt:389-406), which also waits on a goods marker SpEffect
@@ -21,7 +21,7 @@ public static class RaceItemsEmevdInjector
     private const int FirstGoodsId = 1450800;
     private const int RemovalOffset = 50;
 
-    public static void Inject(EMEVD commonEmevd, Events events, IReadOnlyList<RaceItem> items)
+    public static void Inject(EMEVD commonEmevd, Events events, IReadOnlyList<RaceItemGoods> goods)
     {
         var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
@@ -31,20 +31,20 @@ public static class RaceItemsEmevdInjector
         }
 
         int useCount = 0;
-        foreach (var item in items)
+        foreach (var g in goods)
         {
-            int n = item.GoodsId - FirstGoodsId;
+            int n = g.GoodsId - FirstGoodsId;
             if (n < 0 || n >= RemovalOffset)
                 throw new InvalidOperationException(
-                    $"race_items: goods id {item.GoodsId} outside the event slot range");
+                    $"race_items: goods id {g.GoodsId} outside the event slot range");
 
-            if (item.UseFlag is int useFlag && item.Marker is not null)
+            if (g.UseFlag is int useFlag && g.Marker is not null)
             {
                 AddEvent(commonEmevd, initEvent, events, SpeedFogIds.RaceItemEvents.Base + n, new[]
                 {
-                    $"IfCharacterHasSpEffect(MAIN, 10000, {item.Marker.Id}, true, ComparisonType.Equal, 1)",
+                    $"IfCharacterHasSpEffect(MAIN, 10000, {g.Marker.Id}, true, ComparisonType.Equal, 1)",
                     $"SetEventFlag(TargetEventFlagType.EventFlag, {useFlag}, ON)",
-                    $"IfCharacterHasSpEffect(MAIN, 10000, {item.Marker.Id}, false, ComparisonType.Equal, 1)",
+                    $"IfCharacterHasSpEffect(MAIN, 10000, {g.Marker.Id}, false, ComparisonType.Equal, 1)",
                     "EndUnconditionally(EventEndType.Restart)",
                 });
                 useCount++;
@@ -52,14 +52,14 @@ public static class RaceItemsEmevdInjector
 
             AddEvent(commonEmevd, initEvent, events, SpeedFogIds.RaceItemEvents.Base + RemovalOffset + n, new[]
             {
-                $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {item.RemoveFlag})",
-                $"RemoveItemFromPlayer(ItemType.Goods, {item.GoodsId}, 1)",
-                $"SetEventFlag(TargetEventFlagType.EventFlag, {item.RemoveFlag}, OFF)",
+                $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {g.RemoveFlag})",
+                $"RemoveItemFromPlayer(ItemType.Goods, {g.GoodsId}, 1)",
+                $"SetEventFlag(TargetEventFlagType.EventFlag, {g.RemoveFlag}, OFF)",
                 "EndUnconditionally(EventEndType.Restart)",
             });
         }
 
-        Console.WriteLine($"race_items: {useCount} use events and {items.Count} removal events");
+        Console.WriteLine($"race_items: {useCount} use events and {goods.Count} removal events");
     }
 
     private static void AddEvent(
