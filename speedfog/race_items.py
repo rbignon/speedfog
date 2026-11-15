@@ -20,7 +20,7 @@ GOODS_ID_RANGE = range(1450800, 1450820)
 EFFECT_ID_RANGE = range(1450820, 1450850)  # Item effect SpEffects
 USE_FLAG_RANGE = range(1050290100, 1050290200)
 REMOVE_FLAG_RANGE = range(1050290200, 1050290300)
-ICON_ID_RANGE = range(60385, 60400)
+ICON_ID_RANGE = range(60385, 60415)
 
 
 def _check_range(label: str, key: str, value: Any, allowed: range) -> None:

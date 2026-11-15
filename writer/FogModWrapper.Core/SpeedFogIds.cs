@@ -344,10 +344,10 @@ public static class SpeedFogIds
     /// "Profane Tear" by the text catalogue).</summary>
     public const int HalloweenSacredTearIcon = 60384;
 
-    /// <summary>Icon ids of the race items (MENU_ItemIcon_60385..60399, shipped
+    /// <summary>Icon ids of the race items (MENU_ItemIcon_60385..60414, shipped
     /// by the speedfog-icons overlay), after the Halloween ones.</summary>
     public const int RaceItemIconIdMin = 60385;
-    public const int RaceItemIconIdMax = 60399;
+    public const int RaceItemIconIdMax = 60414;
 
     // --- FMG text ids (NpcName.fmg entry ids: a separate namespace from
     //     entity ids, event ids and param rows) ---

@@ -41,7 +41,7 @@ The ranges are reserved in `SpeedFogIds` and documented in
 their markers in 1450800-1450819, item effect SpEffects in 1450820-1450849),
 use flags 1050290100-1050290199, removal flags 1050290200-1050290299 (saved
 category 1050290), common.emevd events 755865700-755865799, icon ids
-60385-60399.
+60385-60414.
 
 ## Goods and items
 
@@ -85,7 +85,22 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `lightning` | Lightning | `race_item` | `lightning` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
 | `flask_stopper` | Flask Stopper | `race_item` | `flask_stopper` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
 | `toxic_blossom` | Toxic Blossom | `race_item` | `toxic_blossom` | 1450832, 3370, `poizonAttackPower = 99999` | none |
+| `star` | Star | `race_item` | `star` | 1450833, 10600, `noDead = 1`, the eight damage cut rates and `toughnessDamageCutRate` at 0, `effectEndurance = 5` | 5 s |
+| `vanish` | Vanish | `race_item` | `vanish` | none (applied by the racing mod through memory writes) | 15 s |
+| `unseen_foes` | Unseen Foes | `race_item` | `unseen_foes` | none (memory writes) | 15 s |
+| `slow_mo` | Slow-mo | `race_item` | `slow_mo` | none (memory writes) | 15 s |
+| `mini` | Mini | `race_item` | `mini` | none (memory writes) | 15 s |
+| `giant` | Giant | `race_item` | `giant` | none (memory writes) | 15 s |
+| `camera` | Camera | `race_item` | `camera` | none (memory writes) | 15 s |
 
+The Star's row makes its user unkillable for its 5 s: `noDead` keeps the
+character out of the death state and every damage cut rate (slash, blow,
+thrust, neutral, magic, fire, thunder, dark) and the poise damage cut rate are
+0, so no hit lands and none staggers. Status build-up still applies. It uses
+this row rather than the character debug flags (`ChrDbgFlags`), which the
+racing mod's cheat detection reads. The six other new items have no row: the
+racing mod applies them by writing the player's or the foes' memory for their
+duration, so the catalog only gives them a name, an icon and a duration.
 An effect on an item of the Shield goods is rejected when the catalog loads:
 the Shield is never used, so nothing would apply it.
 
@@ -161,7 +176,7 @@ lists every item; this excerpt shows two:
 
 ## Replacing the icons
 
-The 12 icons ship as placeholder flat shapes. The art is replaced by dropping
+The 19 icons ship as placeholder flat shapes. The art is replaced by dropping
 PNG files in, nothing else changes. For the graphic artist and for Roger:
 
 - **Format**: PNG, RGBA with a transparent background, square, at least
@@ -171,7 +186,8 @@ PNG files in, nothing else changes. For the graphic artist and for Roger:
 - **Files**: `data/plugins/race_items_icon_<icon>.png`, `<icon>` being a name of
   the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
   `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
-  `toxic_blossom`, `item_box` (ids 60385-60396; the three Rune Pouches share
+  `toxic_blossom`, `item_box`, `star`, `vanish`, `unseen_foes`, `slow_mo`,
+  `mini`, `giant`, `camera` (ids 60385-60403; the three Rune Pouches share
   one icon; `item_box` is the Race Item's own icon, shown until the racing
   mod writes the held item's icon).
 - **After the drop**: overwrite the files (never re-run

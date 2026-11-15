@@ -43,6 +43,13 @@ blue_shell = 60392
 lightning = 60393
 flask_stopper = 60394
 toxic_blossom = 60395
+star = 60397
+vanish = 60398
+unseen_foes = 60399
+slow_mo = 60400
+mini = 60401
+giant = 60402
+camera = 60403
 
 [[goods]]
 key = "shield"
@@ -156,3 +163,53 @@ goods = "race_item"
 icon = "toxic_blossom"
 name = "Toxic Blossom"
 effect = { id = 1450832, template = 3370, fields = { poizonAttackPower = 99999 } }
+
+[[item]]
+key = "star"
+goods = "race_item"
+icon = "star"
+name = "Star"
+duration_s = 5
+effect = { id = 1450833, template = 10600, fields = { noDead = 1, slashDamageCutRate = 0, blowDamageCutRate = 0, thrustDamageCutRate = 0, neutralDamageCutRate = 0, magicDamageCutRate = 0, fireDamageCutRate = 0, thunderDamageCutRate = 0, darkDamageCutRate = 0, toughnessDamageCutRate = 0, effectEndurance = 5 } }
+
+[[item]]
+key = "vanish"
+goods = "race_item"
+icon = "vanish"
+name = "Vanish"
+duration_s = 15
+
+[[item]]
+key = "unseen_foes"
+goods = "race_item"
+icon = "unseen_foes"
+name = "Unseen Foes"
+duration_s = 15
+
+[[item]]
+key = "slow_mo"
+goods = "race_item"
+icon = "slow_mo"
+name = "Slow-mo"
+duration_s = 15
+
+[[item]]
+key = "mini"
+goods = "race_item"
+icon = "mini"
+name = "Mini"
+duration_s = 15
+
+[[item]]
+key = "giant"
+goods = "race_item"
+icon = "giant"
+name = "Giant"
+duration_s = 15
+
+[[item]]
+key = "camera"
+goods = "race_item"
+icon = "camera"
+name = "Camera"
+duration_s = 15

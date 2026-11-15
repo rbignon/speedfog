@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from speedfog.race_items import load_race_items_catalog
+from speedfog.race_items import ICON_ID_RANGE, load_race_items_catalog
 
 CATALOG_PATH = Path(__file__).parent.parent / "data" / "plugins" / "race_items.toml"
 
@@ -32,7 +32,7 @@ def test_shipped_catalog_matches_the_contract():
         "icon": "shield",
         "icon_id": 60385,
     }
-    assert len(catalog["items"]) == 13
+    assert len(catalog["items"]) == 20
     assert catalog["items"]["hammer"] == {
         "name": "Hammer",
         "icon": "hammer",
@@ -72,6 +72,9 @@ def test_shipped_catalog_ids_follow_the_numbering():
 VANILLA_ENDURANCE = {102360: 15, 4101: 0}
 
 
+MEMORY_EFFECTS = {"vanish", "unseen_foes", "slow_mo", "mini", "giant", "camera"}
+
+
 def test_duration_matches_the_speffect_that_carries_it():
     for item in _raw_items():
         duration = item.get("duration_s")
@@ -88,8 +91,36 @@ def test_duration_matches_the_speffect_that_carries_it():
         elif item["key"] == "ink":
             # Overlay only: no SpEffect row.
             assert duration == 30
+        elif item["key"] in MEMORY_EFFECTS:
+            # Applied by the racing mod through memory writes: no SpEffect row.
+            assert duration == 15, item["key"]
         else:
             assert duration is None, item["key"]
+
+
+def test_every_icon_id_is_in_range_and_unique():
+    with CATALOG_PATH.open("rb") as fp:
+        icons = tomllib.load(fp)["icons"]
+    ids = list(icons.values())
+    assert len(ids) == len(set(ids))
+    assert all(icon_id in ICON_ID_RANGE for icon_id in ids)
+
+
+def test_star_row_makes_its_user_invincible_for_its_duration():
+    star = next(item for item in _raw_items() if item["key"] == "star")
+    fields = star["effect"]["fields"]
+    assert star["effect"]["template"] == 10600
+    assert fields["noDead"] == 1
+    assert (
+        fields["effectEndurance"] * 1000
+        == (load_race_items_catalog(CATALOG_PATH)["items"]["star"]["duration_ms"])
+    )
+    for rate in (
+        "slashDamageCutRate", "blowDamageCutRate", "thrustDamageCutRate",
+        "neutralDamageCutRate", "magicDamageCutRate", "fireDamageCutRate",
+        "thunderDamageCutRate", "darkDamageCutRate", "toughnessDamageCutRate",
+    ):  # fmt: skip
+        assert fields[rate] == 0, rate
 
 
 def test_mushroom_lasts_its_row_plus_the_vanilla_tail():
@@ -220,7 +251,7 @@ def test_loader_rejects_unknown_icon(tmp_path, entries):
 
 
 def test_loader_rejects_icon_id_outside_reserved_range(tmp_path):
-    path = _write_catalog(tmp_path, _goods(), icons="[icons]\nfoo = 60400\n")
+    path = _write_catalog(tmp_path, _goods(), icons="[icons]\nfoo = 60415\n")
     with pytest.raises(ValueError, match="icon id"):
         load_race_items_catalog(path)
 

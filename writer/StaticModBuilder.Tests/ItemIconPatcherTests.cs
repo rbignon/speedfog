@@ -170,9 +170,9 @@ public class ItemIconPatcherTests
 
             int written = ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants);
 
-            // 14 icons (2 Halloween + 12 race item: the Race Item's item box
-            // and the 11 item icons), 2 textures each, 2 variants.
-            Assert.Equal(56, written);
+            // 21 icons (2 Halloween + 19 race item: the Race Item's item box
+            // and the 18 item icons), 2 textures each, 2 variants.
+            Assert.Equal(84, written);
             var pngById = new Dictionary<int, string>
             {
                 [SpeedFogIds.HalloweenGoldenSeedIcon] = "halloween_icon_pumpkin_seed.png",
@@ -184,7 +184,7 @@ public class ItemIconPatcherTests
             {
                 pngById[iconId] = $"race_items_icon_{icon}.png";
             }
-            Assert.Equal(new[] { 60383, 60384 }.Concat(Enumerable.Range(60385, 12)), pngById.Keys.Order());
+            Assert.Equal(new[] { 60383, 60384 }.Concat(Enumerable.Range(60385, 19)), pngById.Keys.Order());
             Assert.Equal("race_items_icon_item_box.png", pngById[60396]);
             foreach (var (variant, large) in variants)
             {
@@ -197,10 +197,10 @@ public class ItemIconPatcherTests
                 Assert.Contains(tpf.Textures, t => t.Name == "MENU_DummyTransparent");
             }
 
-            // A rerun replaces by name: still 28 icon textures + the template.
+            // A rerun replaces by name: still 42 icon textures + the template.
             ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants);
             var again = TPF.Read(Path.Combine(iconsDir, "menu", "hi", "05_dummy.tpf.dcx"));
-            Assert.Equal(29, again.Textures.Count);
+            Assert.Equal(43, again.Textures.Count);
         }
         finally
         {
@@ -222,7 +222,7 @@ public class ItemIconPatcherTests
             var iconsDir = Path.Combine(root, "icons");
             Directory.CreateDirectory(iconsDir);
 
-            Assert.Equal(56, ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants));
+            Assert.Equal(84, ItemIconPatcher.Patch(gameDir, iconsDir, dataDir, small, variants));
             foreach (var (variant, _) in variants)
             {
                 var tpf = TPF.Read(Path.Combine(iconsDir, "menu", variant, "05_dummy.tpf.dcx"));

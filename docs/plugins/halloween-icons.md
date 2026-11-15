@@ -66,7 +66,7 @@ touched; a seed with the plugin disabled ships nothing extra at all.
 ## The shared icon overlay
 
 The overlay is shared with the race items plugin ([race-items.md](race-items.md)),
-which ships 12 more icons (ids 60385-60396). ModEngine 2 keeps the first copy
+which ships 19 more icons (ids 60385-60403). ModEngine 2 keeps the first copy
 of a given file, so a second overlay shipping its own `05_dummy.tpf.dcx` would
 hide the other's icons: both icon sets live in ONE file, in ONE overlay,
 `data/mods/speedfog-icons/`, shipped when Halloween OR race items is enabled.

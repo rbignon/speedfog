@@ -24,7 +24,7 @@ public class RaceItemsCatalogTests
         var catalog = RaceItemsCatalog.Load(ShippedCatalogPath());
 
         Assert.Equal(2, catalog.Goods.Count);
-        Assert.Equal(13, catalog.Items.Count);
+        Assert.Equal(20, catalog.Items.Count);
         Assert.Equal(catalog.Goods.OrderBy(g => g.GoodsId).Select(g => g.GoodsId), catalog.Goods.Select(g => g.GoodsId));
 
         var raceItem = catalog.Goods.Single(g => g.Key == "race_item");
@@ -176,7 +176,7 @@ public class RaceItemsCatalogTests
     [Fact]
     public void Rejects_icon_id_outside_the_reserved_range()
     {
-        var toml = "[icons]\nshield = 60400\n" + Goods("a", 1450800);
+        var toml = "[icons]\nshield = 60415\n" + Goods("a", 1450800);
         var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(toml));
         Assert.Contains("icon id", ex.Message);
     }
