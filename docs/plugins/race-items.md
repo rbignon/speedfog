@@ -80,7 +80,7 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `red_shell` | Red Shell | `race_item` | `red_shell` | none | none |
 | `mushroom` | Mushroom | `race_item` | `mushroom` | 1450826, 10600, `effectEndurance = 15`, cycles 102360 every 0.5 s | 30 s |
 | `hammer` | Hammer | `race_item` | `hammer` | 1450827, 10600, `equipWeightChangeRate = 0.35` (rewritten per target by the racing mod), `effectEndurance = 15` | 15 s |
-| `ink` | Ink | `race_item` | `ink` | none (overlay only; the racing mod holds it until the runner stands in a zone whose node has `unused_exits` above 0, or in a boss arena until its boss is dead) | 30 s |
+| `ink` | Ink | `race_item` | `ink` | none (overlay only; the racing mod keeps it waiting until the runner stands in a zone whose node has `unused_exits` above 0; in such a boss arena, the exits hidden through the fight, its time runs from the boss's kill) | 30 s |
 | `blue_shell` | Blue Shell | `race_item` | `blue_shell` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
 | `lightning` | Lightning | `race_item` | `lightning` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
 | `flask_stopper` | Flask Stopper | `race_item` | `flask_stopper` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
