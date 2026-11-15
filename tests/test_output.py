@@ -182,6 +182,98 @@ def make_test_dag() -> Dag:
 
 
 # =============================================================================
+# unused_exits tests
+# =============================================================================
+
+
+def _arena_dag(left_by: str) -> Dag:
+    """start -> arena (two gates g1/g2, entered by g1) -> end, left by `left_by`."""
+    dag = Dag(seed=1)
+    z = "z_arena"
+    gates = [
+        {"fog_id": "g1", "zone": z, "text": "g1"},
+        {"fog_id": "g2", "zone": z, "text": "g2"},
+    ]
+    arena = make_cluster(
+        "c_arena",
+        zones=[z],
+        cluster_type="major_boss",
+        entry_fogs=gates,
+        exit_fogs=gates,
+    )
+    arena.allow_entry_as_exit = True
+    dag.add_node(
+        DagNode(
+            id="start",
+            cluster=make_cluster(
+                "c_s",
+                zones=["z_s"],
+                cluster_type="start",
+                entry_fogs=[],
+                exit_fogs=[{"fog_id": "s1", "zone": "z_s", "text": "s"}],
+            ),
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef("s1", "z_s")],
+        )
+    )
+    dag.add_node(
+        DagNode(
+            id="arena", cluster=arena, layer=1, tier=2, entry_fogs=[FogRef("g1", z)]
+        )
+    )
+    dag.add_node(
+        DagNode(
+            id="end",
+            cluster=make_cluster(
+                "c_e",
+                zones=["z_e"],
+                cluster_type="final_boss",
+                entry_fogs=[{"fog_id": "e1", "zone": "z_e", "text": "e"}],
+            ),
+            layer=2,
+            tier=3,
+            entry_fogs=[FogRef("e1", "z_e")],
+        )
+    )
+    dag.add_edge("start", "arena", FogRef("s1", "z_s"), FogRef("g1", z))
+    dag.add_edge("arena", "end", FogRef(left_by, z), FogRef("e1", "z_e"))
+    dag.start_id = "start"
+    dag.end_id = "end"
+    return dag
+
+
+class TestUnusedExits:
+    def _nodes(self, dag: Dag) -> dict:
+        clusters = ClusterPool(clusters=[n.cluster for n in dag.nodes.values()])
+        return dag_to_dict(dag, clusters)["nodes"]
+
+    def test_unused_exits_counts_the_exits_no_edge_takes(self):
+        dag = make_test_dag()
+        dag.nodes["a"].cluster.exit_fogs.append(
+            {"fog_id": "fog_9", "zone": "z_a", "text": "unused"}
+        )
+        nodes = self._nodes(dag)
+        assert nodes["c_a"]["unused_exits"] == 1
+        assert nodes["c_start"]["unused_exits"] == 0
+
+    def test_unused_exits_skip_the_side_the_runner_came_in_by(self):
+        dag = make_test_dag()
+        dag.nodes["b"].cluster.exit_fogs.append(
+            {"fog_id": "fog_2", "zone": "z_b1", "text": "entry as exit"}
+        )
+        assert self._nodes(dag)["c_b"]["unused_exits"] == 0
+
+    def test_an_arena_left_by_its_entry_gate(self):
+        assert self._nodes(_arena_dag("g1"))["c_arena"]["unused_exits"] == 1
+        assert self._nodes(_arena_dag("g2"))["c_arena"]["unused_exits"] == 0
+
+    def test_the_end_node_has_no_unused_exits(self):
+        assert self._nodes(make_test_dag())["c_end"]["unused_exits"] == 0
+
+
+# =============================================================================
 # effective_type tests
 # =============================================================================
 
@@ -2708,7 +2800,7 @@ class TestDagToDictRaceItems:
             dag, self._clusters(dag), GraphExportOptions(race_items=catalog)
         )
         assert result["race_items"] == catalog
-        assert result["version"] == "4.12"
+        assert result["version"] == "4.13"
         validate_graph_dict(result)
 
     def test_dag_to_dict_omits_race_items_when_disabled(self):

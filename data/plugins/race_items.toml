@@ -124,7 +124,7 @@ key = "ink"
 goods = "race_item"
 icon = "ink"
 name = "Ink"
-duration_s = 15
+duration_s = 30
 
 [[item]]
 key = "blue_shell"

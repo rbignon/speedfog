@@ -298,6 +298,29 @@ def _make_fullname(
     return f"unknown_{fog_id}"
 
 
+def unused_exit_count(dag: Dag, node_id: str) -> int:
+    """Number of a node's cluster exit fogs that no edge takes.
+
+    A fog counts as used when an outgoing edge leaves by it, or when an
+    incoming edge enters by it (the side the runner came in by). Not
+    ``count_node_net_exits``: for ``allow_entry_as_exit`` arenas that keeps the
+    entry gate as free, so a two-gate arena would read as having an unused
+    exit. The end node returns 0, its exits never matter.
+    """
+    if node_id == dag.end_id:
+        return 0
+    node = dag.nodes[node_id]
+    used = {
+        (e.exit_fog.fog_id, e.exit_fog.zone) for e in dag.get_outgoing_edges(node_id)
+    }
+    used |= {
+        (e.entry_fog.fog_id, e.entry_fog.zone) for e in dag.get_incoming_edges(node_id)
+    }
+    return sum(
+        1 for f in node.cluster.exit_fogs if (f["fog_id"], f["zone"]) not in used
+    )
+
+
 def dag_to_dict(
     dag: Dag,
     clusters: ClusterPool,
@@ -445,6 +468,7 @@ def dag_to_dict(
             "tier": node.tier,
             "original_tier": original_tier,
             "weight": node.cluster.weight,
+            "unused_exits": unused_exit_count(dag, node.id),
             "exits": [],
             "entrances": [],
         }

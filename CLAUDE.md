@@ -788,11 +788,11 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 
 ## Data Formats
 
-### graph.json v4.12 (Python → C# + visualization + racing)
+### graph.json v4.13 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.12",
+  "version": "4.13",
   "seed": 212559448,
   "options": {"scale": true, "shuffle": true},
   "plugins": {"summer": {"enabled": true}},
@@ -823,6 +823,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 - `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the same enemy-randomizer placement mapping already computed in `speedfog/item_randomizer.py` and shipped to ItemRandomizerWrapper as `item_config.json`, now also patched into graph.json (`patch_graph_enemy_assignments`) so FogModWrapper can locate placed bosses; absent or empty when no assignments were made (added v4.5, `GraphData.EnemyAssignments`, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
 - `class_loadout`: optional, `[tarnished] starting_loadout`'s shuffled weapon/shield/armor-set permutations for the starting classes (weapon always in the right hand, shields once each on occupied left hands, armor per occupied slot; mechanism-named, not pack-named: `[tarnished]` is only its first producer); absent when the option is off (added v4.6, reshaped v4.7, `GraphData.ClassLoadout`, consumed by `ClassLoadoutInjector`, see `docs/tarnished-showcase.md`)
 - `torrent_skins`: optional, `[tarnished] unlock_torrent_skins`'s unlock flag plus a resolved `default_flag` (6701-6703) for the pre-selected Torrent skin; absent when the option is off (added v4.6, `GraphData.TorrentSkins`, consumed by `StartingItemInjector`, see `docs/tarnished-showcase.md`)
+- `unused_exits`: per node, the number of its cluster's `exit_fogs` that no edge takes, neither as an outgoing edge's exit fog nor as an incoming edge's entry fog (the side the runner came in by); `0` on the end node. Not the generator's free-exit count, which keeps an `allow_entry_as_exit` arena's entry gate as free (added v4.13, consumed by speedfog-racing)
 - `race_items`: optional `{goods: {goods_key: {goods_id, use_flag, remove_flag, icon, icon_id}}, items: {item_key: {name, icon, icon_id, goods, effect_speffect, duration_ms}}}`, the catalog of `data/plugins/race_items.toml` (`load_race_items_catalog`): the two goods rows (`shield`, the passive Shield; `race_item`, the usable Race Item whose icon the racing mod rewrites to the held item) and the items, each pointing at one goods by key; `use_flag`, `effect_speffect` and `duration_ms` are `null` where there is none; written only when `[plugin.race_items] enabled` (added v4.11, split into goods and items v4.12, consumed by speedfog-racing)
 - `boss_names`: optional `{arena_entity_id: {name, map}}`, one entry per `enemy_assignments` entry: the placed entity's own name (the placement's `healthbar_name`, which differs from `randomized_bosses` for a group fight) and the map whose EMEVD shows the arena's healthbar. The injector repoints only the arenas the randomizer did not name itself (added v4.8, `GraphData.BossNames`, consumed by `BossNameInjector`, see `docs/boss-healthbar-names.md`)
 - `helper_models`: optional `{arena_entity_id: [model, ...]}` for the `enemy_assignments` entries whose source owns `Class: Helper` entries in enemy.txt: the models of the helper clones the randomizer places in the arena, so FogModWrapper can scale them with the boss; absent when no placed source has helpers (added v4.9, `GraphData.HelperModels`, consumed by `HelperAreaResolver`, see `docs/item-randomizer.md` "Helper enemy scaling")

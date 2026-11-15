@@ -80,7 +80,7 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `red_shell` | Red Shell | `race_item` | `red_shell` | none | none |
 | `mushroom` | Mushroom | `race_item` | `mushroom` | 1450826, 10600, `effectEndurance = 15`, cycles 102360 every 0.5 s | 30 s |
 | `hammer` | Hammer | `race_item` | `hammer` | 1450827, 10600, `equipWeightChangeRate = 0.35` (rewritten per target by the racing mod), `effectEndurance = 15` | 15 s |
-| `ink` | Ink | `race_item` | `ink` | none (overlay only) | 15 s |
+| `ink` | Ink | `race_item` | `ink` | none (overlay only; the racing mod holds it until the runner stands in a zone whose node has `unused_exits` above 0) | 30 s |
 | `blue_shell` | Blue Shell | `race_item` | `blue_shell` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
 | `lightning` | Lightning | `race_item` | `lightning` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
 | `flask_stopper` | Flask Stopper | `race_item` | `flask_stopper` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
@@ -140,7 +140,7 @@ or, for the Mushroom and the Rune Pouches, to the sender.
 
 ## graph.json `race_items`
 
-Present only when the plugin is enabled (`GRAPH_JSON_VERSION` 4.12; 4.11
+Present only when the plugin is enabled (`GRAPH_JSON_VERSION` 4.13; 4.11
 had one goods per item). `goods` has one entry per goods key, `items` one per
 item key, each item naming its goods by key; `use_flag`, `effect_speffect`
 and `duration_ms` are `null` where the tables above say none. The real value

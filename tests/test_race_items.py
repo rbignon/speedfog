@@ -87,7 +87,7 @@ def test_duration_matches_the_speffect_that_carries_it():
             assert fields["effectEndurance"] + tail == duration, item["key"]
         elif item["key"] == "ink":
             # Overlay only: no SpEffect row.
-            assert duration == 15
+            assert duration == 30
         else:
             assert duration is None, item["key"]
 

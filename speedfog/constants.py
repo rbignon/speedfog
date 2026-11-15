@@ -21,7 +21,8 @@ from __future__ import annotations
 # 4.11: optional race_items (catalog of the race items plugin, written when
 #       [plugin.race_items] is enabled)
 # 4.12: race_items split into goods and items
-GRAPH_JSON_VERSION = "4.12"
+# 4.13: per-node unused_exits (exit fogs no edge takes), read by the racing mod
+GRAPH_JSON_VERSION = "4.13"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.
