@@ -80,12 +80,12 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `red_shell` | Red Shell | `race_item` | `red_shell` | none | none |
 | `mushroom` | Mushroom | `race_item` | `mushroom` | 1450826, 10600, `effectEndurance = 15`, cycles 102360 every 0.5 s | 30 s |
 | `hammer` | Hammer | `race_item` | `hammer` | 1450827, 10600, `equipWeightChangeRate = 0.35` (rewritten per target by the racing mod), `effectEndurance = 15` | 15 s |
-| `ink` | Ink | `race_item` | `ink` | none (overlay only; the racing mod holds it until the runner stands in a zone whose node has `unused_exits` above 0) | 30 s |
+| `ink` | Ink | `race_item` | `ink` | none (overlay only; the racing mod holds it until the runner stands in a zone whose node has `unused_exits` above 0, or in a boss arena until its boss is dead) | 30 s |
 | `blue_shell` | Blue Shell | `race_item` | `blue_shell` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
 | `lightning` | Lightning | `race_item` | `lightning` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
 | `flask_stopper` | Flask Stopper | `race_item` | `flask_stopper` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
 | `toxic_blossom` | Toxic Blossom | `race_item` | `toxic_blossom` | 1450832, 3370, `poizonAttackPower = 99999` | none |
-| `star` | Star | `race_item` | `star` | 1450833, 10600, `noDead = 1`, the eight damage cut rates and `toughnessDamageCutRate` at 0, `effectEndurance = 5` | 5 s |
+| `star` | Star | `race_item` | `star` | 1450833, 10600, `noDead = 1`, the eight damage cut rates and `toughnessDamageCutRate` at 0, `effectEndurance = 15` | 15 s |
 | `vanish` | Vanish | `race_item` | `vanish` | none (applied by the racing mod through memory writes) | 15 s |
 | `unseen_foes` | Unseen Foes | `race_item` | `unseen_foes` | none (memory writes) | 15 s |
 | `slow_mo` | Slow-mo | `race_item` | `slow_mo` | none (memory writes) | 15 s |
@@ -93,7 +93,7 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `giant` | Giant | `race_item` | `giant` | none (memory writes) | 15 s |
 | `camera` | Camera | `race_item` | `camera` | none (memory writes) | 15 s |
 
-The Star's row makes its user unkillable for its 5 s: `noDead` keeps the
+The Star's row makes its user unkillable for its 15 s: `noDead` keeps the
 character out of the death state and every damage cut rate (slash, blow,
 thrust, neutral, magic, fire, thunder, dark) and the poise damage cut rate are
 0, so no hit lands and none staggers. Status build-up still applies. It uses

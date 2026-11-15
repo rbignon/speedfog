@@ -169,8 +169,8 @@ key = "star"
 goods = "race_item"
 icon = "star"
 name = "Star"
-duration_s = 5
-effect = { id = 1450833, template = 10600, fields = { noDead = 1, slashDamageCutRate = 0, blowDamageCutRate = 0, thrustDamageCutRate = 0, neutralDamageCutRate = 0, magicDamageCutRate = 0, fireDamageCutRate = 0, thunderDamageCutRate = 0, darkDamageCutRate = 0, toughnessDamageCutRate = 0, effectEndurance = 5 } }
+duration_s = 15
+effect = { id = 1450833, template = 10600, fields = { noDead = 1, slashDamageCutRate = 0, blowDamageCutRate = 0, thrustDamageCutRate = 0, neutralDamageCutRate = 0, magicDamageCutRate = 0, fireDamageCutRate = 0, thunderDamageCutRate = 0, darkDamageCutRate = 0, toughnessDamageCutRate = 0, effectEndurance = 15 } }
 
 [[item]]
 key = "vanish"
