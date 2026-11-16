@@ -197,4 +197,35 @@ public class RaceItemsCatalogTests
         var badItem = Icons + UsableGoods() + Item("a").Replace("icon = \"shield\"", "icon = \"nope\"");
         Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(badItem));
     }
+
+    private const string HunterToml = """
+
+        [hunter]
+        chr_id = 2130
+        source_npc_param = 21300014
+        source_think = 21300000
+        npc_param_base = {0}
+        think_param = {1}
+        """;
+
+    private static string HunterTable(int baseId, int think) =>
+        HunterToml.Replace("{0}", baseId.ToString()).Replace("{1}", think.ToString());
+
+    [Fact]
+    public void Hunter_table_is_optional()
+    {
+        Assert.Null(RaceItemsCatalog.Parse("").Hunter);
+        var hunter = RaceItemsCatalog.Parse(HunterTable(1450850, 1450850)).Hunter!;
+        Assert.Equal(new RaceItemHunter(2130, 21300014, 21300000, 1450850, 1450850), hunter);
+    }
+
+    [Theory]
+    [InlineData(1450849, 1450850)]  // below the reserved range
+    [InlineData(1450867, 1450850)]  // the 34th tier row leaves the range
+    [InlineData(1450850, 1450900)]  // think row outside
+    public void Rejects_a_hunter_whose_rows_leave_the_range(int baseId, int think)
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(HunterTable(baseId, think)));
+        Assert.Contains("hunter", ex.Message);
+    }
 }

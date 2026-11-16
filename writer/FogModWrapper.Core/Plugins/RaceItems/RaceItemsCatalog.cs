@@ -22,13 +22,21 @@ public sealed record RaceItemGoods(
 public sealed record RaceItem(
     string Key, string Goods, string Icon, int IconId, string Name, RaceItemSpEffect? Effect);
 
+/// <summary>The Hunter's rows: NpcParam <see cref="SourceNpcParam"/> and
+/// NpcThinkParam <see cref="SourceThink"/> (Margit, the Fell Omen) are cloned
+/// into one NpcParam row per enemy tier from <see cref="NpcParamBase"/> and
+/// one think row <see cref="ThinkParam"/>; the racing mod spawns model
+/// <see cref="ChrId"/> (c2130).</summary>
+public sealed record RaceItemHunter(int ChrId, int SourceNpcParam, int SourceThink, int NpcParamBase, int ThinkParam);
+
 /// <summary>
 /// The race items catalog (data/plugins/race_items.toml): the goods rows and
 /// the items pointing at them. Loaded and validated as the Python loader
 /// (speedfog/race_items.py) does. Goods come back ordered by goods id, items
 /// in catalog order.
 /// </summary>
-public sealed record RaceItemsCatalog(IReadOnlyList<RaceItemGoods> Goods, IReadOnlyList<RaceItem> Items)
+public sealed record RaceItemsCatalog(
+    IReadOnlyList<RaceItemGoods> Goods, IReadOnlyList<RaceItem> Items, RaceItemHunter? Hunter = null)
 {
     private const string Prefix = "race_items:";
 
@@ -86,7 +94,31 @@ public sealed record RaceItemsCatalog(IReadOnlyList<RaceItemGoods> Goods, IReadO
             items.Add(item);
         }
 
-        return new RaceItemsCatalog(goods.Values.OrderBy(g => g.GoodsId).ToList(), items);
+        return new RaceItemsCatalog(
+            goods.Values.OrderBy(g => g.GoodsId).ToList(), items, ParseHunter(root));
+    }
+
+    /// <summary>The optional [hunter] table; every row it writes must sit in
+    /// the reserved NpcParam range.</summary>
+    private static RaceItemHunter? ParseHunter(TomlTable root)
+    {
+        if (!root.TryGetValue("hunter", out var obj))
+            return null;
+        if (obj is not TomlTable t)
+            throw new InvalidDataException($"{Prefix} [hunter] must be a table");
+
+        int chrId = TomlHelpers.ToInt(t, "chr_id", Prefix);
+        int sourceNpc = TomlHelpers.ToInt(t, "source_npc_param", Prefix);
+        int sourceThink = TomlHelpers.ToInt(t, "source_think", Prefix);
+        int baseId = TomlHelpers.ToInt(t, "npc_param_base", Prefix);
+        int thinkParam = TomlHelpers.ToInt(t, "think_param", Prefix);
+        CheckRange("npc_param_base", "hunter", baseId,
+            SpeedFogIds.RaceItemNpcParamIdMin, SpeedFogIds.RaceItemNpcParamIdMax);
+        CheckRange("last tier row", "hunter", baseId + SpeedFogIds.RaceItemHunterTierCount - 1,
+            SpeedFogIds.RaceItemNpcParamIdMin, SpeedFogIds.RaceItemNpcParamIdMax);
+        CheckRange("think_param", "hunter", thinkParam,
+            SpeedFogIds.RaceItemNpcParamIdMin, SpeedFogIds.RaceItemNpcParamIdMax);
+        return new RaceItemHunter(chrId, sourceNpc, sourceThink, baseId, thinkParam);
     }
 
     /// <summary>The tables of the [[<paramref name="name"/>]] array, none when absent.</summary>

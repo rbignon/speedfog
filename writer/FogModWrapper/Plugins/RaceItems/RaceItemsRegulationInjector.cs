@@ -1,4 +1,5 @@
 using FogModWrapper.Common;
+using FogModWrapper.Plugins.Halloween;
 using SoulsFormats;
 using SoulsIds;
 
@@ -25,11 +26,20 @@ public static class RaceItemsRegulationInjector
         var sp = reg.GetParam("SpEffectParam", "SpEffect");
         if (goods == null || sp == null)
             throw new InvalidOperationException("race_items: EquipParamGoods or SpEffectParam missing from regulation.bin");
-        Apply(goods, sp, catalog);
+        PARAM? npc = null, think = null;
+        if (catalog.Hunter != null)
+        {
+            npc = reg.GetParam("NpcParam");
+            think = reg.GetParam("NpcThinkParam");
+            if (npc == null || think == null)
+                throw new InvalidOperationException("race_items: NpcParam or NpcThinkParam missing from regulation.bin");
+        }
+        Apply(goods, sp, catalog, npc, think);
     }
 
     /// <summary>Lower-level entry point used by tests; operates on loaded PARAMs.</summary>
-    public static void Apply(PARAM goods, PARAM sp, RaceItemsCatalog catalog)
+    public static void Apply(
+        PARAM goods, PARAM sp, RaceItemsCatalog catalog, PARAM? npc = null, PARAM? think = null)
     {
         foreach (var g in catalog.Goods)
         {
@@ -48,7 +58,57 @@ public static class RaceItemsRegulationInjector
         }
         Console.WriteLine(
             $"race_items: injected {catalog.Goods.Count} goods row(s) and {effects} effect SpEffect row(s)");
+
+        if (catalog.Hunter is { } hunter)
+        {
+            if (npc == null || think == null)
+                throw new ArgumentException("race_items: the catalog has a [hunter] but no NpcParam or NpcThinkParam was given");
+            AddHunterRows(npc, think, hunter);
+        }
     }
+
+    /// <summary>
+    /// The Hunter: Margit cloned once per enemy tier plus one think row. The
+    /// racing mod spawns him through the game's debug character creator, which
+    /// skips FogMod's per-seed boss scaling (EMEVD SpEffects on the boss
+    /// entity), so each clone carries the game's own area scaling row of its
+    /// tier and the server picks the row from the leader's zone tier. No runes
+    /// and no drop on any row, whatever the seed's randomizers did to the
+    /// source. The other cells (behaviorVariationId, teamType, resident
+    /// SpEffects) stay the source's.
+    /// </summary>
+    private static void AddHunterRows(PARAM npc, PARAM think, RaceItemHunter hunter)
+    {
+        for (int tier = 1; tier <= SpeedFogIds.RaceItemHunterTierCount; tier++)
+        {
+            int id = hunter.NpcParamBase + tier - 1;
+            AmbientSpawnInjector.CloneAtTier(npc, id, hunter.SourceNpcParam, tier); // getSoul 0, itemLotId_enemy -1
+            var row = npc[id]!;
+            // His 12000 runes are paid by the map event, not by the row; belt and braces.
+            Set(row, "NpcParam", "isSoulGetByBoss", 0);
+            Set(row, "NpcParam", "itemLotId_map", -1);
+            Set(row, "NpcParam", "sleepCollectorItemLotId_enemy", -1);
+            Set(row, "NpcParam", "sleepCollectorItemLotId_map", -1);
+        }
+
+        // The enemy randomizer caps every think row (eye and nose at 100,
+        // maxBackhomeDist at 200) as soon as any enemy is randomized, which
+        // would send him home after 200 m: restore the vanilla Margit values.
+        var thinkRow = GameEditor.AddRow(think, hunter.ThinkParam, hunter.SourceThink);
+        Set(thinkRow, "NpcThinkParam", "maxBackhomeDist", HunterNeverHome);
+        Set(thinkRow, "NpcThinkParam", "backhomeDist", HunterNeverHome);
+        Set(thinkRow, "NpcThinkParam", "backhomeBattleDist", HunterNeverHome);
+        Set(thinkRow, "NpcThinkParam", "eye_dist", HunterEyeDist);
+
+        Console.WriteLine(
+            $"race_items: Hunter rows NpcParam {hunter.NpcParamBase}-" +
+            $"{hunter.NpcParamBase + SpeedFogIds.RaceItemHunterTierCount - 1} (clones of {hunter.SourceNpcParam}, " +
+            $"one per tier) and NpcThinkParam {hunter.ThinkParam} (clone of {hunter.SourceThink})");
+    }
+
+    /// <summary>Margit's own think distances: he never goes home, and sees 60 m.</summary>
+    private const int HunterNeverHome = 9999;
+    private const int HunterEyeDist = 60;
 
     private static void AddGoodsRow(PARAM goods, RaceItemGoods g)
     {

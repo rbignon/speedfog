@@ -201,6 +201,20 @@ public static class SpeedFogIds
     public const int RaceItemEffectIdMin = 1450820;
     public const int RaceItemEffectIdMax = 1450849;
 
+    /// <summary>Reserved NpcParam and NpcThinkParam ids of the Hunter race item
+    /// (vanilla tops out at 1300000 below 500000000 in both; the enemy
+    /// randomizer's adjacent-row walks start at vanilla ids and never reach
+    /// here): one NpcParam clone of Margit per enemy tier, tier t at
+    /// <see cref="RaceItemNpcParamIdMin"/> + t - 1, and his think row at
+    /// <see cref="RaceItemNpcParamIdMin"/>. Namespaces are per param, so the
+    /// goods and SpEffect ids above are not in conflict.</summary>
+    public const int RaceItemNpcParamIdMin = 1450850;
+    public const int RaceItemNpcParamIdMax = 1450899;
+
+    /// <summary>Enemy tiers (1 to 20 base game, 21 to 34 DLC): the Hunter has
+    /// one NpcParam row per tier.</summary>
+    public const int RaceItemHunterTierCount = 34;
+
     // --- MSB entity ID bases (not EMEVD event ids; a separate id space) ---
 
     /// <summary>DeathMarkerInjector's per-map entity ID allocation floor:

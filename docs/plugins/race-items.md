@@ -113,6 +113,37 @@ carrying the area scaling row of its tier) and NpcThinkParam 1450850. The
 range NpcParam and NpcThinkParam 1450850-1450899 is reserved
 (`docs/event-flags.md`).
 
+Why clones. The racing mod spawns him through the game's debug character
+creator, which runs none of the events of the map he lives in, and FogMod
+scales its bosses per seed through EMEVD SpEffects on the boss entity, so a
+spawned Margit would always fight at his own row's tier 3 scaling. The writer
+therefore clones his NpcParam row (21300014) once per enemy tier, the way the
+Halloween greeter clone does (`AmbientSpawnInjector.CloneAtTier`): the template's
+own area scaling SpEffect is swapped for the game's row of the tier (7010-7200
+for tiers 1 to 20, 20007000-20007130 for the DLC tiers 21 to 34, see
+`docs/enemy-scaling.md`), and the racing server picks the row from the zone
+tier of the leader's node. These are not FogMod's dampened boss rows: he is a
+bit stronger than a placed boss of the same tier in the base game tiers, and in
+the DLC tiers he hits like tier 20 (the DLC damage curve is flat). Every clone
+also gets no runes (`getSoul` 0, `isSoulGetByBoss` 0; his 12000 runes are paid
+by a map event, not by the row) and no drop (`itemLotId_enemy`, `itemLotId_map`,
+`sleepCollectorItemLotId_enemy` and `sleepCollectorItemLotId_map` at -1), so a
+seed's randomizers cannot give him loot. `behaviorVariationId` (his moveset),
+`teamType` and the resident SpEffects stay the source's.
+
+The think row is a clone of NpcThinkParam 21300000 with `maxBackhomeDist`,
+`backhomeDist` and `backhomeBattleDist` at 9999 and `eye_dist` at 60. When any
+enemy is randomized the enemy randomizer caps every think row (eye and nose
+distance at 100, `maxBackhomeDist` at 200), which would send him home after
+200 m; the clone restores his vanilla values. Every cell name is looked up in
+the loaded paramdefs and an unknown one fails the build instead of being
+skipped. A catalog without a `[hunter]` table adds no NpcParam or NpcThinkParam
+row.
+
+To check a built seed in game, dump the rows with the Tarnished tool's
+`game_inspect dump-param` (NpcParam 1450850, 1450867 and 1450883, NpcThinkParam
+1450850) and compare the scaling SpEffect slot and the cells above.
+
 The Star's row makes its user unkillable for its 15 s: `noDead` keeps the
 character out of the death state and every damage cut rate (slash, blow,
 thrust, neutral, magic, fire, thunder, dark) and the poise damage cut rate are

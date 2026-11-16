@@ -1,3 +1,4 @@
+using FogModWrapper.Plugins.Halloween;
 using FogModWrapper.Plugins.RaceItems;
 using SoulsFormats;
 using Xunit;
@@ -33,7 +34,7 @@ public class RaceItemsRegulationInjectorTests
     {
         var goods = BuildParamFromDef("EquipParamGoods", 250);
         var sp = SpEffectTemplates();
-        RaceItemsRegulationInjector.Apply(goods, sp, RaceItemsCatalog.Load(ShippedCatalogPath()));
+        { var (npc, think) = HunterSources(); RaceItemsRegulationInjector.Apply(goods, sp, RaceItemsCatalog.Load(ShippedCatalogPath()), npc, think); }
         return (goods, sp);
     }
 
@@ -65,7 +66,7 @@ public class RaceItemsRegulationInjectorTests
         template["suppleType"].Value = (byte)3;
         template["itemGetTutorialFlagId"].Value = 710590u;
         var sp = SpEffectTemplates();
-        RaceItemsRegulationInjector.Apply(goods, sp, RaceItemsCatalog.Load(ShippedCatalogPath()));
+        { var (npc, think) = HunterSources(); RaceItemsRegulationInjector.Apply(goods, sp, RaceItemsCatalog.Load(ShippedCatalogPath()), npc, think); }
 
         foreach (var id in new[] { 1450800, 1450801 })
         {
@@ -140,8 +141,122 @@ public class RaceItemsRegulationInjectorTests
         var goods = BuildParamFromDef("EquipParamGoods", 250);
         var sp = SpEffectTemplates();
         var catalog = RaceItemsCatalog.Load(ShippedCatalogPath());
-        RaceItemsRegulationInjector.Apply(goods, sp, catalog);
+        var (npc, think) = HunterSources();
+        RaceItemsRegulationInjector.Apply(goods, sp, catalog, npc, think);
         // GameEditor.AddRow refuses an existing id: the plugin runs once per build.
-        Assert.Throws<ArgumentException>(() => RaceItemsRegulationInjector.Apply(goods, sp, catalog));
+        Assert.Throws<ArgumentException>(() => RaceItemsRegulationInjector.Apply(goods, sp, catalog, npc, think));
+    }
+
+    // --- The Hunter's rows (Margit cloned once per enemy tier) ---
+
+    private const int HunterSourceNpc = 21300014;
+    private const int HunterSourceThink = 21300000;
+
+    /// <summary>NpcParam and NpcThinkParam fixtures holding Margit's rows; the
+    /// source carries what a seed's randomizers may have left on it.</summary>
+    private static (PARAM npc, PARAM think) HunterSources(int backhome = 9999, int eye = 60)
+    {
+        var npc = BuildParamFromDef("NpcParam", HunterSourceNpc);
+        var src = npc[HunterSourceNpc]!;
+        src["spEffectID3"].Value = 7030;   // his own tier 3 scaling
+        src["spEffectID4"].Value = 5402;   // a resident SpEffect that must stay
+        src["getSoul"].Value = 5000u;
+        src["isSoulGetByBoss"].Value = (byte)1;
+        foreach (var f in new[] { "itemLotId_enemy", "itemLotId_map", "sleepCollectorItemLotId_enemy", "sleepCollectorItemLotId_map" })
+            src[f].Value = 12345;
+        src["behaviorVariationId"].Value = 21300;
+        src["teamType"].Value = (byte)7;
+
+        var think = BuildParamFromDef("NpcThinkParam", HunterSourceThink);
+        var t = think[HunterSourceThink]!;
+        foreach (var f in new[] { "maxBackhomeDist", "backhomeDist", "backhomeBattleDist" })
+            t[f].Value = (ushort)backhome;
+        t["eye_dist"].Value = (ushort)eye;
+        t["BattleStartDist"].Value = (ushort)10;
+        return (npc, think);
+    }
+
+    private static RaceItemsCatalog WithHunter(RaceItemHunter? hunter) =>
+        new(Array.Empty<RaceItemGoods>(), Array.Empty<RaceItem>(), hunter);
+
+    private static readonly RaceItemHunter Hunter = new(2130, HunterSourceNpc, HunterSourceThink, 1450850, 1450850);
+
+    private static void ApplyHunter(PARAM npc, PARAM think, RaceItemHunter? hunter) =>
+        RaceItemsRegulationInjector.Apply(
+            BuildParamFromDef("EquipParamGoods", 250), BuildParamFromDef("SpEffect", 10600),
+            WithHunter(hunter), npc, think);
+
+    [Fact]
+    public void Hunter_rows_carry_one_tier_each()
+    {
+        var (npc, think) = HunterSources();
+        ApplyHunter(npc, think, Hunter);
+
+        Assert.Equal(34, npc.Rows.Count(r => r.ID >= 1450850 && r.ID <= 1450899));
+        var expected = new Dictionary<int, int> { [1] = 7010, [20] = 7200, [21] = 20007000, [34] = 20007130 };
+        for (int tier = 1; tier <= 34; tier++)
+        {
+            var row = npc[1450850 + tier - 1]!;
+            var scaling = Enumerable.Range(0, 32)
+                .Select(i => (int)row[$"spEffectID{i}"].Value)
+                .Where(v => (v >= 7000 && v <= 7200) || (v >= 20007000 && v <= 20007130))
+                .ToList();
+            Assert.Equal(new[] { AmbientSpawnInjector.AreaScalingSpEffect(tier) }, scaling);
+            if (expected.TryGetValue(tier, out var want))
+                Assert.Equal(want, scaling[0]);
+            Assert.Equal(5402, row["spEffectID4"].Value); // resident SpEffects stay
+
+            Assert.Equal(0u, row["getSoul"].Value);
+            Assert.Equal((byte)0, row["isSoulGetByBoss"].Value);
+            Assert.Equal(-1, row["itemLotId_enemy"].Value);
+            Assert.Equal(-1, row["itemLotId_map"].Value);
+            Assert.Equal(-1, row["sleepCollectorItemLotId_enemy"].Value);
+            Assert.Equal(-1, row["sleepCollectorItemLotId_map"].Value);
+            Assert.Equal(21300, row["behaviorVariationId"].Value);
+            Assert.Equal((byte)7, row["teamType"].Value);
+        }
+        // The source row is not touched.
+        Assert.Equal(5000u, npc[HunterSourceNpc]!["getSoul"].Value);
+        Assert.Equal(7030, npc[HunterSourceNpc]!["spEffectID3"].Value);
+    }
+
+    [Fact]
+    public void Hunter_think_never_goes_home()
+    {
+        // The enemy randomizer capped the source row.
+        var (npc, think) = HunterSources(backhome: 200, eye: 100);
+        ApplyHunter(npc, think, Hunter);
+
+        var row = think[1450850]!;
+        foreach (var f in new[] { "maxBackhomeDist", "backhomeDist", "backhomeBattleDist" })
+            Assert.Equal((ushort)9999, row[f].Value);
+        Assert.Equal((ushort)60, row["eye_dist"].Value);
+        Assert.Equal((ushort)10, row["BattleStartDist"].Value);
+        Assert.Equal((ushort)200, think[HunterSourceThink]!["maxBackhomeDist"].Value);
+    }
+
+    [Fact]
+    public void A_catalog_without_hunter_adds_no_npc_row()
+    {
+        var (npc, think) = HunterSources();
+        ApplyHunter(npc, think, null);
+        Assert.Single(npc.Rows);
+        Assert.Single(think.Rows);
+    }
+
+    [Fact]
+    public void Hunter_with_a_missing_source_row_fails_loudly()
+    {
+        var npc = BuildParamFromDef("NpcParam", 21300099);
+        var think = BuildParamFromDef("NpcThinkParam", HunterSourceThink);
+        Assert.ThrowsAny<Exception>(() => ApplyHunter(npc, think, Hunter));
+    }
+
+    [Fact]
+    public void Shipped_catalog_hunter_lands_on_the_reserved_rows()
+    {
+        var catalog = RaceItemsCatalog.Load(ShippedCatalogPath());
+        Assert.Equal(1450850, catalog.Hunter!.NpcParamBase);
+        Assert.Equal(1450850, catalog.Hunter.ThinkParam);
     }
 }

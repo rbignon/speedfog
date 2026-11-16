@@ -318,11 +318,11 @@ public static class AmbientSpawnInjector
     public static void ApplyHostileGreeter(PARAM npc, HalloweenPluginSettings.GreeterSpecies species)
     {
         int template = GreeterProfile(species).NpcTemplate;
-        int slot = CloneFlatTier(npc, SpeedFogIds.HostileGreeterNpcRow, template);
+        int slot = CloneAtTier(npc, SpeedFogIds.HostileGreeterNpcRow, template, GREETER_TIER);
 
         Console.WriteLine(
             $"Halloween spawns: hostile {species} greeter NpcParam {SpeedFogIds.HostileGreeterNpcRow} " +
-            $"(clone of {template}, tier {GREETER_TIER} scaling {7000 + 10 * GREETER_TIER} in slot {slot}, runes 0, no drop)");
+            $"(clone of {template}, tier {GREETER_TIER} scaling {AreaScalingSpEffect(GREETER_TIER)} in slot {slot}, runes 0, no drop)");
     }
 
     /// <summary>
@@ -332,22 +332,34 @@ public static class AmbientSpawnInjector
     /// greeter species. Returns the SpEffect slot holding the tier row.
     /// </summary>
     internal static int CloneFlatTierUntouchable(PARAM npc, int rowId)
-        => CloneFlatTier(npc, rowId, GreeterProfile(HalloweenPluginSettings.GreeterSpecies.Untouchable).NpcTemplate);
+        => CloneAtTier(npc, rowId, GreeterProfile(HalloweenPluginSettings.GreeterSpecies.Untouchable).NpcTemplate, GREETER_TIER);
 
     /// <summary>
-    /// Clone a vanilla NpcParam row into rowId at the flat GREETER_TIER
-    /// scaling, with no runes and no item drop. Returns the SpEffect slot
-    /// holding the tier row.
+    /// The game's area scaling SpEffect row of an enemy tier (docs/enemy-scaling.md):
+    /// 7000 + 10 * tier for the base game tiers 1 to 20 (7010-7200),
+    /// 20007000 + 10 * (tier - 21) for the DLC tiers 21 to 34.
     /// </summary>
-    private static int CloneFlatTier(PARAM npc, int rowId, int templateRow)
+    internal static int AreaScalingSpEffect(int tier)
+    {
+        if (tier < 1 || tier > 34)
+            throw new ArgumentOutOfRangeException(nameof(tier), tier, "enemy tier must be 1 to 34");
+        return tier <= 20 ? 7000 + 10 * tier : 20007000 + 10 * (tier - 21);
+    }
+
+    /// <summary>
+    /// Clone a vanilla NpcParam row into rowId at the flat scaling of
+    /// <paramref name="tier"/>, with no runes and no item drop. Returns the
+    /// SpEffect slot holding the tier row.
+    /// </summary>
+    internal static int CloneAtTier(PARAM npc, int rowId, int templateRow, int tier)
     {
         var row = GameEditor.AddRow(npc, rowId, templateRow);
         // The template carries its own area scaling (untouchable 52800086:
         // DLC tier 31, 20007100, hp x13.6, attack x3.8; wormface 45700030:
         // tier 8); FogMod never rescales these clones, so the vanilla tier
-        // row of GREETER_TIER takes its place.
+        // row of the requested tier takes its place.
         int slot = ClearScalingSlotsAndFindFree(row);
-        row[$"spEffectID{slot}"].Value = 7000 + 10 * GREETER_TIER; // s32
+        row[$"spEffectID{slot}"].Value = AreaScalingSpEffect(tier); // s32
         row["getSoul"].Value = 0u;  // u32: no rune farm
         row["itemLotId_enemy"].Value = -1;  // s32: no drop
         return slot;

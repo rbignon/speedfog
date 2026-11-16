@@ -251,4 +251,15 @@ public class SpeedFogIdsTests
         };
         Assert.Equal(rows.Length, rows.Distinct().Count());
     }
+
+    [Fact]
+    public void HunterRows_FitTheirReservedRange()
+    {
+        Assert.True(SpeedFogIds.RaceItemNpcParamIdMin >= SpeedFogIds.RaceItemParamIdMin);
+        Assert.True(SpeedFogIds.RaceItemNpcParamIdMax <= SpeedFogIds.RaceItemParamIdMax);
+        Assert.True(SpeedFogIds.RaceItemNpcParamIdMin + SpeedFogIds.RaceItemHunterTierCount - 1
+            <= SpeedFogIds.RaceItemNpcParamIdMax);
+        // Clear of the vanilla ids the enemy randomizer walks upward from.
+        Assert.True(SpeedFogIds.RaceItemNpcParamIdMin > 1300000);
+    }
 }
