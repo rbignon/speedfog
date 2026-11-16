@@ -53,10 +53,11 @@ SpeedFog uses a **dedicated base `1050290000`**, in map coordinates m60_50_29_00
 |-------|---------|------|---------|--------|
 | 1050290000-1050290099 | 0xxx offsets 0-99 | Saved (persistent) | Mod state flags | Various injectors |
 | 1050290100-1050290299 | 0xxx offsets 100-299 | Saved (persistent) | Race item use and removal flags | RaceItemsPlugin |
+| 1050290300-1050290499 | 0xxx offsets 300-499 | Saved (persistent) | Race item talisman removal flags | RaceItemsPlugin |
 | 1050294000-1050294999 | 4xxx offsets 0-999 | Saved (persistent) | Zone tracking, finish event, death markers | ZoneTrackingInjector, RunCompleteInjector, DeathMarkerInjector |
 
 Both ranges use saved flags (persist across area reloads):
-- Category 1050290 (offset 0-299): persistent mod state (items given, etc.) and the race item goods' use/removal flags
+- Category 1050290 (offset 0-499): persistent mod state (items given, etc.), the race item goods' use/removal flags and the talisman removal flags
 - Category 1050294 (offset 0-999): zone tracking, cleared by racing mod after capture
   (so generator EMEVD must never wait on these: features needing "player entered
   cluster X" set their own 1050290xxx mirror flags, see the Halloween jumpscares)
@@ -72,6 +73,7 @@ Both ranges use saved flags (persist across area reloads):
 | 1050290030-1050290099 | 30-99 | Halloween jumpscare "entered cluster" mirror flags, set before warps into an armed cluster | ZoneTrackingInjector (via RegionToFlags) |
 | 1050290100-1050290199 | 100-199 | Race item use flags (`1050290100 + n`, n = goods id - 1450800; only the Race Item goods, 1050290101, has one): set by the plugin's use event when the player uses the goods, read and cleared by the racing mod | RaceItemsPlugin |
 | 1050290200-1050290299 | 200-299 | Race item removal flags (`1050290200 + n`, one per goods: 1050290200 the Shield, 1050290201 the Race Item): set by the racing mod to take the goods back | RaceItemsPlugin (waits on them) |
+| 1050290300-1050290499 | 300-499 | Talisman removal flags (`1050290300 + n`, n = the talisman's index in `data/plugins/race_items_talismans.toml`): set by the racing mod to take that talisman from the player (Talisman Thief) | RaceItemsPlugin (waits on them) |
 
 ### Zone Tracking Flags (1050294xxx)
 
@@ -127,6 +129,7 @@ Event ID ranges and auxiliary flags are declared centrally in
 | 755865500 | HalloweenDarknessInjector | common.emevd | Re-apply the evergaol gparam override (opt-in) |
 | 755865600 | HalloweenJumpscareInjector | map emevds | Halloween jumpscare actors (one event per actor, capacity 100) |
 | 755865700 | RaceItemsPlugin | common.emevd | Race items (opt-in): use events at `base + n` (usable goods only), removal events at `base + 50 + n`, n = goods id - 1450800 (capacity 100) |
+| 755865800 | RaceItemsPlugin | common.emevd | Race items (opt-in): talisman removal events at `base + n`, n = the talisman's index in `data/plugins/race_items_talismans.toml` (capacity 200) |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0),
 built by `EmevdHelper.InitializeEvent`.

@@ -99,6 +99,12 @@ public static class SpeedFogIds
     public static readonly IdRange RaceItemEvents =
         new("RaceItemsPlugin", 755865700, 100);
 
+    /// <summary>A removal event per talisman of
+    /// data/plugins/race_items_talismans.toml (slot n = the talisman's index
+    /// in that list), for the Talisman Thief.</summary>
+    public static readonly IdRange RaceItemTalismanEvents =
+        new("RaceItemsPlugin talismans", 755865800, 200);
+
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -114,6 +120,7 @@ public static class SpeedFogIds
         HalloweenDarknessEvents,
         HalloweenJumpscareEvents,
         RaceItemEvents,
+        RaceItemTalismanEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---
@@ -169,6 +176,14 @@ public static class SpeedFogIds
     /// Each range holds 100 flags.</summary>
     public const int RaceItemUseFlagBase = 1050290100;
     public const int RaceItemRemoveFlagBase = 1050290200;
+
+    /// <summary>Saved removal flags of the talismans (same category): the
+    /// racing mod raises base + n to take talisman n of
+    /// data/plugins/race_items_talismans.toml from the player, and the
+    /// plugin's talisman removal event clears it. Holds as many flags as
+    /// <see cref="RaceItemTalismanEvents"/> has events.</summary>
+    public const int RaceItemTalismanRemoveFlagBase = 1050290300;
+    public const int RaceItemTalismanRemoveFlagCount = 200;
 
     /// <summary>Reserved EquipParamGoods and SpEffectParam ids of the race
     /// items (vanilla has neither, adjacent to the phantom skins range).</summary>

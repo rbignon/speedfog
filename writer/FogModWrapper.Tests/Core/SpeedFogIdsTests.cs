@@ -108,6 +108,26 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
+    public void TalismanRemovalFlags_HaveOneEventEachAndStayClearOfEveryOtherSavedFlag()
+    {
+        Assert.Contains(SpeedFogIds.RaceItemTalismanEvents, SpeedFogIds.EventRanges);
+        Assert.Equal(SpeedFogIds.RaceItemTalismanEvents.Capacity, SpeedFogIds.RaceItemTalismanRemoveFlagCount);
+
+        var talismans = Enumerable.Range(
+            SpeedFogIds.RaceItemTalismanRemoveFlagBase, SpeedFogIds.RaceItemTalismanRemoveFlagCount).ToHashSet();
+        var others = new HashSet<int> { SpeedFogIds.BannerShownFlag, 1050290000 };
+        others.UnionWith(Enumerable.Range(SpeedFogIds.RaceItemUseFlagBase, 100));
+        others.UnionWith(Enumerable.Range(SpeedFogIds.RaceItemRemoveFlagBase, 100));
+        others.UnionWith(Enumerable.Range(SpeedFogIds.HalloweenJumpscareLayerFlagBase, SpeedFogIds.HalloweenJumpscareLayerFlagCount));
+        others.UnionWith(Enumerable.Range(SpeedFogIds.HalloweenJumpscareLeftFlagBase, SpeedFogIds.HalloweenJumpscareLeftFlagCount));
+        others.UnionWith(Enumerable.Range(SpeedFogIds.HalloweenJumpscareEnteredFlagBase, SpeedFogIds.HalloweenJumpscareEnteredFlagCount));
+        Assert.Empty(talismans.Intersect(others));
+
+        // Saved category 1050290 (flags 1050290000-1050290999).
+        Assert.All(talismans, f => Assert.Equal(1050290, f / 1000));
+    }
+
+    [Fact]
     public void RaceItemEffectRange_SitsInsideTheParamRange()
     {
         Assert.True(SpeedFogIds.RaceItemEffectIdMin <= SpeedFogIds.RaceItemEffectIdMax);

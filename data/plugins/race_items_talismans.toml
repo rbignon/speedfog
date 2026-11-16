@@ -1,0 +1,630 @@
+# Talismans the Talisman Thief can steal: every EquipParamAccessory row with an
+# English name (base game and Shadow of the Erdtree, game 1.17). Ids and names
+# from the Item Randomizer's talisman name list
+# (writer/ItemRandomizerWrapper/diste/Names/EquipParamAccessory.txt). The two
+# unnamed rows (204000, 999999999) are left out.
+#
+# Read by the race_items plugin (writer RaceItemTalismans). Ids stay in
+# ascending order: talisman n of this list (from 0) gets the removal flag
+# 1050290300 + n and the removal event 755865800 + n, so an insertion renumbers
+# the talismans after it, in the seeds generated from then on.
+
+[[talisman]]
+id = 1000
+name = "Crimson Amber Medallion"
+
+[[talisman]]
+id = 1001
+name = "Crimson Amber Medallion +1"
+
+[[talisman]]
+id = 1002
+name = "Crimson Amber Medallion +2"
+
+[[talisman]]
+id = 1010
+name = "Cerulean Amber Medallion"
+
+[[talisman]]
+id = 1011
+name = "Cerulean Amber Medallion +1"
+
+[[talisman]]
+id = 1012
+name = "Cerulean Amber Medallion +2"
+
+[[talisman]]
+id = 1020
+name = "Viridian Amber Medallion"
+
+[[talisman]]
+id = 1021
+name = "Viridian Amber Medallion +1"
+
+[[talisman]]
+id = 1022
+name = "Viridian Amber Medallion +2"
+
+[[talisman]]
+id = 1030
+name = "Arsenal Charm"
+
+[[talisman]]
+id = 1031
+name = "Arsenal Charm +1"
+
+[[talisman]]
+id = 1032
+name = "Great-Jar's Arsenal"
+
+[[talisman]]
+id = 1040
+name = "Erdtree's Favor"
+
+[[talisman]]
+id = 1041
+name = "Erdtree's Favor +1"
+
+[[talisman]]
+id = 1042
+name = "Erdtree's Favor +2"
+
+[[talisman]]
+id = 1050
+name = "Radagon's Scarseal"
+
+[[talisman]]
+id = 1051
+name = "Radagon's Soreseal"
+
+[[talisman]]
+id = 1060
+name = "Starscourge Heirloom"
+
+[[talisman]]
+id = 1070
+name = "Prosthesis-Wearer Heirloom"
+
+[[talisman]]
+id = 1080
+name = "Stargazer Heirloom"
+
+[[talisman]]
+id = 1090
+name = "Two Fingers Heirloom"
+
+[[talisman]]
+id = 1100
+name = "Silver Scarab"
+
+[[talisman]]
+id = 1110
+name = "Gold Scarab"
+
+[[talisman]]
+id = 1140
+name = "Moon of Nokstella"
+
+[[talisman]]
+id = 1150
+name = "Green Turtle Talisman"
+
+[[talisman]]
+id = 1160
+name = "Stalwart Horn Charm"
+
+[[talisman]]
+id = 1161
+name = "Stalwart Horn Charm +1"
+
+[[talisman]]
+id = 1170
+name = "Immunizing Horn Charm"
+
+[[talisman]]
+id = 1171
+name = "Immunizing Horn Charm +1"
+
+[[talisman]]
+id = 1180
+name = "Clarifying Horn Charm"
+
+[[talisman]]
+id = 1181
+name = "Clarifying Horn Charm +1"
+
+[[talisman]]
+id = 1190
+name = "Prince of Death's Pustule"
+
+[[talisman]]
+id = 1191
+name = "Prince of Death's Cyst"
+
+[[talisman]]
+id = 1200
+name = "Mottled Necklace"
+
+[[talisman]]
+id = 1201
+name = "Mottled Necklace +1"
+
+[[talisman]]
+id = 1210
+name = "Bull-Goat's Talisman"
+
+[[talisman]]
+id = 1220
+name = "Marika's Scarseal"
+
+[[talisman]]
+id = 1221
+name = "Marika's Soreseal"
+
+[[talisman]]
+id = 1230
+name = "Warrior Jar Shard"
+
+[[talisman]]
+id = 1231
+name = "Shard of Alexander"
+
+[[talisman]]
+id = 1250
+name = "Millicent's Prosthesis"
+
+[[talisman]]
+id = 2000
+name = "Magic Scorpion Charm"
+
+[[talisman]]
+id = 2010
+name = "Lightning Scorpion Charm"
+
+[[talisman]]
+id = 2020
+name = "Fire Scorpion Charm"
+
+[[talisman]]
+id = 2030
+name = "Sacred Scorpion Charm"
+
+[[talisman]]
+id = 2040
+name = "Red-Feathered Branchsword"
+
+[[talisman]]
+id = 2050
+name = "Ritual Sword Talisman"
+
+[[talisman]]
+id = 2060
+name = "Spear Talisman"
+
+[[talisman]]
+id = 2070
+name = "Hammer Talisman"
+
+[[talisman]]
+id = 2080
+name = "Winged Sword Insignia"
+
+[[talisman]]
+id = 2081
+name = "Rotten Winged Sword Insignia"
+
+[[talisman]]
+id = 2090
+name = "Dagger Talisman"
+
+[[talisman]]
+id = 2100
+name = "Arrow's Reach Talisman"
+
+[[talisman]]
+id = 2110
+name = "Blue Dancer Charm"
+
+[[talisman]]
+id = 2120
+name = "Twinblade Talisman"
+
+[[talisman]]
+id = 2130
+name = "Axe Talisman"
+
+[[talisman]]
+id = 2140
+name = "Lance Talisman"
+
+[[talisman]]
+id = 2150
+name = "Arrow's Sting Talisman"
+
+[[talisman]]
+id = 2160
+name = "Lord of Blood's Exultation"
+
+[[talisman]]
+id = 2170
+name = "Kindred of Rot's Exultation"
+
+[[talisman]]
+id = 2180
+name = "Claw Talisman"
+
+[[talisman]]
+id = 2190
+name = "Roar Medallion"
+
+[[talisman]]
+id = 2200
+name = "Curved Sword Talisman"
+
+[[talisman]]
+id = 2210
+name = "Companion Jar"
+
+[[talisman]]
+id = 2220
+name = "Perfumer's Talisman"
+
+[[talisman]]
+id = 3000
+name = "Graven-School Talisman"
+
+[[talisman]]
+id = 3001
+name = "Graven-Mass Talisman"
+
+[[talisman]]
+id = 3040
+name = "Faithful's Canvas Talisman"
+
+[[talisman]]
+id = 3050
+name = "Flock's Canvas Talisman"
+
+[[talisman]]
+id = 3060
+name = "Old Lord's Talisman"
+
+[[talisman]]
+id = 3070
+name = "Radagon Icon"
+
+[[talisman]]
+id = 3080
+name = "Primal Glintstone Blade"
+
+[[talisman]]
+id = 3090
+name = "Godfrey Icon"
+
+[[talisman]]
+id = 4000
+name = "Dragoncrest Shield Talisman"
+
+[[talisman]]
+id = 4001
+name = "Dragoncrest Shield Talisman +1"
+
+[[talisman]]
+id = 4002
+name = "Dragoncrest Shield Talisman +2"
+
+[[talisman]]
+id = 4003
+name = "Dragoncrest Greatshield Talisman"
+
+[[talisman]]
+id = 4010
+name = "Spelldrake Talisman"
+
+[[talisman]]
+id = 4011
+name = "Spelldrake Talisman +1"
+
+[[talisman]]
+id = 4012
+name = "Spelldrake Talisman +2"
+
+[[talisman]]
+id = 4020
+name = "Flamedrake Talisman"
+
+[[talisman]]
+id = 4021
+name = "Flamedrake Talisman +1"
+
+[[talisman]]
+id = 4022
+name = "Flamedrake Talisman +2"
+
+[[talisman]]
+id = 4030
+name = "Boltdrake Talisman"
+
+[[talisman]]
+id = 4031
+name = "Boltdrake Talisman +1"
+
+[[talisman]]
+id = 4032
+name = "Boltdrake Talisman +2"
+
+[[talisman]]
+id = 4040
+name = "Haligdrake Talisman"
+
+[[talisman]]
+id = 4041
+name = "Haligdrake Talisman +1"
+
+[[talisman]]
+id = 4042
+name = "Haligdrake Talisman +2"
+
+[[talisman]]
+id = 4050
+name = "Pearldrake Talisman"
+
+[[talisman]]
+id = 4051
+name = "Pearldrake Talisman +1"
+
+[[talisman]]
+id = 4052
+name = "Pearldrake Talisman +2"
+
+[[talisman]]
+id = 4060
+name = "Crucible Scale Talisman"
+
+[[talisman]]
+id = 4070
+name = "Crucible Feather Talisman"
+
+[[talisman]]
+id = 4080
+name = "Blue-Feathered Branchsword"
+
+[[talisman]]
+id = 4090
+name = "Ritual Shield Talisman"
+
+[[talisman]]
+id = 4100
+name = "Greatshield Talisman"
+
+[[talisman]]
+id = 4110
+name = "Crucible Knot Talisman"
+
+[[talisman]]
+id = 5000
+name = "Crimson Seed Talisman"
+
+[[talisman]]
+id = 5010
+name = "Cerulean Seed Talisman"
+
+[[talisman]]
+id = 5020
+name = "Blessed Dew Talisman"
+
+[[talisman]]
+id = 5030
+name = "Taker's Cameo"
+
+[[talisman]]
+id = 5040
+name = "Godskin Swaddling Cloth"
+
+[[talisman]]
+id = 5050
+name = "Assassin's Crimson Dagger"
+
+[[talisman]]
+id = 5060
+name = "Assassin's Cerulean Dagger"
+
+[[talisman]]
+id = 6000
+name = "Crepus's Vial"
+
+[[talisman]]
+id = 6010
+name = "Concealing Veil"
+
+[[talisman]]
+id = 6020
+name = "Carian Filigreed Crest"
+
+[[talisman]]
+id = 6040
+name = "Longtail Cat Talisman"
+
+[[talisman]]
+id = 6050
+name = "Shabriri's Woe"
+
+[[talisman]]
+id = 6060
+name = "Daedicar's Woe"
+
+[[talisman]]
+id = 6070
+name = "Sacrificial Twig"
+
+[[talisman]]
+id = 6080
+name = "Furled Finger's Trick-Mirror"
+
+[[talisman]]
+id = 6090
+name = "Host's Trick-Mirror"
+
+[[talisman]]
+id = 6100
+name = "[ERROR]Entwining Umbilical Cord"
+
+[[talisman]]
+id = 6110
+name = "Ancestral Spirit's Horn"
+
+[[talisman]]
+id = 7000
+name = "Crimson Amber Medallion +3"
+
+[[talisman]]
+id = 7010
+name = "Cerulean Amber Medallion +3"
+
+[[talisman]]
+id = 7020
+name = "Viridian Amber Medallion +3"
+
+[[talisman]]
+id = 7030
+name = "Two-Headed Turtle Talisman"
+
+[[talisman]]
+id = 7040
+name = "Stalwart Horn Charm +2"
+
+[[talisman]]
+id = 7050
+name = "Immunizing Horn Charm +2"
+
+[[talisman]]
+id = 7060
+name = "Clarifying Horn Charm +2"
+
+[[talisman]]
+id = 7080
+name = "Mottled Necklace +2"
+
+[[talisman]]
+id = 7090
+name = "Spelldrake Talisman +3"
+
+[[talisman]]
+id = 7100
+name = "Flamedrake Talisman +3"
+
+[[talisman]]
+id = 7110
+name = "Boltdrake Talisman +3"
+
+[[talisman]]
+id = 7120
+name = "Golden Braid"
+
+[[talisman]]
+id = 7130
+name = "Pearldrake Talisman +3"
+
+[[talisman]]
+id = 7140
+name = "Crimson Seed Talisman +1"
+
+[[talisman]]
+id = 7150
+name = "Cerulean Seed Talisman +1"
+
+[[talisman]]
+id = 8000
+name = "Blessed Blue Dew Talisman"
+
+[[talisman]]
+id = 8010
+name = "Fine Crucible Feather Talisman"
+
+[[talisman]]
+id = 8020
+name = "Outer God Heirloom"
+
+[[talisman]]
+id = 8030
+name = "Shattered Stone Talisman"
+
+[[talisman]]
+id = 8040
+name = "Two-Handed Sword Talisman"
+
+[[talisman]]
+id = 8050
+name = "Crusade Insignia"
+
+[[talisman]]
+id = 8060
+name = "Aged One's Exultation"
+
+[[talisman]]
+id = 8070
+name = "Arrow's Soaring Sting Talisman"
+
+[[talisman]]
+id = 8090
+name = "Pearl Shield Talisman"
+
+[[talisman]]
+id = 8100
+name = "Dried Bouquet"
+
+[[talisman]]
+id = 8110
+name = "Smithing Talisman"
+
+[[talisman]]
+id = 8120
+name = "Ailment Talisman"
+
+[[talisman]]
+id = 8130
+name = "Retaliatory Crossed-Tree"
+
+[[talisman]]
+id = 8140
+name = "Lacerating Crossed-Tree"
+
+[[talisman]]
+id = 8150
+name = "Sharpshot Talisman"
+
+[[talisman]]
+id = 8160
+name = "St. Trina's Smile"
+
+[[talisman]]
+id = 8170
+name = "Talisman of the Dread"
+
+[[talisman]]
+id = 8180
+name = "Enraged Divine Beast"
+
+[[talisman]]
+id = 8190
+name = "Beloved Stardust"
+
+[[talisman]]
+id = 8200
+name = "Talisman of Lord's Bestowal"
+
+[[talisman]]
+id = 8210
+name = "Verdigris Discus"
+
+[[talisman]]
+id = 8220
+name = "Rellana's Cameo"
+
+[[talisman]]
+id = 8230
+name = "Blade of Mercy"
+
+[[talisman]]
+id = 8240
+name = "Talisman of All Crucibles"

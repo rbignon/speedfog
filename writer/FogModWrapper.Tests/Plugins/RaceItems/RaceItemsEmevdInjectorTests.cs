@@ -48,11 +48,19 @@ public class RaceItemsEmevdInjectorTests
         throw new FileNotFoundException("data/plugins/race_items.toml not found above " + AppContext.BaseDirectory);
     }
 
-    private static EMEVD RunInject(Events events)
+    private static readonly IReadOnlyList<RaceItemTalisman> TwoTalismans = new[]
+    {
+        new RaceItemTalisman(1000, "Crimson Amber Medallion", 1050290300),
+        new RaceItemTalisman(8240, "Talisman of All Crucibles", 1050290301),
+    };
+
+    private static EMEVD RunInject(Events events, IReadOnlyList<RaceItemTalisman>? talismans = null)
     {
         var commonEmevd = new EMEVD();
         commonEmevd.Events.Add(new EMEVD.Event(0));
-        RaceItemsEmevdInjector.Inject(commonEmevd, events, RaceItemsCatalog.Load(ShippedCatalogPath()).Goods);
+        RaceItemsEmevdInjector.Inject(
+            commonEmevd, events, RaceItemsCatalog.Load(ShippedCatalogPath()).Goods,
+            talismans ?? Array.Empty<RaceItemTalisman>());
         return commonEmevd;
     }
 
@@ -130,6 +138,65 @@ public class RaceItemsEmevdInjectorTests
         Assert.Equal(1, shield.Instructions[0].ArgData[1]);
         Assert.Equal(1050290200u, BitConverter.ToUInt32(shield.Instructions[0].ArgData, 4));
         AssertRestart(shield.Instructions[3]);
+    }
+
+    [Fact]
+    public void Adds_one_removal_event_per_talisman_in_its_own_range()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var emevd = RunInject(events, TwoTalismans);
+
+        var range = SpeedFogIds.RaceItemTalismanEvents;
+        var expectedIds = new long[] { range.Base, range.Base + 1 };
+        Assert.Equal(expectedIds,
+            emevd.Events.Select(e => e.ID).Where(id => id >= range.Base && id < range.End).Order());
+        var initIds = Evt(emevd, 0).Instructions
+            .Where(i => i.Bank == 2000 && i.ID == 0)
+            .Select(i => (long)BitConverter.ToInt32(i.ArgData, 4))
+            .Where(id => id >= range.Base && id < range.End)
+            .Order();
+        Assert.Equal(expectedIds, initIds);
+    }
+
+    [Fact]
+    public void TalismanRemovalEvent_removes_its_talisman_and_clears_its_flag()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var second = Evt(RunInject(events, TwoTalismans), SpeedFogIds.RaceItemTalismanEvents.Base + 1);
+
+        Assert.Equal(
+            new[] { (3, 0), (2003, 24), (2003, 66), (1000, 4) },
+            second.Instructions.Select(i => (i.Bank, i.ID)).ToArray());
+        // IF Event Flag: state @1 (ON = 1), flag @4.
+        Assert.Equal(1, second.Instructions[0].ArgData[1]);
+        Assert.Equal(1050290301u, BitConverter.ToUInt32(second.Instructions[0].ArgData, 4));
+        // Remove Item From Player: item type Ring (2, the talismans), id, quantity.
+        Assert.Equal(2, second.Instructions[1].ArgData[0]);
+        Assert.Equal(8240, BitConverter.ToInt32(second.Instructions[1].ArgData, 4));
+        Assert.Equal(1, BitConverter.ToInt32(second.Instructions[1].ArgData, 8));
+        // Set Event Flag: the same flag, OFF (0).
+        Assert.Equal(1050290301u, BitConverter.ToUInt32(second.Instructions[2].ArgData, 4));
+        Assert.Equal(0, second.Instructions[2].ArgData[8]);
+        AssertRestart(second.Instructions[3]);
+    }
+
+    [Fact]
+    public void Rejects_more_talismans_than_event_slots()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var tooMany = Enumerable.Range(0, SpeedFogIds.RaceItemTalismanEvents.Capacity + 1)
+            .Select(n => new RaceItemTalisman(1000 + n, "T", SpeedFogIds.RaceItemTalismanRemoveFlagBase + n))
+            .ToList();
+        Assert.Throws<InvalidOperationException>(() => RunInject(events, tooMany));
     }
 
     private static void AssertHasSpEffect(EMEVD.Instruction ins, int speffect, int shouldHave)

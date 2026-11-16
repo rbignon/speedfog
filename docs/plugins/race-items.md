@@ -27,7 +27,8 @@ warning.
   SpEffect; the Shield is neither. One effect SpEffect per item that needs
   one, applied by the racing mod.
 - **EMEVD events** (`RaceItemsEmevdInjector`, common.emevd): one use event
-  (the Race Item) and one removal event per goods.
+  (the Race Item), one removal event per goods, and one removal event per
+  talisman of the talisman table (below), for the Talisman Thief.
 - **Texts** (`RaceItemsTextInjector`): each goods' name, info and caption in
   the base `GoodsName.fmg`, `GoodsInfo.fmg` and `GoodsCaption.fmg` of
   `item_dlc02.msgbnd.dcx`, for `engus` and `frafr` (English in both); the
@@ -39,9 +40,10 @@ warning.
 The ranges are reserved in `SpeedFogIds` and documented in
 `docs/event-flags.md`: goods and SpEffect ids 1450800-1450899 (goods ids and
 their markers in 1450800-1450819, item effect SpEffects in 1450820-1450849),
-use flags 1050290100-1050290199, removal flags 1050290200-1050290299 (saved
-category 1050290), common.emevd events 755865700-755865799, icon ids
-60385-60414.
+use flags 1050290100-1050290199, removal flags 1050290200-1050290299,
+talisman removal flags 1050290300-1050290499 (saved category 1050290),
+common.emevd events 755865700-755865799 and 755865800-755865999 (talismans),
+icon ids 60385-60414.
 
 ## Goods and items
 
@@ -153,6 +155,21 @@ Both shapes are adapted from FogRando's `common_bellofreturn`
   Shield, 755865751 for the Race Item): wait for the removal flag, remove one
   of the goods from the player, clear the flag, restart. The racing mod
   raises the flag; the event clears it, so the flag is a one-shot request.
+- **Talisman removal event** (one per talisman, id `755865800 + n`, n = the
+  talisman's index in the talisman table): wait for the talisman's removal
+  flag (`1050290300 + n`), remove the talisman from the player (Remove Item
+  From Player, item type Ring), clear the flag, restart. The racing mod will
+  raise it for the Talisman Thief.
+
+The talisman table, `data/plugins/race_items_talismans.toml`, lists every
+EquipParamAccessory row with an English name (155: base game and Shadow of
+the Erdtree; the two unnamed rows, 204000 and 999999999, are left out), in
+ascending id order. Ids and names come from the Item Randomizer's talisman
+name list (`writer/ItemRandomizerWrapper/diste/Names/EquipParamAccessory.txt`,
+extracted by the bootstrap). Its position
+numbers the flags and events, so an insertion renumbers the talismans after
+it in the seeds generated from then on. It sits apart from `race_items.toml`,
+whose edits trip the stale icon overlay check (see Replacing the icons).
 
 No item takes effect through an event or the game's own use: the Race Item's
 use flag tells the racing server which item was used (the one the runner
@@ -296,4 +313,14 @@ To check on the next seed:
 - Lightning: its effect ending at 15 s, and no hitch over its 250 re-applications
   of 4101;
 - each Rune Pouch effect (1450821-1450823, applied with ApplyEffect) granting
-  its runes once.
+  its runes once;
+- a talisman removal flag on an equipped talisman (the Talisman Thief's
+  prerequisite): give the Crimson Amber Medallion with ItemGib (`200003E8`,
+  `0x20000000 | 1000`), equip it, note the max HP, then raise its flag
+  1050290300 with Event Flags by ID. Expected: the talisman leaves the
+  inventory and its slot, the max HP drops back, the flag reads OFF again
+  (re-type the ID), and a reload keeps it all. Then the same with a talisman
+  in the fourth slot (Talisman of All Crucibles, `20002030`, flag
+  1050290454), and with one held but not equipped. If the slot keeps the
+  talisman or its effect, the racing mod will have to empty the slot before
+  raising the flag.
