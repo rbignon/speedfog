@@ -87,7 +87,7 @@ speedfog/
 │   ├── plugins/             # Plugin data files
 │   │   ├── summer.toml      # Summer theme text catalogue (tracked)
 │   │   ├── halloween.toml   # Halloween theme text catalogue (tracked)
-│   │   ├── race_items.toml  # Race items catalog: icons, the two goods (rows, markers, flags, texts), the items and their effect SpEffect rows (tracked)
+│   │   ├── race_items.toml  # Race items catalog: icons, the two goods (rows, markers, flags, texts), the items and their effect SpEffect rows, the junk weapons and the `[hunter]` table (tracked)
 │   │   ├── race_items_icon_<icon>.png  # Race item icon art (placeholders), 1024x1024 (the 160x160 textures are derived), one per [icons] name (tracked)
 │   │   ├── halloween_decorations.toml  # Halloween gate decoration catalogue (bones, candelabras, candles; tracked)
 │   │   ├── halloween_icon_pumpkin_seed.png  # Golden Seed ("Pumpkin Seed") authored icon art, 160x160 (tracked)
@@ -457,7 +457,7 @@ speedfog/
 | `WinterTextureBuilder` / `FrostEncoder` / `DdsImage` | Frost 276 TPFs (foliage, elevator, lever and staircase textures) at half resolution (albedos re-encoded BC1 1-bit alpha at the catalogue's `FrostStrength`, normal or heavy; other textures lose their top mip) |
 | `WinterOverlay` | Copies every file under `data/mods-src/speedfog-winter/` (the Torrent skin binders) verbatim into the winter build; optional folder, a collision with a built file fails the build |
 | `WinterReport` | Writes `data/mods/speedfog-winter.report.txt` (not shipped) |
-| `ItemIconPatcher` | Ships the Halloween icons (Golden Seed/Sacred Tear) and the 12 race item icons (11 item kinds + the Race Item goods' item box) as one 05_dummy.tpf.dcx superset, a 160x160 `MENU_ItemIcon_<id>` and a `MENU_Knowledge_<id>` (inventory detail panel; 160x160 too, reusing the small encode: the vanilla 1024/512 sizes cost minutes of BC7 under Wine) per icon, both from one square PNG (`--icons-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md` and `docs/plugins/race-items.md`) |
+| `ItemIconPatcher` | Ships the Halloween icons (Golden Seed/Sacred Tear) and the 22 race item icons (21 item icons + the Race Item goods' item box) as one 05_dummy.tpf.dcx superset, a 160x160 `MENU_ItemIcon_<id>` and a `MENU_Knowledge_<id>` (inventory detail panel; 160x160 too, reusing the small encode: the vanilla 1024/512 sizes cost minutes of BC7 under Wine) per icon, both from one square PNG (`--icons-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md` and `docs/plugins/race-items.md`) |
 | `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |
 | `LayoutFile` | Menu .layout XML helpers (find/remove SubTexture entries) |
 
@@ -788,11 +788,11 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 
 ## Data Formats
 
-### graph.json v4.13 (Python → C# + visualization + racing)
+### graph.json v4.14 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.13",
+  "version": "4.14",
   "seed": 212559448,
   "options": {"scale": true, "shuffle": true},
   "plugins": {"summer": {"enabled": true}},
@@ -824,7 +824,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 - `class_loadout`: optional, `[tarnished] starting_loadout`'s shuffled weapon/shield/armor-set permutations for the starting classes (weapon always in the right hand, shields once each on occupied left hands, armor per occupied slot; mechanism-named, not pack-named: `[tarnished]` is only its first producer); absent when the option is off (added v4.6, reshaped v4.7, `GraphData.ClassLoadout`, consumed by `ClassLoadoutInjector`, see `docs/tarnished-showcase.md`)
 - `torrent_skins`: optional, `[tarnished] unlock_torrent_skins`'s unlock flag plus a resolved `default_flag` (6701-6703) for the pre-selected Torrent skin; absent when the option is off (added v4.6, `GraphData.TorrentSkins`, consumed by `StartingItemInjector`, see `docs/tarnished-showcase.md`)
 - `unused_exits`: per node, the number of its cluster's `exit_fogs` that no edge takes, neither as an outgoing edge's exit fog nor as an incoming edge's entry fog (the side the runner came in by); `0` on the end node. Not the generator's free-exit count, which keeps an `allow_entry_as_exit` arena's entry gate as free (added v4.13, consumed by speedfog-racing)
-- `race_items`: optional `{goods: {goods_key: {goods_id, use_flag, remove_flag, icon, icon_id}}, items: {item_key: {name, icon, icon_id, goods, effect_speffect, duration_ms}}}`, the catalog of `data/plugins/race_items.toml` (`load_race_items_catalog`): the two goods rows (`shield`, the passive Shield; `race_item`, the usable Race Item whose icon the racing mod rewrites to the held item) and the items, each pointing at one goods by key; `use_flag`, `effect_speffect` and `duration_ms` are `null` where there is none; written only when `[plugin.race_items] enabled` (added v4.11, split into goods and items v4.12, consumed by speedfog-racing)
+- `race_items`: optional `{goods: {goods_key: {goods_id, use_flag, remove_flag, icon, icon_id}}, items: {item_key: {name, icon, icon_id, goods, effect_speffect, duration_ms}}, talismans: [{id, name, flag}], junk_weapons: [{id, name}], hunter: {chr_id, think_param, npc_params}}`, the catalog of `data/plugins/race_items.toml` (`load_race_items_catalog`): the two goods rows (`shield`, the passive Shield; `race_item`, the usable Race Item whose icon the racing mod rewrites to the held item) and the items, each pointing at one goods by key; `use_flag`, `effect_speffect` and `duration_ms` are `null` where there is none; written only when `[plugin.race_items] enabled` (added v4.11, split into goods and items v4.12, `talismans`, `junk_weapons` and `hunter` v4.14, consumed by speedfog-racing)
 - `boss_names`: optional `{arena_entity_id: {name, map}}`, one entry per `enemy_assignments` entry: the placed entity's own name (the placement's `healthbar_name`, which differs from `randomized_bosses` for a group fight) and the map whose EMEVD shows the arena's healthbar. The injector repoints only the arenas the randomizer did not name itself (added v4.8, `GraphData.BossNames`, consumed by `BossNameInjector`, see `docs/boss-healthbar-names.md`)
 - `helper_models`: optional `{arena_entity_id: [model, ...]}` for the `enemy_assignments` entries whose source owns `Class: Helper` entries in enemy.txt: the models of the helper clones the randomizer places in the arena, so FogModWrapper can scale them with the boss; absent when no placed source has helpers (added v4.9, `GraphData.HelperModels`, consumed by `HelperAreaResolver`, see `docs/item-randomizer.md` "Helper enemy scaling")
 - `tarnished_pack`: `[tarnished] enabled`, always present; `false` (also when absent) marks a pack-neutral seed, where `ShopInjector.RemovePackGatedRows` drops the 11 shop rows released by pack flag 6953 (Reverse-Bladed Sword at the Twin Maiden Husks, merchant armor and weapons) that the randomizer leaves vanilla (added v4.10, `GraphData.TarnishedPack`, see `docs/tarnished-showcase.md` "Pack-gated shop rows")
