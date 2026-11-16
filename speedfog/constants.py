@@ -22,7 +22,9 @@ from __future__ import annotations
 #       [plugin.race_items] is enabled)
 # 4.12: race_items split into goods and items
 # 4.13: per-node unused_exits (exit fogs no edge takes), read by the racing mod
-GRAPH_JSON_VERSION = "4.13"
+# 4.14: race_items gains talismans, junk_weapons and hunter (Talisman Thief,
+#       Junk Weapon and Hunter items)
+GRAPH_JSON_VERSION = "4.14"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.

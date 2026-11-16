@@ -1,11 +1,18 @@
 """Tests for the race items catalog and its loader."""
 
+import re
 import tomllib
 from pathlib import Path
 
 import pytest
 
-from speedfog.race_items import ICON_ID_RANGE, load_race_items_catalog
+from speedfog.race_items import (
+    HUNTER_TIERS,
+    ICON_ID_RANGE,
+    NPC_PARAM_RANGE,
+    TALISMAN_FLAG_BASE,
+    load_race_items_catalog,
+)
 
 CATALOG_PATH = Path(__file__).parent.parent / "data" / "plugins" / "race_items.toml"
 
@@ -17,7 +24,7 @@ def _raw_items() -> list[dict]:
 
 def test_shipped_catalog_matches_the_contract():
     catalog = load_race_items_catalog(CATALOG_PATH)
-    assert set(catalog) == {"goods", "items"}
+    assert set(catalog) == {"goods", "items", "talismans", "junk_weapons", "hunter"}
     assert catalog["goods"]["race_item"] == {
         "goods_id": 1450801,
         "use_flag": 1050290101,
@@ -32,7 +39,7 @@ def test_shipped_catalog_matches_the_contract():
         "icon": "shield",
         "icon_id": 60385,
     }
-    assert len(catalog["items"]) == 20
+    assert len(catalog["items"]) == 23
     assert catalog["items"]["hammer"] == {
         "name": "Hammer",
         "icon": "hammer",
@@ -73,6 +80,9 @@ VANILLA_ENDURANCE = {102360: 15, 4101: 0}
 
 
 MEMORY_EFFECTS = {"vanish", "unseen_foes", "slow_mo", "mini", "giant", "camera"}
+# Applied by the racing mod without a SpEffect row: the Hunter lasts 60 s of
+# play clock, the Talisman Thief and the Junk Weapon are permanent.
+MOD_APPLIED_DURATIONS = {"hunter": 60, "talisman_thief": None, "junk_weapon": None}
 
 
 def test_duration_matches_the_speffect_that_carries_it():
@@ -91,6 +101,8 @@ def test_duration_matches_the_speffect_that_carries_it():
         elif item["key"] == "ink":
             # Overlay only: no SpEffect row.
             assert duration == 30
+        elif item["key"] in MOD_APPLIED_DURATIONS:
+            assert duration == MOD_APPLIED_DURATIONS[item["key"]], item["key"]
         elif item["key"] in MEMORY_EFFECTS:
             # Applied by the racing mod through memory writes: no SpEffect row.
             assert duration == 15, item["key"]
@@ -300,3 +312,108 @@ def test_loader_rejects_an_effect_outside_the_effect_range(tmp_path):
     path = _write_catalog(tmp_path, _usable_goods(), _item(extra=_effect(1450819)))
     with pytest.raises(ValueError, match="effect id 1450819 outside"):
         load_race_items_catalog(path)
+
+
+def test_shipped_catalog_exports_the_talisman_table():
+    talismans = load_race_items_catalog(CATALOG_PATH)["talismans"]
+    assert len(talismans) == 155
+    ids = [t["id"] for t in talismans]
+    assert ids == sorted(set(ids))
+    assert [t["flag"] for t in talismans] == [
+        TALISMAN_FLAG_BASE + i for i in range(len(talismans))
+    ]
+    # The C# loader numbers the same flags from this constant.
+    ids_cs = (
+        Path(__file__).parent.parent / "writer/FogModWrapper.Core/SpeedFogIds.cs"
+    ).read_text(encoding="utf-8")
+    match = re.search(r"RaceItemTalismanRemoveFlagBase\s*=\s*(\d+)", ids_cs)
+    assert match and int(match.group(1)) == TALISMAN_FLAG_BASE
+
+
+def test_shipped_hunter_block_covers_every_tier():
+    hunter = load_race_items_catalog(CATALOG_PATH)["hunter"]
+    assert hunter == {
+        "chr_id": 2130,
+        "think_param": 1450850,
+        "npc_params": list(range(1450850, 1450884)),
+    }
+    assert len(hunter["npc_params"]) == HUNTER_TIERS
+    assert all(npc in NPC_PARAM_RANGE for npc in hunter["npc_params"])
+
+
+def test_shipped_junk_weapons_are_unique_and_named():
+    weapons = load_race_items_catalog(CATALOG_PATH)["junk_weapons"]
+    assert [w["id"] for w in weapons] == [
+        11010000, 12000000, 23020000, 33130000, 34000000,
+    ]  # fmt: skip
+    assert all(w["name"] for w in weapons)
+
+
+def _talismans_file(tmp_path: Path, body: str) -> None:
+    (tmp_path / "race_items_talismans.toml").write_text(body, encoding="utf-8")
+
+
+def _talisman(id_, name="T"):
+    return f'\n[[talisman]]\nid = {id_}\nname = "{name}"\n'
+
+
+@pytest.mark.parametrize(
+    ("body", "match"),
+    [
+        pytest.param(_talisman(5) + _talisman(5), "ascending", id="duplicate"),
+        pytest.param(_talisman(6) + _talisman(5), "ascending", id="descending"),
+        pytest.param(_talisman(5, ""), "empty name", id="empty-name"),
+        pytest.param(_talisman(0), "positive", id="non-positive"),
+        pytest.param(
+            "".join(_talisman(i + 1) for i in range(201)), "more than", id="too-many"
+        ),
+    ],
+)
+def test_loader_rejects_a_bad_talisman_table(tmp_path, body, match):
+    _talismans_file(tmp_path, body)
+    path = _write_catalog(tmp_path, _goods())
+    with pytest.raises(ValueError, match=match):
+        load_race_items_catalog(path)
+
+
+def _junk(id_, name="W"):
+    return f'\n[[junk_weapon]]\nid = {id_}\nname = "{name}"\n'
+
+
+@pytest.mark.parametrize(
+    ("entries", "match"),
+    [
+        pytest.param((_junk(0),), "positive", id="zero-id"),
+        pytest.param((_junk(-4),), "positive", id="negative-id"),
+        pytest.param((_junk(5, ""),), "empty name", id="empty-name"),
+        pytest.param((_junk(5), _junk(5, "X")), "duplicate", id="duplicate"),
+    ],
+)
+def test_loader_rejects_a_bad_junk_weapon(tmp_path, entries, match):
+    path = _write_catalog(tmp_path, _goods(), *entries)
+    with pytest.raises(ValueError, match=match):
+        load_race_items_catalog(path)
+
+
+def _hunter(base=1450850, **overrides):
+    fields = {
+        "chr_id": 2130,
+        "source_npc_param": 21300014,
+        "source_think": 21300000,
+        "npc_param_base": base,
+        "think_param": 1450850,
+    } | overrides
+    return "\n[hunter]\n" + "".join(f"{k} = {v}\n" for k, v in fields.items())
+
+
+@pytest.mark.parametrize("base", [1450849, 1450867, 1450900])
+def test_loader_rejects_a_hunter_base_leaving_the_range(tmp_path, base):
+    path = _write_catalog(tmp_path, _goods(), _hunter(base))
+    with pytest.raises(ValueError, match="outside"):
+        load_race_items_catalog(path)
+
+
+def test_loader_keeps_the_csharp_only_hunter_fields_out_of_the_export(tmp_path):
+    path = _write_catalog(tmp_path, _goods(), _hunter())
+    hunter = load_race_items_catalog(path)["hunter"]
+    assert set(hunter) == {"chr_id", "think_param", "npc_params"}

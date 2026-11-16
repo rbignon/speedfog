@@ -94,6 +94,24 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `mini` | Mini | `race_item` | `mini` | none (memory writes) | 15 s |
 | `giant` | Giant | `race_item` | `giant` | none (memory writes) | 15 s |
 | `camera` | Camera | `race_item` | `camera` | none (memory writes) | 15 s |
+| `talisman_thief` | Talisman Thief | `race_item` | `talisman_thief` | none (the racing mod picks a talisman and raises its removal flag) | none |
+| `junk_weapon` | Junk Weapon | `race_item` | `junk_weapon` | none (the racing mod equips one of the junk weapons below) | none |
+| `hunter` | Hunter | `race_item` | `hunter` | none (the racing mod spawns him from the Hunter rows below) | 60 s |
+
+The Junk Weapon forces one of five +0 standard weapons into the victim's right
+hand: Club (11010000), Large Club (12000000), Great Club (23020000),
+Astrologer's Staff (33130000) and Finger Seal (34000000), the `[[junk_weapon]]`
+entries of `race_items.toml` (names from the Item Randomizer's
+`EquipParamWeapon.txt`). The Torch is left out: it lights dark areas, which
+helps its holder.
+
+The Hunter is Margit, the Fell Omen (model `c2130`) sent after the leader. The
+`[hunter]` table of `race_items.toml` names his source rows (NpcParam 21300014,
+NpcThinkParam 21300000, read by the writer only) and where the clones go:
+NpcParam `1450850 + (tier - 1)` for tiers 1 to 34 (1450850-1450883, each
+carrying the area scaling row of its tier) and NpcThinkParam 1450850. The
+range NpcParam and NpcThinkParam 1450850-1450899 is reserved
+(`docs/event-flags.md`).
 
 The Star's row makes its user unkillable for its 15 s: `noDead` keeps the
 character out of the death state and every damage cut rate (slash, blow,
@@ -178,8 +196,8 @@ or, for the Mushroom and the Rune Pouches, to the sender.
 
 ## graph.json `race_items`
 
-Present only when the plugin is enabled (`GRAPH_JSON_VERSION` 4.13; 4.11
-had one goods per item). `goods` has one entry per goods key, `items` one per
+Present only when the plugin is enabled (`GRAPH_JSON_VERSION` 4.14; 4.11
+had one goods per item; 4.14 added `talismans`, `junk_weapons` and `hunter`). `goods` has one entry per goods key, `items` one per
 item key, each item naming its goods by key; `use_flag`, `effect_speffect`
 and `duration_ms` are `null` where the tables above say none. The real value
 lists every item; this excerpt shows two:
@@ -193,13 +211,27 @@ lists every item; this excerpt shows two:
   "items": {
     "hammer": {"name": "Hammer", "icon": "hammer", "icon_id": 60390, "goods": "race_item", "effect_speffect": 1450827, "duration_ms": 15000},
     "shield": {"name": "Shield", "icon": "shield", "icon_id": 60385, "goods": "shield", "effect_speffect": null, "duration_ms": null}
-  }
+  },
+  "talismans": [{"id": 1000, "name": "Crimson Amber Medallion", "flag": 1050290300}],
+  "junk_weapons": [{"id": 11010000, "name": "Club"}],
+  "hunter": {"chr_id": 2130, "think_param": 1450850, "npc_params": [1450850, 1450851]}
 }
 ```
 
+`talismans` is the talisman table (155 entries in ascending id order; the
+excerpt shows one) with each talisman's removal flag, `1050290300 + its index`.
+The generator exports the flags so the racing server and mod take them from
+the seed instead of recomputing the numbering: the mod knows which flag to
+raise for the talisman it picks, and an insertion in the table cannot
+desynchronise them. `junk_weapons` lists the weapons above and `hunter` the
+model, the think row and the 34 NpcParam rows, `npc_params[t - 1]` being the
+row of tier `t`. A catalog without a `[hunter]` table or talisman file
+exports `null` / empty values; the writer-only source rows never reach
+graph.json.
+
 ## Replacing the icons
 
-The 19 icons ship as placeholder flat shapes. The art is replaced by dropping
+The 22 icons ship as placeholder flat shapes. The art is replaced by dropping
 PNG files in, nothing else changes. For the graphic artist and for Roger:
 
 - **Format**: PNG, RGBA with a transparent background, square, at least
@@ -210,7 +242,8 @@ PNG files in, nothing else changes. For the graphic artist and for Roger:
   the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
   `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
   `toxic_blossom`, `item_box`, `star`, `vanish`, `unseen_foes`, `slow_mo`,
-  `mini`, `giant`, `camera` (ids 60385-60403; the three Rune Pouches share
+  `mini`, `giant`, `camera`, `talisman_thief`, `junk_weapon`, `hunter` (ids
+  60385-60406; the three Rune Pouches share
   one icon; `item_box` is the Race Item's own icon, shown until the racing
   mod writes the held item's icon).
 - **After the drop**: overwrite the files (never re-run

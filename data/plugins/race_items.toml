@@ -50,6 +50,9 @@ slow_mo = 60400
 mini = 60401
 giant = 60402
 camera = 60403
+talisman_thief = 60404
+junk_weapon = 60405
+hunter = 60406
 
 [[goods]]
 key = "shield"
@@ -213,3 +216,57 @@ goods = "race_item"
 icon = "camera"
 name = "Camera"
 duration_s = 15
+
+[[item]]
+key = "talisman_thief"
+goods = "race_item"
+icon = "talisman_thief"
+name = "Talisman Thief"
+
+[[item]]
+key = "junk_weapon"
+goods = "race_item"
+icon = "junk_weapon"
+name = "Junk Weapon"
+
+[[item]]
+key = "hunter"
+goods = "race_item"
+icon = "hunter"
+name = "Hunter"
+duration_s = 60
+
+# Weapons the Junk Weapon forces into the victim's right hand (+0, standard
+# upgrade). Names from the Item Randomizer's weapon name list. The Torch is left
+# out: it lights dark areas, which helps its holder.
+[[junk_weapon]]
+id = 11010000
+name = "Club"
+
+[[junk_weapon]]
+id = 12000000
+name = "Large Club"
+
+[[junk_weapon]]
+id = 23020000
+name = "Great Club"
+
+[[junk_weapon]]
+id = 33130000
+name = "Astrologer's Staff"
+
+[[junk_weapon]]
+id = 34000000
+name = "Finger Seal"
+
+# The Hunter: Margit, the Fell Omen's NpcParam and NpcThinkParam rows are cloned
+# by the C# plugin into one NpcParam per tier, npc_param_base + (tier - 1) for
+# tiers 1 to 34, each with its tier's area scaling row, and one NpcThinkParam
+# (think_param). Only chr_id, think_param and the 34 NpcParam ids reach
+# graph.json; the source rows are for the writer.
+[hunter]
+chr_id = 2130
+source_npc_param = 21300014
+source_think = 21300000
+npc_param_base = 1450850
+think_param = 1450850

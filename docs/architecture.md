@@ -284,7 +284,7 @@ Pre-computed zone clusters with entry/exit fogs.
 }
 ```
 
-### graph.json v4.13
+### graph.json v4.14
 
 DAG serialized for C# consumption, visualization tools, and racing. Shows every
 top-level field; see `writer/FogModWrapper.Core/Models/GraphData.cs` for exact
@@ -292,7 +292,7 @@ types and the optional node-level fields documented below.
 
 ```json
 {
-  "version": "4.13",
+  "version": "4.14",
   "seed": 212559448,
   "total_layers": 8, "total_nodes": 12, "total_zones": 24,
   "options": {"scale": true, "shuffle": true},
@@ -369,7 +369,7 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 - `tarnished_pack`: `[tarnished] enabled`; `false` (also when absent) makes `ShopInjector` remove the shop rows only Tarnished Pack owners see (added v4.10, see `docs/tarnished-showcase.md` "Pack-gated shop rows")
 - `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the enemy-randomizer placement mapping; absent when the item randomizer or boss randomization is off (added v4.5, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
 - `unused_exits`: per node, the number of its cluster's `exit_fogs` that no edge takes, neither as an outgoing edge's exit fog nor as an incoming edge's entry fog (the side the runner came in by); `0` on the end node. Not the generator's free-exit count, which keeps an `allow_entry_as_exit` arena's entry gate as free (added v4.13, consumed by speedfog-racing)
-- `race_items`: optional `{goods: {goods_key: {goods_id, use_flag, remove_flag, icon, icon_id}}, items: {item_key: {name, icon, icon_id, goods, effect_speffect, duration_ms}}}`, the catalog of `data/plugins/race_items.toml` (`load_race_items_catalog`): the two goods rows (`shield`, the passive Shield; `race_item`, the usable Race Item whose icon the racing mod rewrites to the held item) and the items, each pointing at one goods by key; `use_flag`, `effect_speffect` and `duration_ms` are `null` where there is none; written only when `[plugin.race_items] enabled` (added v4.11, split into goods and items v4.12, consumed by speedfog-racing)
+- `race_items`: optional `{goods: {goods_key: {goods_id, use_flag, remove_flag, icon, icon_id}}, items: {item_key: {name, icon, icon_id, goods, effect_speffect, duration_ms}}, talismans: [{id, name, flag}], junk_weapons: [{id, name}], hunter: {chr_id, think_param, npc_params}}`, the catalog of `data/plugins/race_items.toml` (`load_race_items_catalog`): the two goods rows (`shield`, the passive Shield; `race_item`, the usable Race Item whose icon the racing mod rewrites to the held item) and the items, each pointing at one goods by key; `use_flag`, `effect_speffect` and `duration_ms` are `null` where there is none; written only when `[plugin.race_items] enabled` (added v4.11, split into goods and items v4.12, `talismans`, `junk_weapons` and `hunter` v4.14, consumed by speedfog-racing)
 - `boss_names`: optional `{arena_entity_id: {name, map}}`, one per assignment, so FogModWrapper can repoint the healthbar name of the arenas the enemy randomizer did not name itself (added v4.8, consumed by `BossNameInjector`, see `docs/boss-healthbar-names.md`)
 - `helper_models`: optional `{arena_entity_id: [model, ...]}` for the assignments whose source owns `Class: Helper` entries in enemy.txt (`parse_helper_models` + `build_helper_models`), the models of the clones the randomizer places in the arena; absent when no placed source has helpers (added v4.9, consumed by `HelperAreaResolver`'s model pass, see `docs/item-randomizer.md` "Helper enemy scaling")
 

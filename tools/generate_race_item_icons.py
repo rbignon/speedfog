@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Generate placeholder race item icons (the 19 icons of race_items.toml).
+"""Generate placeholder race item icons (the 22 icons of race_items.toml).
 
 Standalone from the project venv: requires Pillow only
 (uv run --with pillow python tools/generate_race_item_icons.py). Draws one
 flat, outlined drawing per icon (war horn, rune coin, banana, red shell,
 mushroom, hammer, squid, blue shell, lightning bolt, ghost holding a cork,
 flytrap, item box, star, dotted silhouette, struck-through eye, snail, small
-and large figures with arrows, film camera) on transparent 1024x1024 canvases, the size asked of the
+and large figures with arrows, film camera, gloved hand lifting a pendant,
+cracked club, crosshair over a footprint) on transparent 1024x1024 canvases, the size asked of the
 final art: ItemIconPatcher derives every in-game texture (160x160, the large
 icon included) from each file. Outputs are committed in
 data/plugins/ as race_items_icon_<icon>.png.
@@ -91,6 +92,17 @@ CAM_TOP = (104, 110, 130, 255)
 CAM_LENS = (150, 200, 240, 255)
 CAM_REEL = (186, 190, 204, 255)
 CAM_RED = (222, 52, 52, 255)
+GLOVE = (150, 98, 58, 255)
+GLOVE_DARK = (104, 64, 36, 255)
+CUFF = (70, 74, 90, 255)
+CHAIN = (196, 200, 214, 255)
+PENDANT = (96, 190, 214, 255)
+PENDANT_DARK = (44, 120, 150, 255)
+CLUB_WOOD = (176, 124, 72, 255)
+CLUB_DARK = (120, 80, 44, 255)
+CRACK = (52, 34, 24, 255)
+PRINT = (86, 70, 60, 255)
+SCOPE = (214, 44, 44, 255)
 
 
 class ScaledDraw:
@@ -593,6 +605,91 @@ def draw_camera(draw: ScaledDraw) -> None:
     draw.ellipse((96, 70, 106, 80), fill=CAM_RED, outline=OUTLINE, width=2)
 
 
+def draw_talisman_thief(draw: ScaledDraw) -> None:
+    """A gloved hand reaching up and lifting a pendant by its chain."""
+    draw.line((80, 6, 80, 62), fill=OUTLINE, width=8)
+    draw.line((80, 6, 80, 62), fill=CHAIN, width=3)
+    gem = [(80, 50), (104, 74), (80, 106), (56, 74)]
+    outlined(draw, gem, PENDANT, width=5)
+    outlined(draw, [(80, 50), (104, 74), (80, 74)], PENDANT_DARK, width=3)
+    draw.ellipse((70, 40, 90, 60), fill=GOLD, outline=OUTLINE, width=4)
+    cuff = [(52, 150), (52, 126), (108, 126), (108, 150)]
+    palm = [(56, 128), (50, 104), (56, 92), (106, 92), (112, 104), (104, 128)]
+    outlined(draw, palm, GLOVE, width=5)
+    for x0 in (56, 71, 86):
+        outlined(
+            draw,
+            [(x0, 96), (x0, 76), (x0 + 6, 70), (x0 + 12, 76), (x0 + 12, 96)],
+            GLOVE,
+            width=4,
+        )
+    outlined(draw, [(98, 100), (116, 82), (126, 90), (110, 114)], GLOVE_DARK, width=4)
+    outlined(draw, cuff, CUFF, width=5)
+
+
+def draw_junk_weapon(draw: ScaledDraw) -> None:
+    """A cracked wooden club: a thin grip swelling to a rounded, split head."""
+    tail, tip = (32, 136), (106, 44)
+    dx, dy = tip[0] - tail[0], tip[1] - tail[1]
+    length = math.hypot(dx, dy)
+    ux, uy = dx / length, dy / length
+    nx, ny = -uy, ux
+
+    def at(t: float, w: float) -> Point:
+        return (
+            tail[0] + ux * length * t + nx * w,
+            tail[1] + uy * length * t + ny * w,
+        )
+
+    # Half width along the axis: a slim grip, then a bulging head closed by a
+    # round cap (a quarter-circle profile over the last stretch).
+    profile = [(0.0, 5), (0.3, 6), (0.55, 10), (0.7, 17), (0.8, 22), (0.88, 25)]
+    cap = [
+        (0.88 + 0.12 * math.sin(math.radians(a)), 25 * math.cos(math.radians(a)))
+        for a in range(0, 91, 15)
+    ]
+    side = profile + cap
+    left = [at(t, w) for t, w in side]
+    right = [at(t, -w) for t, w in side]
+    club = left + right[::-1]
+    outlined(draw, club, CLUB_WOOD, width=5)
+    draw.polygon(
+        [at(t, -w * 0.9) for t, w in side[2:]]
+        + [at(t, -w * 0.3) for t, w in side[:1:-1]],
+        fill=CLUB_DARK,
+    )
+    outline(draw, club, width=5)
+    crack = [at(0.98, 10), at(0.88, 4), at(0.82, 11), at(0.74, 2), at(0.68, 6)]
+    draw.line(crack, fill=CRACK, width=5, joint="curve")
+    draw.line([at(0.88, 4), at(0.9, -10)], fill=CRACK, width=4)
+    knot = at(0.6, 2)
+    draw.ellipse(
+        (knot[0] - 5, knot[1] - 5, knot[0] + 5, knot[1] + 5),
+        fill=CLUB_DARK,
+        outline=OUTLINE,
+        width=3,
+    )
+
+
+def draw_hunter(draw: ScaledDraw) -> None:
+    """A crosshair over a footprint."""
+    sole = ellipse_arc((74, 98), (22, 34), 0, 360, angle=-12, steps=32)
+    outlined(draw, sole, PRINT, width=4)
+    for x, y, r in ((52, 56, 7), (66, 46, 8), (82, 44, 8), (97, 50, 7), (107, 62, 6)):
+        draw.ellipse((x - r, y - r, x + r, y + r), fill=PRINT, outline=OUTLINE, width=3)
+    draw.ellipse((22, 22, 138, 138), outline=OUTLINE, width=14)
+    draw.ellipse((22, 22, 138, 138), outline=SCOPE, width=8)
+    for a, b in (
+        ((80, 6), (80, 50)),
+        ((80, 110), (80, 154)),
+        ((6, 80), (50, 80)),
+        ((110, 80), (154, 80)),
+    ):
+        draw.line((*a, *b), fill=OUTLINE, width=12)
+        draw.line((*a, *b), fill=SCOPE, width=6)
+    draw.ellipse((74, 74, 86, 86), fill=SCOPE, outline=OUTLINE, width=2)
+
+
 ICONS: dict[str, Callable[[ScaledDraw], None]] = {
     "shield": draw_shield,
     "rune_pouch": draw_rune_pouch,
@@ -613,6 +710,9 @@ ICONS: dict[str, Callable[[ScaledDraw], None]] = {
     "mini": draw_mini,
     "giant": draw_giant,
     "camera": draw_camera,
+    "talisman_thief": draw_talisman_thief,
+    "junk_weapon": draw_junk_weapon,
+    "hunter": draw_hunter,
 }
 
 

@@ -21,6 +21,14 @@ EFFECT_ID_RANGE = range(1450820, 1450850)  # Item effect SpEffects
 USE_FLAG_RANGE = range(1050290100, 1050290200)
 REMOVE_FLAG_RANGE = range(1050290200, 1050290300)
 ICON_ID_RANGE = range(60385, 60415)
+NPC_PARAM_RANGE = range(1450850, 1450900)  # NpcParam and NpcThinkParam
+# One Hunter NpcParam row per tier, tiers 1 to 34.
+HUNTER_TIERS = 34
+# Removal flag of talisman n of race_items_talismans.toml: base + n. Same value
+# as SpeedFogIds.RaceItemTalismanRemoveFlagBase (tests pin the two together).
+TALISMAN_FLAG_BASE = 1050290300
+TALISMAN_FLAG_COUNT = 200
+TALISMANS_FILE = "race_items_talismans.toml"
 
 
 def _check_range(label: str, key: str, value: Any, allowed: range) -> None:
@@ -38,19 +46,78 @@ def _required(entry: dict[str, Any], *fields: str) -> list[Any]:
         raise ValueError(f"race_items: entry missing required field {exc}") from None
 
 
-def load_race_items_catalog(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
+def _positive_id(label: str, value: Any) -> None:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(f"race_items: {label} id {value!r} must be positive")
+
+
+def _named_ids(
+    label: str, entries: list[Any], *, ascending: bool, limit: int | None = None
+) -> list[dict[str, Any]]:
+    """Validate ``[[label]]`` entries of ``{id, name}`` and return them."""
+    if not isinstance(entries, list):
+        raise ValueError(f"race_items: [[{label}]] must be an array of tables")
+    if limit is not None and len(entries) > limit:
+        raise ValueError(
+            f"race_items: {len(entries)} {label}s, more than the {limit} reserved"
+        )
+    out: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    for entry in entries:
+        entry_id, name = _required(entry, "id", "name")
+        _positive_id(label, entry_id)
+        if not isinstance(name, str) or not name:
+            raise ValueError(f"race_items: {label} {entry_id}: empty name")
+        if ascending and out and entry_id <= out[-1]["id"]:
+            raise ValueError(
+                f"race_items: {label} {entry_id} after {out[-1]['id']}: "
+                "ids must be strictly ascending"
+            )
+        if entry_id in seen:
+            raise ValueError(f"race_items: duplicate {label} id {entry_id}")
+        seen.add(entry_id)
+        out.append({"id": entry_id, "name": name})
+    return out
+
+
+def _load_hunter(hunter: Any) -> dict[str, Any] | None:
+    if hunter is None:
+        return None
+    if not isinstance(hunter, dict):
+        raise ValueError("race_items: [hunter] must be a table")
+    # source_npc_param and source_think are read by the C# writer only.
+    chr_id, base, think = _required(hunter, "chr_id", "npc_param_base", "think_param")
+    _positive_id("hunter chr", chr_id)
+    _check_range("npc_param_base", "hunter", base, NPC_PARAM_RANGE)
+    _check_range("last tier row", "hunter", base + HUNTER_TIERS - 1, NPC_PARAM_RANGE)
+    _check_range("think_param", "hunter", think, NPC_PARAM_RANGE)
+    return {
+        "chr_id": chr_id,
+        "think_param": think,
+        "npc_params": list(range(base, base + HUNTER_TIERS)),
+    }
+
+
+def load_race_items_catalog(path: Path) -> dict[str, Any]:
     """Load the race items catalog and return the graph.json ``race_items`` value.
 
-    The value is ``{"goods": {key: goods}, "items": {key: item}}``: the goods
-    rows the game holds (``goods_id``, ``use_flag``, ``remove_flag``, ``icon``,
-    ``icon_id``) and the items that point at one of them (``name``, ``icon``,
-    ``icon_id``, ``goods``, ``effect_speffect``, ``duration_ms``).
+    The value is ``{"goods": {key: goods}, "items": {key: item}, "talismans":
+    [...], "junk_weapons": [...], "hunter": {...} | None}``: the goods rows
+    the game holds (``goods_id``, ``use_flag``, ``remove_flag``, ``icon``,
+    ``icon_id``), the items that point at one of them (``name``, ``icon``,
+    ``icon_id``, ``goods``, ``effect_speffect``, ``duration_ms``), the
+    talisman table (``id``, ``name``, ``flag``) read from the sibling
+    ``race_items_talismans.toml`` (empty when absent), the junk weapons
+    (``id``, ``name``) and the Hunter's ``chr_id``, ``think_param`` and
+    ``npc_params`` (one row per tier).
 
     Raises:
         ValueError: on a malformed catalog (missing field, duplicate key,
             goods id or effect id, id or flag outside its reserved range,
             use_flag without marker or the reverse, unknown icon or goods,
-            effect on a goods that cannot be used).
+            effect on a goods that cannot be used, talismans not strictly
+            ascending, an empty name, a non-positive or duplicate id, more
+            talismans than reserved flags, a Hunter row outside its range).
     """
     with path.open("rb") as fp:
         data = tomllib.load(fp)
@@ -142,4 +209,27 @@ def load_race_items_catalog(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
             "effect_speffect": effect_id,
             "duration_ms": None if duration_s is None else int(duration_s * 1000),
         }
-    return {"goods": goods, "items": items}
+
+    talismans_path = path.parent / TALISMANS_FILE
+    talisman_entries: list[Any] = []
+    if talismans_path.exists():
+        with talismans_path.open("rb") as fp:
+            talisman_entries = tomllib.load(fp).get("talisman", [])
+    talismans = [
+        {**talisman, "flag": TALISMAN_FLAG_BASE + index}
+        for index, talisman in enumerate(
+            _named_ids(
+                "talisman", talisman_entries, ascending=True, limit=TALISMAN_FLAG_COUNT
+            )
+        )
+    ]
+    junk_weapons = _named_ids(
+        "junk weapon", data.get("junk_weapon", []), ascending=False
+    )
+    return {
+        "goods": goods,
+        "items": items,
+        "talismans": talismans,
+        "junk_weapons": junk_weapons,
+        "hunter": _load_hunter(data.get("hunter")),
+    }

@@ -24,7 +24,7 @@ public class RaceItemsCatalogTests
         var catalog = RaceItemsCatalog.Load(ShippedCatalogPath());
 
         Assert.Equal(2, catalog.Goods.Count);
-        Assert.Equal(20, catalog.Items.Count);
+        Assert.Equal(23, catalog.Items.Count);
         Assert.Equal(catalog.Goods.OrderBy(g => g.GoodsId).Select(g => g.GoodsId), catalog.Goods.Select(g => g.GoodsId));
 
         var raceItem = catalog.Goods.Single(g => g.Key == "race_item");

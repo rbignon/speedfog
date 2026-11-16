@@ -2800,7 +2800,7 @@ class TestDagToDictRaceItems:
             dag, self._clusters(dag), GraphExportOptions(race_items=catalog)
         )
         assert result["race_items"] == catalog
-        assert result["version"] == "4.13"
+        assert result["version"] == "4.14"
         validate_graph_dict(result)
 
     def test_dag_to_dict_omits_race_items_when_disabled(self):

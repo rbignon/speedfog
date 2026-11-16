@@ -142,6 +142,7 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 |-------|----------|-------|-----------|-------|
 | 1450700-1450799 | PhantomParam, SpEffectVfxParam, SpEffectParam | Phantom skins catalog | `docs/phantom-skins.md` | |
 | 1450800-1450899 | EquipParamGoods, SpEffectParam | RaceItemsPlugin | `SpeedFogIds.RaceItemParamIdMin/Max`, `RaceItemGoodsIdMax`, `RaceItemEffectIdMin/Max`, `data/plugins/race_items.toml` | Race items: goods id = marker SpEffect id, in 1450800-1450819 (1450800 Shield, 1450801 Race Item); item effect SpEffects in 1450820-1450849; vanilla has neither (checked 2026-11-12) |
+| 1450850-1450899 | NpcParam, NpcThinkParam | RaceItemsPlugin | `data/plugins/race_items.toml` `[hunter]`, `speedfog/race_items.py` `NPC_PARAM_RANGE` | The Hunter: one NpcParam per tier at 1450850 + (tier - 1), tiers 1 to 34 (1450850-1450883), and NpcThinkParam 1450850; the rest of the range is spare. Separate tables from the goods and SpEffect rows above, which share the numbers |
 | 755890000 | NpcParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossNpcRow` | Boss clone; outside 5280-band to avoid nerflantern patching |
 | 755890000 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossSpEffectRow` | Partial damage-cut state for boss |
 | 755890000 | NpcThinkParam | AmbientSpawnInjector | `SpeedFogIds.HostileGreeterThinkRow` | Greeter think row (species basis: untouchable 52800000 or wormface 45700100, perception capped at `GREETER_AGGRO_DIST`) |
