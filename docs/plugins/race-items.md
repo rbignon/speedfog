@@ -85,7 +85,7 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `lightning` | Lightning | `race_item` | `lightning` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
 | `flask_stopper` | Flask Stopper | `race_item` | `flask_stopper` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
 | `toxic_blossom` | Toxic Blossom | `race_item` | `toxic_blossom` | 1450832, 3370, `poizonAttackPower = 99999` | none |
-| `star` | Star | `race_item` | `star` | 1450833, 10600, `noDead = 1`, the eight damage cut rates and `toughnessDamageCutRate` at 0, `effectEndurance = 15` | 15 s |
+| `star` | Star | `race_item` | `star` | 1450833, 10600, `noDead = 1`, the eight damage cut rates and `toughnessDamageCutRate` at 0, the seven status `disable*` bits at 1 and `*DefDamageRate` at 0, `effectEndurance = 15` | 15 s |
 | `vanish` | Vanish | `race_item` | `vanish` | none (applied by the racing mod through memory writes) | 15 s |
 | `unseen_foes` | Unseen Foes | `race_item` | `unseen_foes` | none (memory writes) | 15 s |
 | `slow_mo` | Slow-mo | `race_item` | `slow_mo` | none (memory writes) | 15 s |
@@ -96,11 +96,17 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 The Star's row makes its user unkillable for its 15 s: `noDead` keeps the
 character out of the death state and every damage cut rate (slash, blow,
 thrust, neutral, magic, fire, thunder, dark) and the poise damage cut rate are
-0, so no hit lands and none staggers. Status build-up still applies. It uses
-this row rather than the character debug flags (`ChrDbgFlags`), which the
-racing mod's cheat detection reads. The six other new items have no row: the
-racing mod applies them by writing the player's or the foes' memory for their
-duration, so the catalog only gives them a name, an icon and a duration.
+0, so no hit lands and none staggers. Nor does any status: the seven immunity
+bits (`disablePoison`, `disableDisease` for scarlet rot, `disableBlood`,
+`disableCurse` for death blight, `disableFreeze`, `disableSleep`,
+`disableMadness`) keep each from taking hold, and the seven defender build-up
+rates (`poisonDefDamageRate` and the others) at 0 keep its bar empty, so none
+fires once the Star ends (a status already on the user when the Star starts
+may keep ticking: not checked in game). It uses this row rather than the
+character debug flags (`ChrDbgFlags`), which the racing mod's cheat detection
+reads. The six other new items have no row: the racing mod applies them by
+writing the player's or the foes' memory for their duration, so the catalog
+only gives them a name, an icon and a duration.
 An effect on an item of the Shield goods is rejected when the catalog loads:
 the Shield is never used, so nothing would apply it.
 

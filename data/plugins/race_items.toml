@@ -170,7 +170,7 @@ goods = "race_item"
 icon = "star"
 name = "Star"
 duration_s = 15
-effect = { id = 1450833, template = 10600, fields = { noDead = 1, slashDamageCutRate = 0, blowDamageCutRate = 0, thrustDamageCutRate = 0, neutralDamageCutRate = 0, magicDamageCutRate = 0, fireDamageCutRate = 0, thunderDamageCutRate = 0, darkDamageCutRate = 0, toughnessDamageCutRate = 0, effectEndurance = 15 } }
+effect = { id = 1450833, template = 10600, fields = { noDead = 1, slashDamageCutRate = 0, blowDamageCutRate = 0, thrustDamageCutRate = 0, neutralDamageCutRate = 0, magicDamageCutRate = 0, fireDamageCutRate = 0, thunderDamageCutRate = 0, darkDamageCutRate = 0, toughnessDamageCutRate = 0, disablePoison = 1, disableDisease = 1, disableBlood = 1, disableCurse = 1, disableFreeze = 1, disableSleep = 1, disableMadness = 1, poisonDefDamageRate = 0, diseaseDefDamageRate = 0, bloodDefDamageRate = 0, curseDefDamageRate = 0, freezeDefDamageRate = 0, sleepDefDamageRate = 0, madnessDefDamageRate = 0, effectEndurance = 15 } }
 
 [[item]]
 key = "vanish"

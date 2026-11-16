@@ -121,6 +121,11 @@ def test_star_row_makes_its_user_invincible_for_its_duration():
         "thunderDamageCutRate", "darkDamageCutRate", "toughnessDamageCutRate",
     ):  # fmt: skip
         assert fields[rate] == 0, rate
+    # Every status: immune (no proc) and no build-up, so none fires once the
+    # Star ends either.
+    for status in ("poison", "disease", "blood", "curse", "freeze", "sleep", "madness"):
+        assert fields[f"disable{status.capitalize()}"] == 1, status
+        assert fields[f"{status}DefDamageRate"] == 0, status
 
 
 def test_mushroom_lasts_its_row_plus_the_vanilla_tail():
