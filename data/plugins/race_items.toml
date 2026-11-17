@@ -47,7 +47,6 @@ star = 60397
 vanish = 60398
 unseen_foes = 60399
 slow_mo = 60400
-mini = 60401
 giant = 60402
 camera = 60403
 talisman_thief = 60404
@@ -194,13 +193,6 @@ key = "slow_mo"
 goods = "race_item"
 icon = "slow_mo"
 name = "Slow-mo"
-duration_s = 15
-
-[[item]]
-key = "mini"
-goods = "race_item"
-icon = "mini"
-name = "Mini"
 duration_s = 15
 
 [[item]]

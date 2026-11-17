@@ -39,7 +39,7 @@ def test_shipped_catalog_matches_the_contract():
         "icon": "shield",
         "icon_id": 60385,
     }
-    assert len(catalog["items"]) == 23
+    assert len(catalog["items"]) == 22
     assert catalog["items"]["hammer"] == {
         "name": "Hammer",
         "icon": "hammer",
@@ -79,7 +79,7 @@ def test_shipped_catalog_ids_follow_the_numbering():
 VANILLA_ENDURANCE = {102360: 15, 4101: 0}
 
 
-MEMORY_EFFECTS = {"vanish", "unseen_foes", "slow_mo", "mini", "giant", "camera"}
+MEMORY_EFFECTS = {"vanish", "unseen_foes", "slow_mo", "giant", "camera"}
 # Applied by the racing mod without a SpEffect row: the Hunter lasts 30 s of
 # play clock, the Talisman Thief and the Junk Weapon are permanent.
 MOD_APPLIED_DURATIONS = {"hunter": 30, "talisman_thief": None, "junk_weapon": None}

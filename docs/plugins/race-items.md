@@ -84,14 +84,13 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `hammer` | Hammer | `race_item` | `hammer` | 1450827, 10600, `equipWeightChangeRate = 0.35` (rewritten per target by the racing mod), `effectEndurance = 15` | 15 s |
 | `ink` | Ink | `race_item` | `ink` | none (overlay only; the racing mod keeps it waiting until the runner stands in a zone whose node has `unused_exits` above 0; in such a boss arena, the exits hidden through the fight, its time runs from the boss's kill) | 30 s |
 | `blue_shell` | Blue Shell | `race_item` | `blue_shell` | 1450829, 10600, `maxHpRate = 0.5`, `effectEndurance = 15` | 15 s |
-| `lightning` | Lightning | `race_item` | `lightning` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s | 15 s |
+| `lightning` | Lightning | `race_item` | `lightning` | 1450830, 10600, `effectEndurance = 15`, cycles 4101 every 0.06 s (the racing mod also shrinks the target for the same time) | 15 s |
 | `flask_stopper` | Flask Stopper | `race_item` | `flask_stopper` | 1450831, 10600, `stateInfo = 154`, `effectEndurance = 15` | 15 s |
 | `toxic_blossom` | Toxic Blossom | `race_item` | `toxic_blossom` | 1450832, 3370, `poizonAttackPower = 99999` | none |
 | `star` | Star | `race_item` | `star` | 1450833, 10600, `noDead = 1`, the eight damage cut rates and `toughnessDamageCutRate` at 0, the seven status `disable*` bits at 1 and `*DefDamageRate` at 0, `effectEndurance = 15` | 15 s |
 | `vanish` | Vanish | `race_item` | `vanish` | none (applied by the racing mod through memory writes) | 15 s |
 | `unseen_foes` | Unseen Foes | `race_item` | `unseen_foes` | none (memory writes) | 15 s |
 | `slow_mo` | Slow-mo | `race_item` | `slow_mo` | none (memory writes) | 15 s |
-| `mini` | Mini | `race_item` | `mini` | none (memory writes) | 15 s |
 | `giant` | Giant | `race_item` | `giant` | none (memory writes) | 15 s |
 | `camera` | Camera | `race_item` | `camera` | none (memory writes) | 15 s |
 | `talisman_thief` | Talisman Thief | `race_item` | `talisman_thief` | none (the racing mod picks a talisman and raises its removal flag) | none |
@@ -280,8 +279,8 @@ PNG files in, nothing else changes. For the graphic artist and for Roger:
   the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
   `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
   `toxic_blossom`, `item_box`, `star`, `vanish`, `unseen_foes`, `slow_mo`,
-  `mini`, `giant`, `camera`, `talisman_thief`, `junk_weapon`, `hunter` (ids
-  60385-60406; the three Rune Pouches share
+  `giant`, `camera`, `talisman_thief`, `junk_weapon`, `hunter` (ids
+  60385-60406, 60401 left free since the Mini went; the three Rune Pouches share
   one icon; `item_box` is the Race Item's own icon, shown until the racing
   mod writes the held item's icon).
 - **After the drop**: overwrite the files (never re-run

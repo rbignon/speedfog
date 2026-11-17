@@ -161,7 +161,7 @@ Menu icon ids (a third namespace, not entity ids nor param rows). Vanilla icon i
 | Range | Owner | Reference | Notes |
 |-------|-------|-----------|-------|
 | 60383-60384 | Halloween plugin | `SpeedFogIds.HalloweenGoldenSeedIcon`, `HalloweenSacredTearIcon` | Golden Seed pumpkin, corrupted Sacred Tear |
-| 60385-60414 | RaceItemsPlugin | `SpeedFogIds.RaceItemIconIdMin/Max`, `[icons]` in `data/plugins/race_items.toml` | One icon per item kind (60385-60395) and the Race Item goods' item box (60396); 60397-60403 the Star, Vanish, Unseen Foes, Slow-mo, Mini, Giant and Camera, 60404-60414 spare |
+| 60385-60414 | RaceItemsPlugin | `SpeedFogIds.RaceItemIconIdMin/Max`, `[icons]` in `data/plugins/race_items.toml` | One icon per item kind (60385-60395) and the Race Item goods' item box (60396); 60397-60403 the Star, Vanish, Unseen Foes, Slow-mo, (60401 free, the Mini's until it went), Giant and Camera, 60404-60406 the Talisman Thief, Junk Weapon and Hunter, 60407-60414 spare |
 
 ## Reserved FMG Entry IDs
 

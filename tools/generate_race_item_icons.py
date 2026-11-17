@@ -567,14 +567,6 @@ def _arrow(draw: ScaledDraw, tail: Point, head: Point) -> None:
     outlined(draw, shape, ARROW_ORANGE, width=3)
 
 
-def draw_mini(draw: ScaledDraw) -> None:
-    """A small figure with four arrows closing in on it."""
-    _figure(draw, 80, 56, 52)
-    for tail, head in (((16, 16), (56, 56)), ((144, 16), (104, 56)),
-                       ((16, 144), (56, 104)), ((144, 144), (104, 104))):  # fmt: skip
-        _arrow(draw, tail, head)
-
-
 def draw_giant(draw: ScaledDraw) -> None:
     """A large figure with four arrows pushing out from its edges."""
     _figure(draw, 80, 30, 100)
@@ -707,7 +699,6 @@ ICONS: dict[str, Callable[[ScaledDraw], None]] = {
     "vanish": draw_vanish,
     "unseen_foes": draw_unseen_foes,
     "slow_mo": draw_slow_mo,
-    "mini": draw_mini,
     "giant": draw_giant,
     "camera": draw_camera,
     "talisman_thief": draw_talisman_thief,
