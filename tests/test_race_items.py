@@ -80,9 +80,9 @@ VANILLA_ENDURANCE = {102360: 15, 4101: 0}
 
 
 MEMORY_EFFECTS = {"vanish", "unseen_foes", "slow_mo", "mini", "giant", "camera"}
-# Applied by the racing mod without a SpEffect row: the Hunter lasts 60 s of
+# Applied by the racing mod without a SpEffect row: the Hunter lasts 30 s of
 # play clock, the Talisman Thief and the Junk Weapon are permanent.
-MOD_APPLIED_DURATIONS = {"hunter": 60, "talisman_thief": None, "junk_weapon": None}
+MOD_APPLIED_DURATIONS = {"hunter": 30, "talisman_thief": None, "junk_weapon": None}
 
 
 def test_duration_matches_the_speffect_that_carries_it():
@@ -341,12 +341,14 @@ def test_shipped_hunter_block_covers_every_tier():
     assert all(npc in NPC_PARAM_RANGE for npc in hunter["npc_params"])
 
 
-def test_shipped_junk_weapons_are_unique_and_named():
+def test_shipped_junk_weapons_are_plain():
+    # The loader already rejects duplicate ids and empty names.
     weapons = load_race_items_catalog(CATALOG_PATH)["junk_weapons"]
-    assert [w["id"] for w in weapons] == [
-        11010000, 12000000, 23020000, 33130000, 34000000,
-    ]  # fmt: skip
-    assert all(w["name"] for w in weapons)
+    ids = [w["id"] for w in weapons]
+    assert ids
+    # +0 standard (a weapon id ends in its affinity and upgrade level): the
+    # racing mod finds the given copy by this base, whatever level it lands at.
+    assert all(id_ % 10000 == 0 for id_ in ids)
 
 
 def _talismans_file(tmp_path: Path, body: str) -> None:

@@ -234,30 +234,58 @@ key = "hunter"
 goods = "race_item"
 icon = "hunter"
 name = "Hunter"
-duration_s = 60
+duration_s = 30
 
-# Weapons the Junk Weapon forces into the victim's right hand (+0, standard
-# upgrade). Names from the Item Randomizer's weapon name list. The Torch is left
-# out: it lights dark areas, which helps its holder.
+# Weapons the Junk Weapon forces into the victim's right hand: the base game's
+# whips and torches (+0, standard; the Item Randomizer's auto-upgrade may raise
+# one as it lands). Names from the Item Randomizer's weapon name list. Left out:
+# the Sentry's Torch, which the run's shop sells when `sentry_torch_shop` is on
+# (it reveals invisible enemies), so receiving it would be a gift; and the DLC ones
+# (Tooth Whip, Nanaya's Torch, Lamenting Visage), which a seed without the DLC
+# cannot give.
 [[junk_weapon]]
-id = 11010000
-name = "Club"
-
-[[junk_weapon]]
-id = 12000000
-name = "Large Club"
-
-[[junk_weapon]]
-id = 23020000
-name = "Great Club"
+id = 20000000
+name = "Whip"
 
 [[junk_weapon]]
-id = 33130000
-name = "Astrologer's Staff"
+id = 20020000
+name = "Thorned Whip"
 
 [[junk_weapon]]
-id = 34000000
-name = "Finger Seal"
+id = 20030000
+name = "Magma Whip Candlestick"
+
+[[junk_weapon]]
+id = 20050000
+name = "Hoslow's Petal Whip"
+
+[[junk_weapon]]
+id = 20060000
+name = "Giant's Red Braid"
+
+[[junk_weapon]]
+id = 20070000
+name = "Urumi"
+
+[[junk_weapon]]
+id = 24000000
+name = "Torch"
+
+[[junk_weapon]]
+id = 24020000
+name = "Steel-Wire Torch"
+
+[[junk_weapon]]
+id = 24040000
+name = "St. Trina's Torch"
+
+[[junk_weapon]]
+id = 24050000
+name = "Ghostflame Torch"
+
+[[junk_weapon]]
+id = 24060000
+name = "Beast-Repellent Torch"
 
 # The Hunter: Margit, the Fell Omen's NpcParam and NpcThinkParam rows are cloned
 # by the C# plugin into one NpcParam per tier, npc_param_base + (tier - 1) for

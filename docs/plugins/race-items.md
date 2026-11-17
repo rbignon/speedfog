@@ -96,14 +96,20 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `camera` | Camera | `race_item` | `camera` | none (memory writes) | 15 s |
 | `talisman_thief` | Talisman Thief | `race_item` | `talisman_thief` | none (the racing mod picks a talisman and raises its removal flag) | none |
 | `junk_weapon` | Junk Weapon | `race_item` | `junk_weapon` | none (the racing mod equips one of the junk weapons below) | none |
-| `hunter` | Hunter | `race_item` | `hunter` | none (the racing mod spawns him from the Hunter rows below) | 60 s |
+| `hunter` | Hunter | `race_item` | `hunter` | none (the racing mod spawns him from the Hunter rows below) | 30 s |
 
-The Junk Weapon forces one of five +0 standard weapons into the victim's right
-hand: Club (11010000), Large Club (12000000), Great Club (23020000),
-Astrologer's Staff (33130000) and Finger Seal (34000000), the `[[junk_weapon]]`
-entries of `race_items.toml` (names from the Item Randomizer's
-`EquipParamWeapon.txt`). The Torch is left out: it lights dark areas, which
-helps its holder.
+The Junk Weapon forces one of the base game's whips and torches into the
+victim's right hand, +0 standard: Whip (20000000), Thorned Whip (20020000),
+Magma Whip Candlestick (20030000), Hoslow's Petal Whip (20050000), Giant's Red
+Braid (20060000), Urumi (20070000), Torch (24000000), Steel-Wire Torch
+(24020000), St. Trina's Torch (24040000), Ghostflame Torch (24050000) and
+Beast-Repellent Torch (24060000), the `[[junk_weapon]]` entries of
+`race_items.toml` (names from the Item Randomizer's `EquipParamWeapon.txt`).
+With `auto_upgrade_weapons` on, the Item Randomizer raises the weapon to the
+runner's best upgrade level as it lands. Left out: the Sentry's Torch, which the
+run's shop sells when `sentry_torch_shop` is on (it reveals invisible enemies),
+so receiving it would be a gift; and the DLC ones (Tooth Whip, Nanaya's Torch,
+Lamenting Visage), which a seed without the DLC cannot give.
 
 The Hunter is Margit, the Fell Omen (model `c2130`) sent after the leader. The
 `[hunter]` table of `race_items.toml` names his source rows (NpcParam 21300014,
@@ -245,7 +251,7 @@ lists every item; this excerpt shows two:
     "shield": {"name": "Shield", "icon": "shield", "icon_id": 60385, "goods": "shield", "effect_speffect": null, "duration_ms": null}
   },
   "talismans": [{"id": 1000, "name": "Crimson Amber Medallion", "flag": 1050290300}],
-  "junk_weapons": [{"id": 11010000, "name": "Club"}],
+  "junk_weapons": [{"id": 20000000, "name": "Whip"}],
   "hunter": {"chr_id": 2130, "think_param": 1450850, "npc_params": [1450850, 1450851]}
 }
 ```
