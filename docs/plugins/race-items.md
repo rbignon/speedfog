@@ -140,9 +140,10 @@ the loaded paramdefs and an unknown one fails the build instead of being
 skipped. A catalog without a `[hunter]` table adds no NpcParam or NpcThinkParam
 row.
 
-To check a built seed in game, dump the rows with the Tarnished tool's
-`game_inspect dump-param` (NpcParam 1450850, 1450867 and 1450883, NpcThinkParam
-1450850) and compare the scaling SpEffect slot and the cells above.
+To check a built seed, dump the rows offline from its regulation.bin with
+speedfog's own `tools/game_inspect dump-param` (NpcParam 1450850, 1450867 and
+1450883, NpcThinkParam 1450850) and compare the scaling SpEffect slot and the
+cells above.
 
 The Star's row makes its user unkillable for its 15 s: `noDead` keeps the
 character out of the death state and every damage cut rate (slash, blow,
