@@ -78,4 +78,21 @@ public class RaceItemTalismansTests
     {
         Assert.Throws<InvalidDataException>(() => RaceItemTalismans.Parse(toml));
     }
+
+    [Fact]
+    public void A_missing_file_is_an_empty_table()
+    {
+        // As for the Python loader, which exports no talisman then.
+        var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "race_items_talismans.toml");
+        Assert.Empty(RaceItemTalismans.Load(missing));
+    }
+
+    [Theory]
+    [InlineData("[[talismans]]\nid = 5\nname = \"T\"\n", "unknown key 'talismans'")]
+    [InlineData("[[talisman]]\nid = 5\nname = \"T\"\nflag = 3\n", "unknown key 'flag'")]
+    public void Rejects_an_unknown_key(string toml, string expected)
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => RaceItemTalismans.Parse(toml));
+        Assert.Contains(expected, ex.Message);
+    }
 }

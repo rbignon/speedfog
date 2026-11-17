@@ -1,0 +1,10 @@
+# expect: last tier row 1450900 outside 1450850-1450899
+[icons]
+foo = 60385
+
+[hunter]
+chr_id = 2130
+source_npc_param = 21300014
+source_think = 21300000
+npc_param_base = 1450867
+think_param = 1450850

@@ -95,6 +95,64 @@ public class RaceItemsRegulationInjectorTests
         Assert.Contains("SpEffectParam", ex.Message);
     }
 
+    /// <summary>A catalog of one usable goods and one item "x" whose effect
+    /// sets <paramref name="field"/>.</summary>
+    private static RaceItemsCatalog CatalogWithEffectField(string field, double value) => new(
+        new[]
+        {
+            new RaceItemGoods("g", "i", 60385, "G", "i", "c", 1450801, 1050290101, 1050290201,
+                new RaceItemSpEffect(1450801, 10600, new Dictionary<string, double>())),
+        },
+        new[]
+        {
+            new RaceItem("x", "g", "i", 60385, "X",
+                new RaceItemSpEffect(1450820, 10600, new Dictionary<string, double> { [field] = value })),
+        });
+
+    [Theory]
+    [InlineData(154.5, "is an integer")]   // would be rounded to 154
+    [InlineData(0.35, "is an integer")]    // would be written as 0
+    [InlineData(70000, "does not fit")]    // stateInfo is a u16
+    [InlineData(-1, "does not fit")]
+    public void A_value_an_integer_cell_cannot_hold_is_rejected_and_names_the_item(double value, string reason)
+    {
+        var goods = BuildParamFromDef("EquipParamGoods", 250);
+        var sp = BuildParamFromDef("SpEffect", 10600);
+        var ex = Assert.Throws<InvalidDataException>(() =>
+            RaceItemsRegulationInjector.Apply(goods, sp, CatalogWithEffectField("stateInfo", value)));
+        Assert.Contains(reason, ex.Message);
+        Assert.Contains("item 'x' effect", ex.Message);
+        Assert.Contains("stateInfo", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(1e300)]                     // finite, but Infinity once cast to a float
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NaN)]
+    public void A_value_a_float_cell_cannot_hold_is_rejected(double value)
+    {
+        var goods = BuildParamFromDef("EquipParamGoods", 250);
+        var sp = BuildParamFromDef("SpEffect", 10600);
+        var ex = Assert.Throws<InvalidDataException>(() =>
+            RaceItemsRegulationInjector.Apply(goods, sp, CatalogWithEffectField("maxHpRate", value)));
+        Assert.Contains("does not fit", ex.Message);
+        Assert.Contains("item 'x' effect", ex.Message);
+    }
+
+    [Fact]
+    public void Fractions_stay_allowed_on_float_cells_and_whole_numbers_on_integer_ones()
+    {
+        var goods = BuildParamFromDef("EquipParamGoods", 250);
+        var sp = BuildParamFromDef("SpEffect", 10600);
+        RaceItemsRegulationInjector.Apply(goods, sp, CatalogWithEffectField("maxHpRate", 0.5));
+        Assert.Equal(0.5f, sp[1450820]!["maxHpRate"].Value);
+
+        sp = BuildParamFromDef("SpEffect", 10600);
+        RaceItemsRegulationInjector.Apply(
+            BuildParamFromDef("EquipParamGoods", 250), sp, CatalogWithEffectField("stateInfo", 154));
+        Assert.Equal((ushort)154, sp[1450820]!["stateInfo"].Value);
+    }
+
     [Fact]
     public void Shield_is_passive()
     {

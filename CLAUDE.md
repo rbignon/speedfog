@@ -67,7 +67,7 @@ speedfog/
 │   ├── fog_mod.py           # FogMod wrapper (runs FogModWrapper.exe)
 │   ├── item_randomizer.py   # Item Randomizer integration
 │   └── proc.py              # Subprocess streaming with elapsed-time prefixes
-├── tests/                   # Python tests
+├── tests/                   # Python tests (fixtures/race_items/: catalogs replayed by the Python and C# race items loaders)
 ├── data/                    # Shared data files
 │   ├── fog.txt              # FogRando zone definitions (gitignored)
 │   ├── foglocations2.txt    # FogRando enemy areas (gitignored)
@@ -87,7 +87,7 @@ speedfog/
 │   ├── plugins/             # Plugin data files
 │   │   ├── summer.toml      # Summer theme text catalogue (tracked)
 │   │   ├── halloween.toml   # Halloween theme text catalogue (tracked)
-│   │   ├── race_items.toml  # Race items catalog: icons, the two goods (rows, markers, flags, texts), the items and their effect SpEffect rows, the junk weapons and the `[hunter]` table (tracked)
+│   │   ├── race_items.toml  # Race items catalog: icons, the two goods (rows, markers, texts; flags derived from the goods id), the items and their effect SpEffect rows, the junk weapons and the `[hunter]` table (tracked)
 │   │   ├── race_items_icon_<icon>.png  # Race item icon art (placeholders), 1024x1024 (the 160x160 textures are derived), one per [icons] name (tracked)
 │   │   ├── halloween_decorations.toml  # Halloween gate decoration catalogue (bones, candelabras, candles; tracked)
 │   │   ├── halloween_icon_pumpkin_seed.png  # Golden Seed ("Pumpkin Seed") authored icon art, 160x160 (tracked)

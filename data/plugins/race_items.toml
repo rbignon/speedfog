@@ -8,8 +8,10 @@
 # applied by the racing mod (to its targets, or to the sender for the Mushroom
 # and the Rune Pouches).
 #
-# Numbering (n = goods_id - 1450800): marker SpEffect id = goods_id, use_flag =
-# 1050290100 + n, remove_flag = 1050290200 + n. Item effect SpEffect ids sit in
+# Numbering (n = goods_id - 1450800): marker SpEffect id = goods_id, removal
+# flag = 1050290200 + n, use flag = 1050290100 + n. The flags are derived by the
+# loaders, not written here; a goods can be used when it has a `marker`. Both
+# loaders reject an unknown key. Item effect SpEffect ids sit in
 # 1450820-1450849, at 1450820 + the item's index in the v1 catalog (one goods
 # per item, 1450800 + index). Templates: 10600 is neutral (every rate at 1);
 # 3269 is Golden Rune [1]; 3370 is a self-targeted poison row. `fields` maps
@@ -60,7 +62,6 @@ name = "Shield"
 info = "Blocks the next item thrown at you."
 caption = "A race item. It cannot be used: it sits in your inventory and absorbs the next hostile item, then disappears."
 goods_id = 1450800
-remove_flag = 1050290200
 
 [[goods]]
 key = "race_item"
@@ -69,8 +70,6 @@ name = "Race Item"
 info = "The item your last boss kill earned you."
 caption = "A race item. The race overlay names the item it holds; using it unleashes that item."
 goods_id = 1450801
-use_flag = 1050290101
-remove_flag = 1050290201
 marker = { template = 10600, fields = { effectEndurance = 1 } }
 
 [[item]]

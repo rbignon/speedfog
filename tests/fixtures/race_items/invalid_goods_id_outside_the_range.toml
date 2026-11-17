@@ -1,0 +1,12 @@
+# expect: goods_id 1450820 outside 1450800-1450819
+[icons]
+foo = 60385
+
+[[goods]]
+key = "g"
+icon = "foo"
+name = "N"
+info = "I"
+caption = "C"
+goods_id = 1450820
+marker = { template = 10600, fields = { effectEndurance = 1 } }

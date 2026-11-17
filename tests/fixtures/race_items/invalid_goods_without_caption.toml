@@ -1,0 +1,11 @@
+# expect: field 'caption'
+[icons]
+foo = 60385
+
+[[goods]]
+key = "g"
+icon = "foo"
+name = "N"
+info = "I"
+goods_id = 1450801
+marker = { template = 10600, fields = { effectEndurance = 1 } }

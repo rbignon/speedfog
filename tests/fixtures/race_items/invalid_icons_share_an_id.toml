@@ -1,0 +1,4 @@
+# expect: share id 60385
+[icons]
+foo = 60385
+bar = 60385

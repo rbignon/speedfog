@@ -1,0 +1,11 @@
+# expect: field 'goods_id' must be integer
+[icons]
+foo = 60385
+
+[[goods]]
+key = "g"
+icon = "foo"
+name = "N"
+info = "I"
+caption = "C"
+goods_id = 99999999999

@@ -1,0 +1,51 @@
+[icons]
+foo = 60385
+
+[[goods]]
+key = "shield"
+icon = "foo"
+name = "N"
+info = "I"
+caption = "C"
+goods_id = 1450800
+
+[[goods]]
+key = "g"
+icon = "foo"
+name = "N"
+info = "I"
+caption = "C"
+goods_id = 1450801
+marker = { template = 10600, fields = { effectEndurance = 1 } }
+
+[[item]]
+key = "shield"
+goods = "shield"
+icon = "foo"
+name = "A"
+
+[[item]]
+key = "a"
+goods = "g"
+icon = "foo"
+name = "A"
+duration_s = 7.5
+effect = { id = 1450820, template = 10600, fields = { effectEndurance = 15 } }
+
+[[item]]
+key = "b"
+goods = "g"
+icon = "foo"
+name = "A"
+duration_s = 15
+
+[[junk_weapon]]
+id = 20000000
+name = "Whip"
+
+[hunter]
+chr_id = 2130
+source_npc_param = 21300014
+source_think = 21300000
+npc_param_base = 1450850
+think_param = 1450850

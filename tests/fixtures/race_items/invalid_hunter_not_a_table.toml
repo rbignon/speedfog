@@ -1,0 +1,5 @@
+# expect: [hunter] must be a table
+hunter = 3
+
+[icons]
+foo = 60385

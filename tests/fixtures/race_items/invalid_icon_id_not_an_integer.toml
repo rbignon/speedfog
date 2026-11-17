@@ -1,0 +1,3 @@
+# expect: field 'foo' must be integer
+[icons]
+foo = "60385"

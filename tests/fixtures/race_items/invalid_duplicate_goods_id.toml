@@ -1,0 +1,21 @@
+# expect: duplicate goods_id 1450801
+[icons]
+foo = 60385
+
+[[goods]]
+key = "a"
+icon = "foo"
+name = "N"
+info = "I"
+caption = "C"
+goods_id = 1450801
+marker = { template = 10600, fields = { effectEndurance = 1 } }
+
+[[goods]]
+key = "b"
+icon = "foo"
+name = "N"
+info = "I"
+caption = "C"
+goods_id = 1450801
+marker = { template = 10600, fields = { effectEndurance = 1 } }

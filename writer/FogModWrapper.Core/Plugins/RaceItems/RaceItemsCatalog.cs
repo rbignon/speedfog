@@ -10,8 +10,12 @@ public sealed record RaceItemSpEffect(int Id, int Template, IReadOnlyDictionary<
 /// <summary>One goods row carrying race items. <see cref="Marker"/> is the
 /// SpEffect the goods row applies when used (its id equals
 /// <see cref="GoodsId"/>); both it and <see cref="UseFlag"/> are null for the
-/// unusable Shield. The texts (name, info, caption) are the goods'
-/// own.</summary>
+/// unusable Shield. The flags are derived from the goods id, not read from
+/// the catalog: <see cref="RemoveFlag"/> is
+/// <see cref="SpeedFogIds.RaceItemRemoveFlagBase"/> + n and
+/// <see cref="UseFlag"/> <see cref="SpeedFogIds.RaceItemUseFlagBase"/> + n,
+/// n = goods id - <see cref="SpeedFogIds.RaceItemParamIdMin"/>. The texts
+/// (name, info, caption) are the goods' own.</summary>
 public sealed record RaceItemGoods(
     string Key, string Icon, int IconId, string Name, string Info, string Caption,
     int GoodsId, int? UseFlag, int RemoveFlag, RaceItemSpEffect? Marker);
@@ -32,8 +36,11 @@ public sealed record RaceItemHunter(int ChrId, int SourceNpcParam, int SourceThi
 /// <summary>
 /// The race items catalog (data/plugins/race_items.toml): the goods rows and
 /// the items pointing at them. Loaded and validated as the Python loader
-/// (speedfog/race_items.py) does. Goods come back ordered by goods id, items
-/// in catalog order.
+/// (speedfog/race_items.py) does: both replay the catalogs of
+/// tests/fixtures/race_items/, and both reject an unknown key. The
+/// [[junk_weapon]] entries are the exception: only Python reads them (they
+/// reach the racing mod through graph.json), so only their key is known here.
+/// Goods come back ordered by goods id, items in catalog order.
 /// </summary>
 public sealed record RaceItemsCatalog(
     IReadOnlyList<RaceItemGoods> Goods, IReadOnlyList<RaceItem> Items, RaceItemHunter? Hunter = null)
@@ -52,6 +59,8 @@ public sealed record RaceItemsCatalog(
         var model = Toml.ToModel(toml);
         if (model is not TomlTable root)
             throw new InvalidDataException($"{Prefix} top-level TOML must be a table");
+        TomlHelpers.CheckKeys(root, "top level", Prefix, "icons", "goods", "item", "junk_weapon", "hunter");
+        Tables(root, "junk_weapon");
 
         var icons = new Dictionary<string, int>();
         if (root.TryGetValue("icons", out var iObj))
@@ -106,12 +115,16 @@ public sealed record RaceItemsCatalog(
             return null;
         if (obj is not TomlTable t)
             throw new InvalidDataException($"{Prefix} [hunter] must be a table");
+        TomlHelpers.CheckKeys(t, "hunter", Prefix,
+            "chr_id", "source_npc_param", "source_think", "npc_param_base", "think_param");
 
         int chrId = TomlHelpers.ToInt(t, "chr_id", Prefix);
         int sourceNpc = TomlHelpers.ToInt(t, "source_npc_param", Prefix);
         int sourceThink = TomlHelpers.ToInt(t, "source_think", Prefix);
         int baseId = TomlHelpers.ToInt(t, "npc_param_base", Prefix);
         int thinkParam = TomlHelpers.ToInt(t, "think_param", Prefix);
+        if (chrId <= 0)
+            throw new InvalidDataException($"{Prefix} hunter chr id {chrId} must be positive");
         CheckRange("npc_param_base", "hunter", baseId,
             SpeedFogIds.RaceItemNpcParamIdMin, SpeedFogIds.RaceItemNpcParamIdMax);
         CheckRange("last tier row", "hunter", baseId + SpeedFogIds.RaceItemHunterTierCount - 1,
@@ -121,38 +134,25 @@ public sealed record RaceItemsCatalog(
         return new RaceItemHunter(chrId, sourceNpc, sourceThink, baseId, thinkParam);
     }
 
-    /// <summary>The tables of the [[<paramref name="name"/>]] array, none when absent.</summary>
-    private static IEnumerable<TomlTable> Tables(TomlTable root, string name)
-    {
-        if (!root.TryGetValue(name, out var obj))
-            return Array.Empty<TomlTable>();
-        if (obj is not TomlTableArray arr)
-            throw new InvalidDataException($"{Prefix} [[{name}]] must be an array of tables");
-        return arr;
-    }
+    private static IReadOnlyList<TomlTable> Tables(TomlTable root, string name) =>
+        TomlHelpers.Tables(root, name, Prefix);
 
     private static RaceItemGoods ParseGoods(TomlTable e, Dictionary<string, int> icons)
     {
         string key = TomlHelpers.ToString(e, "key", Prefix);
+        TomlHelpers.CheckKeys(e, key, Prefix, "key", "icon", "name", "info", "caption", "goods_id", "marker");
         var (icon, iconId) = ParseIcon(e, key, icons);
 
         int goodsId = TomlHelpers.ToInt(e, "goods_id", Prefix);
         CheckRange("goods_id", key, goodsId, SpeedFogIds.RaceItemParamIdMin, SpeedFogIds.RaceItemGoodsIdMax);
 
-        int removeFlag = TomlHelpers.ToInt(e, "remove_flag", Prefix);
-        CheckRange("remove_flag", key, removeFlag,
-            SpeedFogIds.RaceItemRemoveFlagBase, SpeedFogIds.RaceItemRemoveFlagBase + 99);
-
-        int? useFlag = TomlHelpers.ToIntOpt(e, "use_flag", Prefix);
-        if ((useFlag == null) != !e.ContainsKey("marker"))
-            throw new InvalidDataException($"{Prefix} {key}: use_flag and marker go together");
-        if (useFlag is int uf)
-            CheckRange("use_flag", key, uf,
-                SpeedFogIds.RaceItemUseFlagBase, SpeedFogIds.RaceItemUseFlagBase + 99);
-
+        // A goods can be used when it has a marker; its flags follow its id.
         RaceItemSpEffect? marker = e.ContainsKey("marker")
             ? ParseSpEffect(e, "marker", key, goodsId)
             : null;
+        int n = goodsId - SpeedFogIds.RaceItemParamIdMin;
+        int? useFlag = marker != null ? SpeedFogIds.RaceItemUseFlagBase + n : null;
+        int removeFlag = SpeedFogIds.RaceItemRemoveFlagBase + n;
 
         return new RaceItemGoods(
             key, icon, iconId,
@@ -166,6 +166,7 @@ public sealed record RaceItemsCatalog(
         TomlTable e, Dictionary<string, int> icons, Dictionary<string, RaceItemGoods> goods)
     {
         string key = TomlHelpers.ToString(e, "key", Prefix);
+        TomlHelpers.CheckKeys(e, key, Prefix, "key", "goods", "icon", "name", "duration_s", "effect");
         string goodsKey = TomlHelpers.ToString(e, "goods", Prefix);
         if (!goods.TryGetValue(goodsKey, out var carrier))
             throw new InvalidDataException($"{Prefix} {key}: unknown goods '{goodsKey}'");
@@ -180,6 +181,14 @@ public sealed record RaceItemsCatalog(
             effect = ParseSpEffect(e, "effect", key, null);
             CheckRange("effect id", key, effect.Id, SpeedFogIds.RaceItemEffectIdMin, SpeedFogIds.RaceItemEffectIdMax);
         }
+
+        // The duration only reaches graph.json (Python); checked here too, so
+        // both loaders reject the same catalogs.
+        // At least 1 ms once rounded: the export is in milliseconds.
+        if (e.TryGetValue("duration_s", out var dObj)
+            && !(AsNumber(dObj) is double duration && Math.Round(duration * 1000) >= 1))
+            throw new InvalidDataException(
+                $"{Prefix} {key}: duration_s must be a finite number of at least 1 ms");
 
         return new RaceItem(key, goodsKey, icon, iconId, TomlHelpers.ToString(e, "name", Prefix), effect);
     }
@@ -198,6 +207,10 @@ public sealed record RaceItemsCatalog(
     {
         if (e[field] is not TomlTable t)
             throw new InvalidDataException($"{Prefix} {key}: '{field}' must be a table");
+        if (fixedId == null)
+            TomlHelpers.CheckKeys(t, $"{key}: {field}", Prefix, "id", "template", "fields");
+        else
+            TomlHelpers.CheckKeys(t, $"{key}: {field}", Prefix, "template", "fields");
 
         int id = fixedId ?? TomlHelpers.ToInt(t, "id", Prefix);
         int template = TomlHelpers.ToInt(t, "template", Prefix);
@@ -209,19 +222,22 @@ public sealed record RaceItemsCatalog(
                 throw new InvalidDataException($"{Prefix} {key}: '{field}.fields' must be a table");
             foreach (var (name, value) in fTable)
             {
-                fields[name] = value switch
-                {
-                    double d => d,
-                    long l => l,
-                    int i => i,
-                    _ => throw new InvalidDataException(
-                        $"{Prefix} {key}: '{field}.fields.{name}' must be numeric, got {value?.GetType().Name}")
-                };
+                fields[name] = AsNumber(value) ?? throw new InvalidDataException(
+                    $"{Prefix} {key}: '{field}.fields.{name}' must be numeric, got {value?.GetType().Name}");
             }
         }
 
         return new RaceItemSpEffect(id, template, fields);
     }
+
+    /// <summary>A finite TOML number (not a boolean, inf or nan), else null.</summary>
+    private static double? AsNumber(object? value) => value switch
+    {
+        double d when double.IsFinite(d) => d,
+        long l => l,
+        int i => i,
+        _ => null
+    };
 
     private static void CheckRange(string label, string key, int value, int min, int max)
     {

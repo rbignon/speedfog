@@ -1,0 +1,3 @@
+# expect: icon id 60415 outside 60385-60414
+[icons]
+foo = 60415

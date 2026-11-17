@@ -61,14 +61,12 @@ public class RaceItemsCatalogTests
         info = "I"
         caption = "C"
         goods_id = {goodsId}
-        remove_flag = 1050290200
         {extra}
 
         """;
 
-    /// <summary>A usable goods (use flag and marker) keyed "g".</summary>
-    private static string UsableGoods() =>
-        Goods("g", 1450801, Marker + "\nuse_flag = 1050290101").Replace("1050290200", "1050290201");
+    /// <summary>A usable goods (one with a marker) keyed "g".</summary>
+    private static string UsableGoods() => Goods("g", 1450801, Marker);
 
     private static string Item(string key, string goods = "g", string extra = "") => $"""
         [[item]]
@@ -122,21 +120,17 @@ public class RaceItemsCatalogTests
     }
 
     [Fact]
-    public void Rejects_use_flag_without_marker_and_marker_without_use_flag()
+    public void Derives_the_flags_from_the_goods_id()
     {
-        Assert.Throws<InvalidDataException>(() =>
-            RaceItemsCatalog.Parse(Icons + Goods("a", 1450800, "use_flag = 1050290100")));
-        Assert.Throws<InvalidDataException>(() =>
-            RaceItemsCatalog.Parse(Icons + Goods("a", 1450800, Marker)));
-    }
-
-    [Fact]
-    public void Rejects_flags_outside_their_ranges()
-    {
-        Assert.Throws<InvalidDataException>(() =>
-            RaceItemsCatalog.Parse(Icons + Goods("a", 1450800, Marker + "\nuse_flag = 1050290200")));
-        var badRemove = Icons + Goods("a", 1450800).Replace("remove_flag = 1050290200", "remove_flag = 1050290100");
-        Assert.Throws<InvalidDataException>(() => RaceItemsCatalog.Parse(badRemove));
+        // The flags are not in the catalog: two goods cannot share one, and
+        // only a goods with a marker (one that can be used) gets a use flag.
+        var catalog = RaceItemsCatalog.Parse(Icons + Goods("passive", 1450804) + Goods("usable", 1450807, Marker));
+        var passive = catalog.Goods.Single(g => g.Key == "passive");
+        Assert.Null(passive.UseFlag);
+        Assert.Equal(1050290204, passive.RemoveFlag);
+        var usable = catalog.Goods.Single(g => g.Key == "usable");
+        Assert.Equal(1050290107, usable.UseFlag);
+        Assert.Equal(1050290207, usable.RemoveFlag);
     }
 
     [Fact]

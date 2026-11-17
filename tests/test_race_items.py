@@ -7,10 +7,15 @@ from pathlib import Path
 import pytest
 
 from speedfog.race_items import (
+    EFFECT_ID_RANGE,
+    GOODS_ID_RANGE,
     HUNTER_TIERS,
     ICON_ID_RANGE,
     NPC_PARAM_RANGE,
+    REMOVE_FLAG_BASE,
     TALISMAN_FLAG_BASE,
+    TALISMAN_FLAG_COUNT,
+    USE_FLAG_BASE,
     load_race_items_catalog,
 )
 
@@ -164,14 +169,7 @@ def _write_catalog(
 MARKER = "marker = { template = 10600, fields = {} }\n"
 
 
-def _goods(
-    key="g",
-    goods_id=1450800,
-    extra="",
-    use_flag=None,
-    remove_flag=1050290200,
-    icon="foo",
-):
+def _goods(key="g", goods_id=1450800, extra="", icon="foo"):
     lines = [
         "\n[[goods]]",
         f'key = "{key}"',
@@ -180,22 +178,12 @@ def _goods(
         'info = "I"',
         'caption = "C"',
         f"goods_id = {goods_id}",
-        f"remove_flag = {remove_flag}",
     ]
-    if use_flag is not None:
-        lines.append(f"use_flag = {use_flag}")
     return "\n".join(lines) + "\n" + extra
 
 
 def _usable_goods(key="g", goods_id=1450801):
-    n = goods_id - 1450800
-    return _goods(
-        key,
-        goods_id,
-        extra=MARKER,
-        use_flag=1050290100 + n,
-        remove_flag=1050290200 + n,
-    )
+    return _goods(key, goods_id, extra=MARKER)
 
 
 def _item(key="a", goods="g", icon="foo", extra=""):
@@ -242,16 +230,87 @@ def test_loader_rejects_a_goods_without_its_texts(tmp_path, field):
         load_race_items_catalog(path)
 
 
-def test_loader_rejects_use_flag_without_marker(tmp_path):
-    path = _write_catalog(tmp_path, _goods(use_flag=1050290100))
-    with pytest.raises(ValueError, match="go together"):
+def test_loader_derives_the_flags_from_the_goods_id(tmp_path):
+    # The flags are not in the catalog: two goods cannot share one, and only
+    # a goods with a marker (one that can be used) gets a use flag.
+    path = _write_catalog(
+        tmp_path, _goods("passive", 1450804), _usable_goods("usable", 1450807)
+    )
+    goods = load_race_items_catalog(path)["goods"]
+    assert (goods["passive"]["use_flag"], goods["passive"]["remove_flag"]) == (
+        None,
+        1050290204,
+    )
+    assert (goods["usable"]["use_flag"], goods["usable"]["remove_flag"]) == (
+        1050290107,
+        1050290207,
+    )
+
+
+def test_loader_rounds_a_fractional_duration_to_the_millisecond(tmp_path):
+    # 4.35 * 1000 is 4349.999... in binary floating point.
+    path = _write_catalog(tmp_path, _usable_goods(), _item(extra="duration_s = 4.35\n"))
+    assert load_race_items_catalog(path)["items"]["a"]["duration_ms"] == 4350
+
+
+def test_loader_reads_a_catalog_saved_with_a_bom(tmp_path):
+    # A Windows editor's UTF-8 BOM is not a syntax error; the C# loader's
+    # File.ReadAllText drops it too. Not in the shared corpus: the check-toml
+    # pre-commit hook refuses such a file.
+    path = _write_catalog(tmp_path, _goods())
+    path.write_bytes(b"\xef\xbb\xbf" + path.read_bytes())
+    assert "g" in load_race_items_catalog(path)["goods"]
+
+
+CORPUS = Path(__file__).parent / "fixtures" / "race_items"
+CS_IDS = Path(__file__).parent.parent / "writer/FogModWrapper.Core/SpeedFogIds.cs"
+
+
+def _corpus(prefix: str) -> list[Path]:
+    return sorted(CORPUS.glob(f"{prefix}_*.toml"))
+
+
+def test_corpus_has_both_kinds():
+    assert _corpus("valid") and _corpus("invalid")
+
+
+@pytest.mark.parametrize("path", _corpus("valid"), ids=lambda p: p.stem)
+def test_loader_accepts_the_shared_valid_catalogs(path):
+    # The C# loader replays the same files (RaceItemsCatalogCorpusTests).
+    load_race_items_catalog(path)
+
+
+@pytest.mark.parametrize("path", _corpus("invalid"), ids=lambda p: p.stem)
+def test_loader_rejects_the_shared_invalid_catalogs(path):
+    first_line = path.read_text(encoding="utf-8").splitlines()[0]
+    assert first_line.startswith("# expect: "), path.name
+    expected = first_line.removeprefix("# expect: ")
+    with pytest.raises(ValueError, match=re.escape(expected)):
         load_race_items_catalog(path)
 
 
-def test_loader_rejects_marker_without_use_flag(tmp_path):
-    path = _write_catalog(tmp_path, _goods(extra=MARKER))
-    with pytest.raises(ValueError, match="go together"):
-        load_race_items_catalog(path)
+@pytest.mark.parametrize(
+    ("constant", "value"),
+    [
+        ("RaceItemUseFlagBase", USE_FLAG_BASE),
+        ("RaceItemRemoveFlagBase", REMOVE_FLAG_BASE),
+        ("RaceItemTalismanRemoveFlagBase", TALISMAN_FLAG_BASE),
+        ("RaceItemTalismanRemoveFlagCount", TALISMAN_FLAG_COUNT),
+        ("RaceItemParamIdMin", GOODS_ID_RANGE.start),
+        ("RaceItemGoodsIdMax", GOODS_ID_RANGE.stop - 1),
+        ("RaceItemEffectIdMin", EFFECT_ID_RANGE.start),
+        ("RaceItemEffectIdMax", EFFECT_ID_RANGE.stop - 1),
+        ("RaceItemNpcParamIdMin", NPC_PARAM_RANGE.start),
+        ("RaceItemNpcParamIdMax", NPC_PARAM_RANGE.stop - 1),
+        ("RaceItemHunterTierCount", HUNTER_TIERS),
+        ("RaceItemIconIdMin", ICON_ID_RANGE.start),
+        ("RaceItemIconIdMax", ICON_ID_RANGE.stop - 1),
+    ],
+)
+def test_reserved_ranges_match_the_csharp_ones(constant, value):
+    # Both loaders number and bound the same ids from their own constants.
+    match = re.search(rf"\b{constant}\s*=\s*(\d+)", CS_IDS.read_text(encoding="utf-8"))
+    assert match and int(match.group(1)) == value
 
 
 @pytest.mark.parametrize(
@@ -322,12 +381,6 @@ def test_shipped_catalog_exports_the_talisman_table():
     assert [t["flag"] for t in talismans] == [
         TALISMAN_FLAG_BASE + i for i in range(len(talismans))
     ]
-    # The C# loader numbers the same flags from this constant.
-    ids_cs = (
-        Path(__file__).parent.parent / "writer/FogModWrapper.Core/SpeedFogIds.cs"
-    ).read_text(encoding="utf-8")
-    match = re.search(r"RaceItemTalismanRemoveFlagBase\s*=\s*(\d+)", ids_cs)
-    assert match and int(match.group(1)) == TALISMAN_FLAG_BASE
 
 
 def test_shipped_hunter_block_covers_every_tier():
@@ -372,6 +425,25 @@ def _talisman(id_, name="T"):
     ],
 )
 def test_loader_rejects_a_bad_talisman_table(tmp_path, body, match):
+    _talismans_file(tmp_path, body)
+    path = _write_catalog(tmp_path, _goods())
+    with pytest.raises(ValueError, match=match):
+        load_race_items_catalog(path)
+
+
+@pytest.mark.parametrize(
+    ("body", "match"),
+    [
+        pytest.param(
+            _talisman(5).replace("[[talisman]]", "[[talismans]]"),
+            "unknown key 'talismans'",
+            id="table",
+        ),
+        pytest.param(_talisman(5) + "flag = 3\n", "unknown key 'flag'", id="entry"),
+    ],
+)
+def test_loader_rejects_an_unknown_key_in_the_talisman_table(tmp_path, body, match):
+    # Same cases as the C# RaceItemTalismansTests.Rejects_an_unknown_key.
     _talismans_file(tmp_path, body)
     path = _write_catalog(tmp_path, _goods())
     with pytest.raises(ValueError, match=match):

@@ -1,0 +1,10 @@
+# expect: hunter chr id 0 must be positive
+[icons]
+foo = 60385
+
+[hunter]
+chr_id = 0
+source_npc_param = 21300014
+source_think = 21300000
+npc_param_base = 1450850
+think_param = 1450850

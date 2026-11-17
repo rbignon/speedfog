@@ -45,14 +45,14 @@ public static class RaceItemsRegulationInjector
         {
             AddGoodsRow(goods, g);
             if (g.Marker != null)
-                AddSpEffectRow(sp, g.Marker);
+                AddSpEffectRow(sp, g.Marker, $"goods '{g.Key}' marker");
         }
         int effects = 0;
         foreach (var item in catalog.Items)
         {
             if (item.Effect != null)
             {
-                AddSpEffectRow(sp, item.Effect);
+                AddSpEffectRow(sp, item.Effect, $"item '{item.Key}' effect");
                 effects++;
             }
         }
@@ -136,19 +136,44 @@ public static class RaceItemsRegulationInjector
         Set(row, "EquipParamGoods", "itemGetTutorialFlagId", 0);
     }
 
-    private static void AddSpEffectRow(PARAM sp, RaceItemSpEffect effect)
+    /// <summary><paramref name="owner"/> names the catalog entry the row
+    /// comes from, for the error messages.</summary>
+    private static void AddSpEffectRow(PARAM sp, RaceItemSpEffect effect, string owner)
     {
         var row = GameEditor.AddRow(sp, effect.Id, effect.Template);
         foreach (var (field, value) in effect.Fields)
-            Set(row, "SpEffectParam", field, value);
+            Set(row, "SpEffectParam", field, value, owner);
     }
 
-    /// <summary>Writes <paramref name="value"/> converted to the cell's own type.</summary>
-    private static void Set(PARAM.Row row, string param, string field, double value)
+    /// <summary>Writes <paramref name="value"/> converted to the cell's own
+    /// type. A value the cell cannot hold exactly is rejected rather than
+    /// rounded: a fraction on an integer cell (0.35 would be written as 0),
+    /// a number outside the cell type's range, or one that is not finite.</summary>
+    private static void Set(PARAM.Row row, string param, string field, double value, string? owner = null)
     {
+        string where = owner == null ? "" : $"{owner}: ";
         var cell = row.Cells.FirstOrDefault(c => c.Def.InternalName == field)
             ?? throw new InvalidDataException(
-                $"race_items: unknown field '{field}' on {param} row {row.ID}");
-        cell.Value = Convert.ChangeType(value, cell.Value.GetType());
+                $"race_items: {where}unknown field '{field}' on {param} row {row.ID}");
+        var type = cell.Value.GetType();
+        bool integerCell = type != typeof(float) && type != typeof(double);
+        if (!double.IsFinite(value) || (type == typeof(float) && Math.Abs(value) > float.MaxValue))
+            throw new InvalidDataException(
+                $"race_items: {where}field '{field}' on {param} row {row.ID}: "
+                + $"{value} does not fit a {type.Name}");
+        if (integerCell && value != Math.Truncate(value))
+            throw new InvalidDataException(
+                $"race_items: {where}field '{field}' on {param} row {row.ID} is an integer "
+                + $"({type.Name}), got {value}");
+        try
+        {
+            cell.Value = Convert.ChangeType(value, type);
+        }
+        catch (Exception e) when (e is OverflowException or InvalidCastException)
+        {
+            throw new InvalidDataException(
+                $"race_items: {where}field '{field}' on {param} row {row.ID}: "
+                + $"{value} does not fit a {type.Name}");
+        }
     }
 }

@@ -1,0 +1,5 @@
+# expect: [[item]] must be an array of tables
+item = [1, 2]
+
+[icons]
+foo = 60385

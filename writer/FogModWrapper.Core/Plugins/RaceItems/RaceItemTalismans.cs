@@ -11,7 +11,9 @@ public sealed record RaceItemTalisman(int Id, string Name, int RemoveFlag);
 /// The talisman table of the race items (data/plugins/race_items_talismans.toml,
 /// a [[talisman]] array of { id, name }). Ids are strictly ascending, and
 /// talisman n (from 0, in file order) gets the removal flag
-/// <see cref="SpeedFogIds.RaceItemTalismanRemoveFlagBase"/> + n.
+/// <see cref="SpeedFogIds.RaceItemTalismanRemoveFlagBase"/> + n. The file is
+/// optional, as it is for the Python loader: without it the table is empty
+/// (graph.json exports no talisman, the Talisman Thief has nothing to take).
 /// </summary>
 public static class RaceItemTalismans
 {
@@ -19,6 +21,11 @@ public static class RaceItemTalismans
 
     public static IReadOnlyList<RaceItemTalisman> Load(string path)
     {
+        if (!File.Exists(path))
+        {
+            Console.WriteLine($"{Prefix} {path} not found, no talisman removal events");
+            return Array.Empty<RaceItemTalisman>();
+        }
         var talismans = Parse(File.ReadAllText(path));
         Console.WriteLine($"{Prefix} loaded {talismans.Count} talismans from {path}");
         return talismans;
@@ -28,10 +35,8 @@ public static class RaceItemTalismans
     {
         if (Toml.ToModel(toml) is not TomlTable root)
             throw new InvalidDataException($"{Prefix} top-level TOML must be a table");
-        if (!root.TryGetValue("talisman", out var obj))
-            return Array.Empty<RaceItemTalisman>();
-        if (obj is not TomlTableArray entries)
-            throw new InvalidDataException($"{Prefix} [[talisman]] must be an array of tables");
+        TomlHelpers.CheckKeys(root, "top level", Prefix, "talisman");
+        var entries = TomlHelpers.Tables(root, "talisman", Prefix);
         if (entries.Count > SpeedFogIds.RaceItemTalismanRemoveFlagCount)
             throw new InvalidDataException(
                 $"{Prefix} {entries.Count} talismans, more than the "
@@ -40,6 +45,7 @@ public static class RaceItemTalismans
         var talismans = new List<RaceItemTalisman>();
         foreach (var entry in entries)
         {
+            TomlHelpers.CheckKeys(entry, "talisman", Prefix, "id", "name");
             int id = TomlHelpers.ToInt(entry, "id", Prefix);
             string name = TomlHelpers.ToString(entry, "name", Prefix);
             if (id <= 0)

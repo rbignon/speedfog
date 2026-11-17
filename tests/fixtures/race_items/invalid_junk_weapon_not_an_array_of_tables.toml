@@ -1,0 +1,5 @@
+# expect: [[junk_weapon]] must be an array of tables
+junk_weapon = 3
+
+[icons]
+foo = 60385

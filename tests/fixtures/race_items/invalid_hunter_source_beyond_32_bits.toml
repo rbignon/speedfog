@@ -1,0 +1,10 @@
+# expect: field 'source_npc_param' must be integer
+[icons]
+foo = 60385
+
+[hunter]
+chr_id = 2130
+source_npc_param = 99999999999
+source_think = 21300000
+npc_param_base = 1450850
+think_param = 1450850

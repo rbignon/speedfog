@@ -1,0 +1,5 @@
+# expect: [[goods]] must be an array of tables
+goods = 3
+
+[icons]
+foo = 60385

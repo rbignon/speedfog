@@ -13,7 +13,8 @@ enabled = true
 
 `enabled` is the only setting; any other key aborts the build
 (`InvalidDataException`). The catalog lives in `data/plugins/race_items.toml`,
-read by the C# plugin and by the Python loader (`speedfog/race_items.py`).
+read by the C# plugin and by the Python loader (`speedfog/race_items.py`);
+see [Catalog validation](#catalog-validation) for what both reject.
 It is not a text theme: it never counts toward the "more than one text theme"
 warning.
 
@@ -58,7 +59,9 @@ reconnection while connected triggers); the race overlay names the held item.
 ### Goods
 
 n = goods id - 1450800. The marker SpEffect id is the goods id; the use flag
-is 1050290100 + n; the removal flag is 1050290200 + n.
+is 1050290100 + n; the removal flag is 1050290200 + n. The flags are not in
+the catalog: both loaders derive them from the goods id, so two goods cannot
+share one. A goods can be used (and gets a use flag) when it has a `marker`.
 
 | n | key | name | goods id | icon | marker | use flag | removal flag |
 |---|---|---|---|---|---|---|---|
@@ -197,6 +200,36 @@ cost of weapon attacks; `stateInfo` 286 / 287 ("movement slow" in the
 community enum) slowed nothing, and no row of the 1.17 regulation uses them;
 copies of 102360 and 425 kept their param fields but not the c0000.hks
 behaviors.
+
+## Catalog validation
+
+Two loaders read `race_items.toml`: the Python one before the DAG is generated
+(it builds the graph.json value) and the C# one (`RaceItemsCatalog`, used by
+the plugin and by `ItemIconPatcher` at bootstrap). They apply the same rules,
+and `tests/fixtures/race_items/` holds the catalogs both test suites replay:
+each `invalid_*.toml` names, on its first line, a text both error messages
+must contain. A rule added to one loader gets a file there, which fails the
+other loader's tests until it has the rule too.
+
+- **Unknown keys** are rejected in every table (top level, `[[goods]]`,
+  `[[item]]`, `marker`, `effect`, `[hunter]`, and `[[talisman]]` of the
+  talisman table), so a typo such as `efect` or `duration` cannot silently
+  give an item without effect or duration. `use_flag` and `remove_flag`, which
+  the catalog carried until the flags were derived, are unknown keys now.
+- **Shapes**: `marker` is `{ template, fields }` and `effect`
+  `{ id, template, fields }`, `fields` holding finite numbers only;
+  `duration_s` is a finite number of at least 1 ms; ids are 32-bit integers,
+  in their reserved ranges where one exists; `[hunter]` needs
+  its five fields in both loaders, the writer-only source rows included.
+- **`[[junk_weapon]]`** is the exception: only Python reads the entries (they
+  reach the racing mod through graph.json), the C# loader only knows the key.
+
+When the rows are written, `RaceItemsRegulationInjector` refuses a `fields`
+value the cell cannot hold exactly instead of rounding it: a fraction on an
+integer cell (`0.35` would be written as 0) or a number outside the cell
+type's range (a float cell's included). The message names the item or goods, the field and the row. An
+unknown field name fails the same way. These checks need the paramdefs, so
+they run at build time, not in the Python loader.
 
 ## Events
 

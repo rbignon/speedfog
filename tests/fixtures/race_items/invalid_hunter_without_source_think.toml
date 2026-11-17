@@ -1,0 +1,9 @@
+# expect: field 'source_think'
+[icons]
+foo = 60385
+
+[hunter]
+chr_id = 2130
+source_npc_param = 21300014
+npc_param_base = 1450850
+think_param = 1450850
