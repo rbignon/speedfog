@@ -258,8 +258,9 @@ the same pair can be fine early and unfair late: Commander O'Neil is an
 average minor early but a heavy extreme mid and late, so he never meets
 Soldier of Godrick (a light extreme in every band) past tier 8.
 
-`main.py`'s `post_validate` passes `boss_layers` and `boss_tiers` (cluster
-ID -> layer, -> tier) to `generate_item_config`. `_build_enemy_assignments`
+`main.py`'s `match_bosses` (the first half of its `post_validate` hook) passes
+`boss_layers` and `boss_tiers` (cluster ID -> layer, -> tier) to
+`generate_item_config`. `_build_enemy_assignments`
 groups the arena slots of each job by layer (a phase-1 slot takes its
 leader's layer), tags each group with its band, and calls
 `match_arenas_balanced` with the job's cap (`minor_boss_max_ratio` for
@@ -323,6 +324,12 @@ late; Malenia vs Leonine Misbegotten is blocked in every band.
 Limitation: balance is per slot, so a two-slot node (Fire Giant) next to a
 one-slot node on the same layer still means two fights against one. That
 imbalance belongs to the zone weight.
+
+`boss.weight` has a second reader: `[budget] max_path_weight` weighs each arena
+node by its placed boss at the node's band (`effective_node_weights`, both
+bosses of a two-slot arena) to cap
+the lightest start-to-end path, see `docs/dag-generation.md` ("Fastest path
+cap").
 
 ### Calibration
 

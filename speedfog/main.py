@@ -8,9 +8,12 @@ import shutil
 import sys
 import time
 import tomllib
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 from speedfog.boss_arena_constraints import (
+    EntityTags,
     MatchingError,
     load_tags,
     resolve_boss_allowlist,
@@ -18,6 +21,7 @@ from speedfog.boss_arena_constraints import (
 from speedfog.care_package import sample_care_package
 from speedfog.clusters import ClusterData, ClusterPool, load_clusters
 from speedfog.config import Config, load_config, prune_final_boss_candidates
+from speedfog.dag import Dag
 from speedfog.enemy_data import (
     build_boss_names,
     build_boss_placements,
@@ -45,6 +49,7 @@ from speedfog.graph_export import (
 )
 from speedfog.item_randomizer import (
     ASSIGNABLE_ARENA_TYPES,
+    effective_node_weights,
     generate_item_config,
     run_item_randomizer,
 )
@@ -55,9 +60,34 @@ from speedfog.packaging import (
     stale_static_mod_scripts,
 )
 from speedfog.race_items import load_race_items_catalog
-from speedfog.spoiler import append_boss_placements_to_spoiler, export_spoiler_log
+from speedfog.spoiler import (
+    append_boss_placements_to_spoiler,
+    export_spoiler_log,
+    format_path_bounds,
+)
 from speedfog.tarnished import build_class_loadout, build_torrent_skins, tarnished_rng
-from speedfog.validator import validate_exclusions
+from speedfog.validator import check_max_path_weight, validate_exclusions
+
+
+def _path_bounds(
+    dag: Dag,
+    item_config: Mapping[str, Any],
+    tags: Mapping[int, EntityTags] | None,
+    phase_mapping: Mapping[int, int] | None = None,
+) -> tuple[float, float]:
+    """Lightest and heaviest start-to-end path weight of a generated DAG.
+
+    An arena holding a randomized boss (``item_config``'s
+    ``enemy_assignments``) weighs that boss, both bosses for a multi-phase
+    arena (``phase_mapping``); without an assignment every node weighs its
+    cluster.
+    """
+    assignments = item_config.get("enemy_assignments")
+    if not assignments or tags is None:
+        return dag.path_weight_bounds()
+    return dag.path_weight_bounds(
+        effective_node_weights(dag, assignments, tags, phase_mapping)
+    )
 
 
 def _item_preset_source(config: Config, project_root: Path) -> Path | None:
@@ -355,7 +385,11 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
     assignment_major_ids: list[int] = []
     assignment_minor_ids: list[int] = []
     assignment_phase_mapping: dict[int, int] = {}
-    post_validate = None
+    match_bosses = None
+    # Item config of the last candidate the boss matcher accepted, kept so
+    # the downstream writer step doesn't re-run the matcher on the same
+    # inputs; empty without boss randomization.
+    accepted_item_config: dict = {}
     if config.item_randomizer.enabled:
         # Phase mapping is also consumed by patch_graph_boss_placements,
         # regardless of the randomize_bosses setting.
@@ -363,7 +397,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
     if config.item_randomizer.enabled and config.enemy.randomize_bosses != "none":
         assignment_tags = load_tags(project_root / "data" / "boss_arena_tags.json")
         # Validate the allowlist and the final boss once, before the reroll
-        # loop. generate_item_config re-resolves them inside post_validate.
+        # loop. generate_item_config re-resolves them inside match_bosses.
         try:
             if config.enemy.bosses:
                 resolve_boss_allowlist(assignment_tags, config.enemy.bosses)
@@ -377,11 +411,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         assignment_major_ids = _vanilla_ids_of_type("major_boss")
         assignment_minor_ids = _vanilla_ids_of_type("boss_arena")
 
-        # Cache the accepted item_config so the downstream writer step
-        # doesn't re-run the matcher on the same inputs.
-        accepted_item_config: dict = {}
-
-        def post_validate(dag, seed):
+        def match_bosses(dag, seed):
             boss_clusters = [
                 n.cluster
                 for n in dag.nodes.values()
@@ -406,6 +436,26 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 raise GenerationError(f"boss-arena matching infeasible: {e}") from e
             accepted_item_config.clear()
             accepted_item_config.update(cfg)
+
+    # (lightest, heaviest) path weight of the accepted candidate.
+    accepted_bounds: list[tuple[float, float]] = []
+
+    def post_validate(dag, seed):
+        """Match the bosses, then hold the candidate to the fastest-path cap.
+
+        The cap ([budget] max_path_weight) reads the placed bosses' weights,
+        so it runs after the matching; without boss randomization it reads
+        the cluster weights.
+        """
+        if match_bosses is not None:
+            match_bosses(dag, seed)
+        bounds = _path_bounds(
+            dag, accepted_item_config, assignment_tags, assignment_phase_mapping
+        )
+        error = check_max_path_weight(bounds[0], config.budget.max_path_weight)
+        if error is not None:
+            raise GenerationError(error)
+        accepted_bounds[:] = [bounds]
 
     try:
         result = generate_with_retry(
@@ -432,6 +482,8 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         print(f"Generated DAG with seed {actual_seed}")
         print(f"  Layers: {max((n.layer for n in dag.nodes.values()), default=0) + 1}")
         print(f"  Nodes: {len(dag.nodes)}")
+    path_bounds = accepted_bounds[0]
+    print(format_path_bounds(path_bounds))
 
     # Create output directory: <output>/<seed>/
     seed_dir = output_dir / str(actual_seed)
@@ -546,6 +598,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
             care_package=care_package_items,
             class_loadout=class_loadout,
             torrent_skins=torrent_skins,
+            path_bounds=path_bounds,
         )
         print(f"Written: {_spoiler}")
 
@@ -559,7 +612,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
     # boss_arena_constraints (single source of truth; no C# round-trip). Runs
     # regardless of --no-build, so graph.json carries the names even when the
     # randomizer is not executed. accepted_item_config was filled by
-    # post_validate during generation under the same guard.
+    # match_bosses during generation under the same guard.
     if config.item_randomizer.enabled and config.enemy.randomize_bosses != "none":
         enemy_assignments = accepted_item_config.get("enemy_assignments")
         if enemy_assignments:
@@ -611,9 +664,9 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         timer.step("Item Randomizer")
 
         # When boss randomization is active the accepted item_config was
-        # already computed by post_validate; reuse it. Otherwise the matcher
+        # already computed by match_bosses; reuse it. Otherwise the matcher
         # never runs and we build a fresh config here.
-        if post_validate is not None:
+        if match_bosses is not None:
             item_config = dict(accepted_item_config)
         else:
             boss_clusters_for_assignment = [

@@ -15,9 +15,11 @@ from speedfog.boss_arena_constraints import (
 )
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
+from speedfog.dag import Dag, DagNode
 from speedfog.item_randomizer import (
     _compose_pool,
     _family_forbidden,
+    effective_node_weights,
     ensure_vanilla_cache,
     generate_item_config,
     run_item_randomizer,
@@ -1899,3 +1901,111 @@ def test_vanilla_cache_guard_releases_lock_on_extraction_failure(tmp_path, monke
         assert ok is False
 
     assert events == ["acquired", "released"]
+
+
+# =============================================================================
+# effective_node_weights (placed boss weights for [budget] max_path_weight)
+# =============================================================================
+
+
+def _weights_dag(*nodes: tuple[str, str, int, int]) -> Dag:
+    """A DAG of (node id, cluster type, defeat_flag, tier) nodes, no edges."""
+    dag = Dag(seed=1)
+    for layer, (nid, ctype, defeat_flag, tier) in enumerate(nodes):
+        dag.add_node(
+            DagNode(
+                id=nid,
+                cluster=_boss_cluster(f"c_{nid}", ctype, defeat_flag),
+                layer=layer,
+                tier=tier,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+    return dag
+
+
+def test_effective_node_weights_uses_the_placed_boss_at_the_node_band():
+    """Tier 5 reads the early weight, tier 12 mid, tier 20 late."""
+    dag = _weights_dag(
+        ("early", "boss_arena", 100, 5),
+        ("mid", "boss_arena", 200, 12),
+        ("late", "major_boss", 300, 20),
+    )
+    tags = {900: _entity(900, weights=(1.5, 2.5, 3.5))}
+    assignments = {"100": "900", "200": "900", "300": "900"}
+    assert effective_node_weights(dag, assignments, tags) == {
+        "early": 1.5,
+        "mid": 2.5,
+        "late": 3.5,
+    }
+
+
+def test_effective_node_weights_skips_arenas_left_vanilla():
+    """An arena whose leader has no assignment keeps its cluster weight."""
+    dag = _weights_dag(
+        ("placed", "boss_arena", 100, 5),
+        ("vanilla", "major_boss", 200, 5),
+    )
+    tags = {900: _entity(900, weight=4.0)}
+    assert effective_node_weights(dag, {"100": "900"}, tags) == {"placed": 4.0}
+
+
+def test_effective_node_weights_sums_the_two_slots_of_a_multi_phase_arena():
+    """Both phase entities get their own boss: the node holds two fights.
+
+    The phase-1 boss reads the node's band like the leader's (early here).
+    """
+    dag = _weights_dag(("arena", "major_boss", 100, 5))
+    tags = {
+        900: _entity(900, weight=4.0),
+        901: _entity(901, weights=(9.0, 20.0, 30.0)),
+    }
+    assignments = {"100": "900", "101": "901"}
+    weights = effective_node_weights(dag, assignments, tags, {100: 101})
+    assert weights == {"arena": 13.0}
+
+
+def test_effective_node_weights_ignores_slots_outside_the_phase_mapping():
+    """An assignment entry no node leads and no phase mapping names is inert."""
+    dag = _weights_dag(("arena", "major_boss", 100, 5))
+    tags = {900: _entity(900, weight=4.0), 901: _entity(901, weight=9.0)}
+    assignments = {"100": "900", "101": "901"}
+    assert effective_node_weights(dag, assignments, tags) == {"arena": 4.0}
+    assert effective_node_weights(dag, assignments, tags, {555: 101}) == {"arena": 4.0}
+
+
+def test_effective_node_weights_phase_slot_left_unassigned():
+    """A phase-1 sibling without an assignment adds nothing."""
+    dag = _weights_dag(("arena", "major_boss", 100, 5))
+    tags = {900: _entity(900, weight=4.0)}
+    assert effective_node_weights(dag, {"100": "900"}, tags, {100: 101}) == {
+        "arena": 4.0
+    }
+
+
+def test_effective_node_weights_resolves_offset_defeat_flags():
+    """Radahn's defeat flag is his entity ID plus the 200M offset."""
+    from speedfog.enemy_data import resolve_entity_id
+
+    flag = 1252380800
+    leader = resolve_entity_id(flag)
+    assert leader != flag
+    dag = _weights_dag(("radahn", "major_boss", flag, 5))
+    tags = {900: _entity(900, weight=4.0)}
+    assert effective_node_weights(dag, {str(leader): "900"}, tags) == {"radahn": 4.0}
+
+
+def test_effective_node_weights_skips_bosses_unknown_to_the_tags():
+    dag = _weights_dag(("arena", "boss_arena", 100, 5))
+    assert effective_node_weights(dag, {"100": "900"}, {}) == {}
+
+
+def test_effective_node_weights_skips_non_arena_nodes():
+    """A dungeon keeps its weight, even with a defeat flag in the mapping."""
+    dag = _weights_dag(
+        ("dungeon", "mini_dungeon", 100, 5),
+        ("no_flag", "boss_arena", 0, 5),
+    )
+    tags = {900: _entity(900, weight=4.0)}
+    assert effective_node_weights(dag, {"100": "900", "0": "900"}, tags) == {}

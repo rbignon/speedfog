@@ -153,6 +153,13 @@ max_entrances = 3
 # auto mode. Scales with layers_count: ~30-layer runs sit around a
 # 5-minute spread, ~90-layer runs around 11.
 tolerance = 0
+# Maximum weight (in minutes) of the lightest start-to-end path. 0 disables
+# the check. A seed whose fastest route weighs more is rerolled in auto mode
+# (a fixed seed fails instead). An arena holding a randomized boss weighs
+# that boss's weight at the arena's scaling tier, not the arena's own
+# weight. Meant for grinding short seeds: a cap few seeds meet needs a
+# higher --max-attempts (see docs/dag-generation.md, "Fastest path cap").
+max_path_weight = 0
 
 [paths]
 # Path to Elden Ring installation.

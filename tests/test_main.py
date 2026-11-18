@@ -136,6 +136,112 @@ def test_main_logs_writes_spoiler_and_generation_log(tmp_path, monkeypatch):
     assert (seed_dir / "logs" / "generation.log").exists()
 
 
+def test_main_reports_path_weight(tmp_path, monkeypatch, capsys):
+    """The accepted seed prints its lightest and heaviest path weight."""
+    _real_clusters_or_skip()
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[budget]\nmax_path_weight = 10000\n")
+    out_dir = tmp_path / "out"
+
+    rc = _run_main(
+        monkeypatch, str(config_path), "--no-build", "--logs", "-o", str(out_dir)
+    )
+
+    assert rc == 0
+    assert "Path weight: lightest " in capsys.readouterr().out
+    seed_dir = next(d for d in out_dir.iterdir() if d.is_dir())
+    spoiler = (seed_dir / "logs" / "spoiler.txt").read_text(encoding="utf-8")
+    assert "Path weight: lightest " in spoiler
+
+
+def test_main_max_path_weight_rerolls_then_fails(tmp_path, monkeypatch, capsys):
+    """No DAG fits a 0.1 minute cap: every attempt is rejected on it.
+
+    Boss randomization is off in the default config, so this is the cap on
+    nominal cluster weights.
+    """
+    _real_clusters_or_skip()
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[budget]\nmax_path_weight = 0.1\n")
+    out_dir = tmp_path / "out"
+
+    rc = _run_main(
+        monkeypatch,
+        str(config_path),
+        "--no-build",
+        "--max-attempts",
+        "2",
+        "-o",
+        str(out_dir),
+    )
+
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "> max_path_weight 0.1" in captured.out
+    assert "Failed to generate DAG after 2 attempts" in captured.err
+    # Rejected before any seed directory is written
+    assert not out_dir.exists() or not any(out_dir.iterdir())
+
+
+def test_path_bounds_use_placed_boss_weights():
+    """With an assignment the arena weighs its placed boss, else its cluster."""
+    from speedfog.boss_arena_constraints import BossTags, EntityTags
+    from speedfog.clusters import ClusterData
+    from speedfog.dag import Dag, DagNode, FogRef
+
+    dag = Dag(seed=1)
+    for layer, (nid, ctype, weight, flag) in enumerate(
+        (("start", "start", 1.0, 0), ("arena", "boss_arena", 1.0, 100))
+    ):
+        dag.add_node(
+            DagNode(
+                id=nid,
+                cluster=ClusterData(
+                    id=f"c_{nid}",
+                    zones=[nid],
+                    type=ctype,
+                    weight=weight,
+                    entry_fogs=[],
+                    exit_fogs=[],
+                    defeat_flag=flag,
+                ),
+                layer=layer,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+    dag.add_edge("start", "arena", FogRef("out", "start"), FogRef("in", "arena"))
+    boss = BossTags(
+        size=1,
+        type=1,
+        is_two_phase=False,
+        is_dragon=False,
+        is_npc=False,
+        can_escape=False,
+        night_boss=False,
+        exclude_from_pool=False,
+        weights=(6.0, 6.0, 6.0),
+    )
+    tags = {
+        900: EntityTags(
+            entity_id=900,
+            name="heavy",
+            boss=boss,
+            arena=None,
+            pool="minor",
+            region=1,
+            scaling=1,
+            dlc=False,
+        )
+    }
+
+    assert main_module._path_bounds(dag, {}, None) == (2.0, 2.0)
+    assert main_module._path_bounds(dag, {"enemy_assignments": {}}, tags) == (2.0, 2.0)
+    placed = {"enemy_assignments": {"100": "900"}}
+    assert main_module._path_bounds(dag, placed, tags) == (7.0, 7.0)
+
+
 def test_main_copies_configured_item_preset(tmp_path, monkeypatch):
     _real_clusters_or_skip()
     preset = tmp_path / "my_preset.yaml"

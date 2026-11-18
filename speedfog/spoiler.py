@@ -358,12 +358,19 @@ def _build_connection_lines(
     return lines
 
 
+def format_path_bounds(path_bounds: tuple[float, float]) -> str:
+    """One line naming the lightest and heaviest start-to-end path weight."""
+    lightest, heaviest = path_bounds
+    return f"Path weight: lightest {lightest:.1f}, heaviest {heaviest:.1f}"
+
+
 def export_spoiler_log(
     dag: Dag,
     output_path: Path,
     care_package: list[CarePackageItem] | None = None,
     class_loadout: dict[str, Any] | None = None,
     torrent_skins: dict[str, Any] | None = None,
+    path_bounds: tuple[float, float] | None = None,
 ) -> None:
     """Export human-readable spoiler log with ASCII graph visualization.
 
@@ -375,6 +382,8 @@ def export_spoiler_log(
             ({"weapons": [...], "shields": [...], "armor_sets": [...]})
         torrent_skins: Optional Tarnished Pack Torrent skins unlock draw
             ({"unlock": bool, "default_flag": int?})
+        path_bounds: Optional (lightest, heaviest) start-to-end path
+            weights, placed bosses included
     """
     lines: list[str] = []
 
@@ -384,6 +393,8 @@ def export_spoiler_log(
     lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("=" * 60)
     lines.append(f"Total zones: {dag.total_zones()}")
+    if path_bounds is not None:
+        lines.append(format_path_bounds(path_bounds))
     lines.append("")
 
     # Group nodes by layer

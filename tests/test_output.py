@@ -415,6 +415,20 @@ class TestExportSpoilerLog:
         assert "42" in content
         assert "seed" in content.lower()
 
+    def test_path_bounds_line(self, tmp_path: Path):
+        """The path weight line is written only when the bounds are given."""
+        dag = make_test_dag()
+        with_bounds = tmp_path / "with.txt"
+        without = tmp_path / "without.txt"
+
+        export_spoiler_log(dag, with_bounds, path_bounds=(31.25, 36.0))
+        export_spoiler_log(dag, without)
+
+        assert "Path weight: lightest 31.2, heaviest 36.0" in with_bounds.read_text(
+            encoding="utf-8"
+        )
+        assert "Path weight" not in without.read_text(encoding="utf-8")
+
     def test_contains_ascii_graph(self, tmp_path: Path):
         """export_spoiler_log output contains ASCII graph visualization."""
         dag = make_test_dag()

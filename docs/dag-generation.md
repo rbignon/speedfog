@@ -340,6 +340,56 @@ width: measured on the racing pools, ~30-35-layer width-3 pools sit at a median 
 90-layer expedition pool sits around 11 (tolerance below ~15 makes generation fail), and
 width-1 pools always have spread 0.
 
+### Fastest path cap
+
+`[budget] max_path_weight` (0 = disabled) caps the weight of the lightest start-to-end path:
+a seed is kept only when at least one route weighs at most that many minutes. It is a filter
+for grinding short seeds (the Set Seed speedrun category of speedfog-racing), not a balance
+rule: nothing steers the generator toward light clusters, heavier candidates are rerolled.
+
+The weight is the *effective* one. A node whose arena holds a randomized boss weighs that
+boss's `boss.weight` at the band of the node's tier (`effective_node_weights` in
+`item_randomizer.py`, see `docs/boss-arena-constraints.md`), in place of the cluster weight;
+every other node (dungeons, arenas the matcher left vanilla, every node when bosses are not
+randomized) weighs its cluster. A multi-phase arena (Fire Giant, Rennala: two slots, each
+with its own placed boss, see "Multi-phase bosses" in that document) weighs both bosses.
+Replacing rather than adjusting is deliberate: an arena's cluster weight is hand-tuned for
+its vanilla boss. Known approximation: the few arena clusters spanning several zones (a
+post-boss room, a chest) lose the weight of those extra zones when a boss is placed there. `budget.tolerance` is unaffected and stays
+on cluster weights, so the two keys do not measure the same thing: with placed bosses the
+lightest-to-heaviest gap is wider than the tolerance (median 5.0 on `standard` and 8.0 on
+`boss_rush`, both at tolerance 4).
+
+Because the boss assignment is only known after matching, the check is not part of
+`validate_dag`: `main.py`'s `post_validate` hook runs the matcher, then
+`Dag.path_weight_bounds` on the effective weights and `check_max_path_weight`
+(`validator.py`), and raises `GenerationError` above the cap (reroll in auto mode, an error
+naming the measured weight with a fixed seed). The comparison is inclusive. Rejection costs
+only the Python generation: no C# step has run yet.
+
+Every generated seed prints `Path weight: lightest <a>, heaviest <b>` (effective weights) on
+stdout, and in `spoiler.txt` with `--logs`, whether or not the cap is set, so kept seeds can
+be ranked.
+
+Measured on 1000 seeds per racing pool (2026-11-18, cap disabled, both pools at tolerance 4,
+about 23 attempts per accepted seed before any cap):
+
+| Pool | Lightest path over the 1000 seeds | Cap | Seeds under the cap | Attempts per kept seed |
+|------|------|-----|------|------|
+| `standard` (30 layers) | min 38.4, median 47.7, max 56.4 | 42 | 2.6% | ~900 |
+| | | 44 | 11% | ~225 |
+| | | 46 | 30% | ~80 |
+| | | 48 | 54% | ~45 |
+| `boss_rush` (35 layers) | min 37.4, median 42.9, max 47.8 | 40 | 4.9% | ~450 |
+| | | 41 | 14% | ~160 |
+| | | 42 | 32% | ~70 |
+| | | 43 | 53% | ~42 |
+
+The default `--max-attempts` is 100, which those pools already exhaust on about 1% of runs
+without a cap: a cap that keeps under a third of the seeds needs `--max-attempts` raised to
+several times the "attempts per kept seed" figure. Re-measure before choosing a cap for
+another pool: the distribution follows `layers_count`, the cluster pool and the boss weights.
+
 
 ## Retry System (`generate_with_retry`)
 
@@ -349,6 +399,7 @@ width-1 pools always have spread 0.
 - Generate random seed
 - Attempt generation + validation
 - Retry on `GenerationError` or validation failure
+- Run the `post_validate` hook when given (boss matching, then the fastest path cap); a `GenerationError` there rerolls too
 - Up to `max_attempts` (default 100)
 - Print each failure with seed and reason
 - Return first successful result as `GenerationResult(dag, seed, validation, attempts)`
@@ -374,6 +425,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `requirements.bosses` | 5 | Minimum boss arenas |
 | `requirements.mini_dungeons` | 5 | Minimum mini dungeons |
 | `budget.tolerance` | 0 (disabled) | Max weight spread between lightest and heaviest full path; violations reroll the seed |
+| `budget.max_path_weight` | 0 (disabled) | Max weight of the lightest full path, placed bosses included; heavier seeds are rerolled |
 
 ## Validation
 
@@ -401,6 +453,9 @@ Post-generation checks on the built DAG:
 8. **Requirements**: minimum zone type counts met
 9. **Layer count**: few layers = warning
 10. **Event flag budget**: total flag allocation within budget
+
+The fastest path cap (`budget.max_path_weight`) is checked after these, outside
+`validate_dag`, once the bosses are placed (see "Fastest path cap").
 
 ## Required Zones
 

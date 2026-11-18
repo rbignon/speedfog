@@ -7,6 +7,7 @@ used to represent randomized speedrun routes.
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
@@ -150,25 +151,34 @@ class Dag:
             1 for node in self.nodes.values() if node.cluster.type == cluster_type
         )
 
-    def path_weight_spread(self) -> float:
-        """Weight difference between the heaviest and lightest full path.
+    def path_weight_bounds(
+        self, weights: Mapping[str, float] | None = None
+    ) -> tuple[float, float]:
+        """Total weight of the lightest and of the heaviest full path.
 
-        Total cluster weight summed along a start-to-end path, min and max
-        taken over every path, computed by dynamic programming in layer
-        order (one pass over nodes and edges after a sort by layer).
+        Node weight summed along a start-to-end path, min and max taken
+        over every path, computed by dynamic programming in layer order
+        (one pass over nodes and edges after a sort by layer).
         Cross-links make path *enumeration* exponential, but the
         lightest/heaviest totals compose per node, so no path is ever
         materialized.
+
+        A node weighs ``weights[node.id]`` when ``weights`` has it, else
+        its cluster weight: callers pass the nodes whose effective weight
+        differs from the cluster's (an arena holding a randomized boss).
 
         Nodes without incoming edges are treated as path starts and nodes
         without outgoing edges as path ends. On structurally invalid DAGs
         (backward edges, dangling edge endpoints) the value is still
         defined, though meaningless: sources not processed yet are
-        ignored, and 0.0 is returned when no end exists. Structural
+        ignored, and (0.0, 0.0) is returned when no end exists. Structural
         validity is validated separately.
+
+        Returns:
+            ``(lightest, heaviest)``.
         """
         if not self.nodes:
-            return 0.0
+            return 0.0, 0.0
         incoming: dict[str, list[str]] = {}
         has_outgoing: set[str] = set()
         for edge in self.edges:
@@ -179,6 +189,8 @@ class Dag:
         order = sorted(self.nodes.values(), key=lambda n: n.layer)
         for node in order:
             weight = node.cluster.weight
+            if weights is not None:
+                weight = weights.get(node.id, weight)
             sources = [s for s in incoming.get(node.id, []) if s in lightest]
             if sources:
                 lightest[node.id] = min(lightest[s] for s in sources) + weight
@@ -187,8 +199,17 @@ class Dag:
                 lightest[node.id] = heaviest[node.id] = weight
         ends = [n.id for n in order if n.id not in has_outgoing]
         if not ends:
-            return 0.0
-        return max(heaviest[e] for e in ends) - min(lightest[e] for e in ends)
+            return 0.0, 0.0
+        return min(lightest[e] for e in ends), max(heaviest[e] for e in ends)
+
+    def path_weight_spread(self) -> float:
+        """Weight difference between the heaviest and lightest full path.
+
+        On cluster weights (see ``path_weight_bounds``); 0.0 when the DAG
+        has no node or no end.
+        """
+        lightest, heaviest = self.path_weight_bounds()
+        return heaviest - lightest
 
     def validate_structure(self) -> list[str]:
         """Validate the DAG structure for correctness.

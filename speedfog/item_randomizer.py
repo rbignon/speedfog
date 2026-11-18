@@ -24,6 +24,7 @@ from speedfog.boss_arena_constraints import (
 )
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
+from speedfog.dag import Dag
 from speedfog.enemy_data import resolve_entity_id
 from speedfog.proc import stream_command
 
@@ -355,8 +356,7 @@ def _compose_pool(
         entry = tags.get(eid)
         if entry is None:
             raise KeyError(
-                f"vanilla {kind} boss entity {eid} missing from "
-                f"boss_arena_tags.json"
+                f"vanilla {kind} boss entity {eid} missing from boss_arena_tags.json"
             )
         vanilla_set.add(eid)
         if entry.boss.exclude_from_pool:
@@ -413,6 +413,49 @@ BOSS_ASSIGNMENT_SEED_SALT = 0xBA7A5A5A
 MAJOR_ARENA_TYPES = {"major_boss", "final_boss"}
 MINOR_ARENA_TYPES = {"boss_arena"}
 ASSIGNABLE_ARENA_TYPES = MAJOR_ARENA_TYPES | MINOR_ARENA_TYPES
+
+
+def effective_node_weights(
+    dag: Dag,
+    enemy_assignments: Mapping[str, str],
+    tags: Mapping[int, EntityTags],
+    phase_mapping: Mapping[int, int] | None = None,
+) -> dict[str, float]:
+    """Weight of the DAG nodes whose arena holds a randomized boss.
+
+    An assignable arena whose leader entity has an entry in
+    ``enemy_assignments`` (item_config's ``{arena entity: boss entity}``,
+    decimal strings) weighs the placed boss's ``boss.weight`` at the band
+    of the node's tier, in place of its cluster weight: the cluster weight
+    of an arena is hand-tuned for its vanilla boss. A multi-phase arena has
+    a second slot (``phase_mapping``, leader -> phase-1 entity) that
+    receives a boss of its own, fought before the leader's: the node
+    weighs both.
+
+    Every other node is left out, for callers to fall back on the cluster
+    weight (``Dag.path_weight_bounds``): dungeons, arenas the matcher left
+    vanilla, and arenas whose placed boss the tags do not know.
+    """
+    weights: dict[str, float] = {}
+    for node in dag.nodes.values():
+        cluster = node.cluster
+        if cluster.type not in ASSIGNABLE_ARENA_TYPES or not cluster.defeat_flag:
+            continue
+        leader = resolve_entity_id(cluster.defeat_flag)
+        slots = [leader]
+        if phase_mapping is not None and leader in phase_mapping:
+            slots.append(phase_mapping[leader])
+        band = weight_band(node.tier)
+        placed = [
+            tags[int(boss)]
+            for slot in slots
+            if (boss := enemy_assignments.get(str(slot))) is not None
+            and int(boss) in tags
+        ]
+        if str(leader) not in enemy_assignments or not placed:
+            continue
+        weights[node.id] = sum(entry.boss.weight_at(band) for entry in placed)
+    return weights
 
 
 def _family_forbidden(

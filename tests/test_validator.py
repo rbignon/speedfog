@@ -3,7 +3,12 @@
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.config import Config
 from speedfog.dag import Dag, DagNode, FogRef
-from speedfog.validator import ValidationResult, validate_dag, validate_exclusions
+from speedfog.validator import (
+    ValidationResult,
+    check_max_path_weight,
+    validate_dag,
+    validate_exclusions,
+)
 
 
 def make_cluster(
@@ -1205,6 +1210,23 @@ class TestPathWeightSpreadCheck:
     def test_spread_within_tolerance_passes(self):
         result = validate_dag(self._make_diamond(), self._make_config(2.5))
         assert not any("Path weight spread" in e for e in result.errors)
+
+
+class TestMaxPathWeightCheck:
+    """Tests for the fastest-path cap (budget.max_path_weight)."""
+
+    def test_disabled_at_zero(self):
+        assert check_max_path_weight(1000.0, 0) is None
+
+    def test_weight_at_the_cap_passes(self):
+        assert check_max_path_weight(40.0, 40) is None
+
+    def test_weight_under_the_cap_passes(self):
+        assert check_max_path_weight(39.9, 40) is None
+
+    def test_weight_above_the_cap_names_both_values(self):
+        error = check_max_path_weight(40.26, 40)
+        assert error == "Lightest path weight 40.3 > max_path_weight 40"
 
 
 class TestValidateExclusions:

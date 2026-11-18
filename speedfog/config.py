@@ -225,10 +225,20 @@ class BudgetConfig:
         # layers_count: ~30-layer pools sit around a 5-minute spread,
         # ~90-layer pools around 11, so the tolerance is a per-pool call.
     )
+    max_path_weight: float = (
+        0.0  # Max weight of the lightest start-to-end path (0 = check
+        # disabled), an arena holding a randomized boss weighing that
+        # boss's weight at the node's tier. A heavier seed is rerolled in
+        # auto mode (see docs/dag-generation.md, "Fastest path cap").
+    )
 
     def __post_init__(self) -> None:
         if self.tolerance < 0:
             raise ValueError(f"tolerance must be >= 0, got {self.tolerance}")
+        if self.max_path_weight < 0:
+            raise ValueError(
+                f"max_path_weight must be >= 0, got {self.max_path_weight}"
+            )
 
 
 @dataclass
@@ -753,7 +763,7 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "final_boss",
         }
     ),
-    "budget": frozenset({"tolerance"}),
+    "budget": frozenset({"tolerance", "max_path_weight"}),
     "tarnished": frozenset(
         {
             "enabled",
@@ -935,6 +945,7 @@ class Config:
             ),
             budget=BudgetConfig(
                 tolerance=float(budget_section.get("tolerance", 0.0)),
+                max_path_weight=float(budget_section.get("max_path_weight", 0.0)),
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),

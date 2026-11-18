@@ -341,6 +341,26 @@ def _check_path_weight_spread(dag: Dag, tolerance: float) -> list[str]:
     return []
 
 
+def check_max_path_weight(lightest: float, max_path_weight: float) -> str | None:
+    """Check the weight of the lightest full path against the cap.
+
+    Not part of ``validate_dag``: the weight counts the bosses the boss
+    randomizer placed (``item_randomizer.effective_node_weights``), which
+    are only known after the matching that follows validation.
+
+    Args:
+        lightest: Weight of the lightest start-to-end path.
+        max_path_weight: Maximum permitted weight; ``<= 0`` disables the
+            check.
+
+    Returns:
+        The error message when the path is heavier than the cap, else None.
+    """
+    if max_path_weight <= 0 or lightest <= max_path_weight + 1e-9:
+        return None
+    return f"Lightest path weight {lightest:.1f} > max_path_weight {max_path_weight:g}"
+
+
 def _check_layer_type_homogeneity(dag: Dag) -> list[str]:
     """Check that all nodes within each layer share the same cluster type.
 

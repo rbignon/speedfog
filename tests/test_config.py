@@ -29,6 +29,24 @@ def test_budget_negative_tolerance_rejected():
         Config.from_dict({"budget": {"tolerance": -1}})
 
 
+def test_budget_max_path_weight_parsed():
+    """[budget] max_path_weight is parsed as the fastest-path cap."""
+    config = Config.from_dict({"budget": {"max_path_weight": 40}})
+    assert config.budget.max_path_weight == 40.0
+
+
+def test_budget_max_path_weight_defaults_to_disabled():
+    """Without the key, the fastest-path cap is disabled (0)."""
+    config = Config.from_dict({"budget": {"tolerance": 5}})
+    assert config.budget.max_path_weight == 0.0
+
+
+def test_budget_negative_max_path_weight_rejected():
+    """A negative cap fails loudly."""
+    with pytest.raises(ValueError, match="max_path_weight must be >= 0"):
+        Config.from_dict({"budget": {"max_path_weight": -1}})
+
+
 def test_budget_unknown_key_rejected():
     """Typo'd keys inside [budget] fail loudly."""
     with pytest.raises(ValueError, match="unknown key budget.tolerence"):

@@ -584,6 +584,52 @@ class TestPathWeightSpread:
         dag.add_edge("ghost", "mid", _f("ghost_out"), _f("ghost_in"))
         assert dag.path_weight_spread() >= 0.0
 
+    _DIAMOND_NODES = (
+        ("start", 0, 1),
+        ("a", 1, 1),
+        ("b", 1, 3),
+        ("c", 2, 2),
+        ("d", 2, 4),
+        ("end", 3, 5),
+    )
+    _DIAMOND_EDGES = (
+        ("start", "a"),
+        ("start", "b"),
+        ("a", "c"),
+        ("a", "d"),
+        ("b", "c"),
+        ("b", "d"),
+        ("c", "end"),
+        ("d", "end"),
+    )
+
+    def test_bounds_nominal(self):
+        """The bounds are the lightest and heaviest totals behind the spread."""
+        dag = self._make_dag(self._DIAMOND_NODES, self._DIAMOND_EDGES)
+        assert dag.path_weight_bounds() == (9.0, 13.0)
+        assert dag.path_weight_spread() == 4.0
+
+    def test_bounds_with_weight_override(self):
+        """An override replaces a node's cluster weight, others keep theirs.
+
+        a(1) raised to 10 makes b(3) the light branch: lightest =
+        1+3+2+5 = 11, heaviest = 1+10+4+5 = 20. The spread stays nominal.
+        """
+        dag = self._make_dag(self._DIAMOND_NODES, self._DIAMOND_EDGES)
+        assert dag.path_weight_bounds({"a": 10.0}) == (11.0, 20.0)
+        assert dag.path_weight_spread() == 4.0
+
+    def test_bounds_empty_dag(self):
+        assert Dag(seed=42).path_weight_bounds() == (0.0, 0.0)
+
+    def test_bounds_without_end_node(self):
+        """A cycle leaves no end node: the bounds stay defined."""
+        dag = self._make_dag(
+            (("a", 0, 1), ("b", 1, 2)),
+            (("a", "b"), ("b", "a")),
+        )
+        assert dag.path_weight_bounds() == (0.0, 0.0)
+
 
 # =============================================================================
 # Validation tests
