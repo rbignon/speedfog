@@ -17,12 +17,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from itertools import combinations
 
+from speedfog.boss_arena_constraints import weight_band
 from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.constants import (
     DEFAULT_MAX_LAYER_SPREAD,
     INTERMEDIATE_CLUSTER_TYPES,
-    MAX_TIER,
     WEIGHT_TOLERANCE_STEP,
 )
 from speedfog.dag import Dag, DagNode, FogRef
@@ -365,6 +365,7 @@ def pick_cluster_weight_matched(
     anchor_tolerance: float = 3.0,
     layer_bounds: tuple[float, float] | None = None,
     max_layer_spread: float = DEFAULT_MAX_LAYER_SPREAD,
+    band: str,
 ) -> ClusterData | None:
     """Pick a cluster compatible with the layer's weight window.
 
@@ -425,7 +426,8 @@ def pick_cluster_weight_matched(
         available = [
             c
             for c in available
-            if max(hi, c.weight) - min(lo, c.weight) <= max_layer_spread + 1e-9
+            if max(hi, c.weight_at(band)) - min(lo, c.weight_at(band))
+            <= max_layer_spread + 1e-9
         ]
         if not available:
             return None
@@ -438,7 +440,9 @@ def pick_cluster_weight_matched(
     # and starve clusters whose weight has no exact twin in the pool.
     tol = WEIGHT_TOLERANCE_STEP
     while tol <= anchor_tolerance + 1e-9:
-        matched = [c for c in available if abs(c.weight - anchor_weight) <= tol + 1e-9]
+        matched = [
+            c for c in available if abs(c.weight_at(band) - anchor_weight) <= tol + 1e-9
+        ]
         if matched:
             return rng.choice(matched)
         tol += WEIGHT_TOLERANCE_STEP
@@ -830,6 +834,7 @@ def pick_layer_clusters(
     anchor_tolerance: float = 3.0,
     max_layer_spread: float = DEFAULT_MAX_LAYER_SPREAD,
     required_zones: frozenset[str] = frozenset(),
+    band: str,
 ) -> tuple[list[ClusterData], list[FallbackEntry], list[float | None]]:
     """Pick `width` clusters for a layer, falling back to other allowed types.
 
@@ -844,7 +849,7 @@ def pick_layer_clusters(
     same zone is not over-prioritized once placed.
 
     Returns (picks, fallbacks, weight_deltas). `weight_deltas[i]` is the
-    distance between picks[i].weight and the anchor used to match it
+    distance between picks[i]'s weight in ``band`` and the anchor used to match it
     (None for slot 0 and for type fallbacks, which bypass matching). Each
     pick of the wrong type yields a FallbackEntry (reason='pool_exhausted').
     Raises GenerationError if no compatible cluster remains in any allowed
@@ -873,11 +878,9 @@ def pick_layer_clusters(
         else:
             # Anchor = mean of ALL prior picks, including type fallbacks:
             # each contributes a real weight to the layer's centroid.
-            anchor = sum(p.weight for p in picks) / len(picks)
-            layer_bounds = (
-                min(p.weight for p in picks),
-                max(p.weight for p in picks),
-            )
+            weights = [p.weight_at(band) for p in picks]
+            anchor = sum(weights) / len(weights)
+            layer_bounds = (min(weights), max(weights))
             c = pick_cluster_weight_matched(
                 primary_pool,
                 local_used,
@@ -887,6 +890,7 @@ def pick_layer_clusters(
                 layer_bounds=layer_bounds,
                 max_layer_spread=max_layer_spread,
                 required_zones=req_frozen,
+                band=band,
             )
         if c is None:
             for ft in fallback_types:
@@ -916,7 +920,7 @@ def pick_layer_clusters(
         if anchor is None or is_fallback:
             weight_deltas.append(None)
         else:
-            weight_deltas.append(abs(c.weight - anchor))
+            weight_deltas.append(abs(c.weight_at(band) - anchor))
         _mark_cluster_used(c, local_used, clusters)
         local_required.difference_update(c.zones)
     return picks, fallbacks, weight_deltas
@@ -965,6 +969,18 @@ def generate_dag(
     required_zones_remaining: set[str] = set(config.requirements.zones)
     total_target = config.structure.layers_count
 
+    def tier_at(layer: int) -> int:
+        """Scaling tier of a layer: fixed by the structure config, so a
+        node knows its tier (and the band of its weight) when created."""
+        return compute_tier(
+            layer,
+            total_target,
+            final_tier=config.structure.final_tier,
+            start_tier=config.structure.start_tier,
+            curve=config.structure.tier_curve,
+            exponent=config.structure.tier_curve_exponent,
+        )
+
     # 1. Pick final boss
     boss_cluster_list = boss_candidates
     all_boss_zones = {zone for c in boss_cluster_list for zone in c.zones}
@@ -988,7 +1004,7 @@ def generate_dag(
         id="node_0_a",
         cluster=start,
         layer=0,
-        tier=1,
+        tier=tier_at(0),
         entry_fogs=[],
         exit_fogs=[FogRef(f["fog_id"], f["zone"]) for f in start.exit_fogs],
     )
@@ -1060,6 +1076,7 @@ def generate_dag(
             anchor_tolerance=config.structure.max_weight_tolerance,
             max_layer_spread=config.structure.max_layer_spread,
             required_zones=frozenset(required_zones_remaining),
+            band=weight_band(tier_at(layer_idx)),
         )
 
         next_nodes: list[DagNode] = []
@@ -1068,7 +1085,7 @@ def generate_dag(
                 id=f"node_{layer_idx}_{chr(97 + i)}",
                 cluster=c,
                 layer=layer_idx,
-                tier=1,
+                tier=tier_at(layer_idx),
                 entry_fogs=[],
                 exit_fogs=[FogRef(f["fog_id"], f["zone"]) for f in c.exit_fogs],
             )
@@ -1100,7 +1117,7 @@ def generate_dag(
                 NodeEntry(
                     n.cluster.id,
                     n.cluster.type,
-                    n.cluster.weight,
+                    n.weight,
                     "routed",
                     weight_delta=weight_deltas[i],
                 )
@@ -1124,7 +1141,7 @@ def generate_dag(
         id=f"node_{total_target - 1}_a",
         cluster=final_boss,
         layer=total_target - 1,
-        tier=MAX_TIER,
+        tier=tier_at(total_target - 1),
         entry_fogs=[],
         exit_fogs=[],
     )
@@ -1132,17 +1149,6 @@ def generate_dag(
     dag.end_id = boss_node.id
     route_exits(dag, current_layer_nodes, [boss_node], rng)
     boss_node.entry_fogs = [e.entry_fog for e in dag.get_incoming_edges(boss_node.id)]
-
-    # 6. Tier assignment
-    for node in dag.nodes.values():
-        node.tier = compute_tier(
-            node.layer,
-            total_target,
-            final_tier=config.structure.final_tier,
-            start_tier=config.structure.start_tier,
-            curve=config.structure.tier_curve,
-            exponent=config.structure.tier_curve_exponent,
-        )
 
     # 7. Build summary
     all_fallbacks = [fb for le in log.layer_events for fb in le.fallbacks]

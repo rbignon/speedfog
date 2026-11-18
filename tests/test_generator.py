@@ -20,6 +20,7 @@ from speedfog.generator import (
     generate_with_retry,
     pick_cluster_uniform,
     pick_cluster_weight_matched,
+    pick_layer_clusters,
     select_weighted_final_boss,
     validate_config,
 )
@@ -1954,9 +1955,10 @@ class TestPickClusterWeightMatched:
                 set(),
                 random.Random(seed),
                 anchor_weight=3,
+                band="mid",
             )
             assert r is not None
-            results.add(r.weight)
+            results.add(r.weight_at("mid"))
         assert results == {3}  # Only w=3 sits within +/-0.5 of the anchor
 
     def test_first_band_has_width(self):
@@ -1980,9 +1982,10 @@ class TestPickClusterWeightMatched:
                 set(),
                 random.Random(seed),
                 anchor_weight=3.0,
+                band="mid",
             )
             assert r is not None
-            results.add(r.weight)
+            results.add(r.weight_at("mid"))
         assert results == {3.0, 3.5}
 
     def test_tolerance_widening_prefers_closer(self):
@@ -1999,9 +2002,10 @@ class TestPickClusterWeightMatched:
                 random.Random(seed),
                 anchor_weight=3,
                 anchor_tolerance=3,
+                band="mid",
             )
             assert r is not None
-            results.add(r.weight)
+            results.add(r.weight_at("mid"))
         assert results == {2}  # Weight 2 always wins (closer to anchor)
 
     def test_tolerance_widening_same_distance(self):
@@ -2018,9 +2022,10 @@ class TestPickClusterWeightMatched:
                 random.Random(seed),
                 anchor_weight=3,
                 anchor_tolerance=2,
+                band="mid",
             )
             assert r is not None
-            results.add(r.weight)
+            results.add(r.weight_at("mid"))
         assert results == {1, 5}  # Both reachable at tol=2
 
     def test_fallback_uniform_within_window_when_no_anchor_match(self):
@@ -2040,9 +2045,10 @@ class TestPickClusterWeightMatched:
                 random.Random(seed),
                 anchor_weight=10,
                 anchor_tolerance=2,
+                band="mid",
             )
             assert r is not None
-            results.add(r.weight)
+            results.add(r.weight_at("mid"))
         assert results == {1, 5, 7}
 
     def test_half_step_tolerance(self):
@@ -2062,9 +2068,10 @@ class TestPickClusterWeightMatched:
                 random.Random(seed),
                 anchor_weight=3.5,
                 anchor_tolerance=2.0,
+                band="mid",
             )
             assert r is not None
-            results.add(r.weight)
+            results.add(r.weight_at("mid"))
         assert results == {3.0}
 
     def test_disabled_when_zero(self):
@@ -2078,9 +2085,10 @@ class TestPickClusterWeightMatched:
                 random.Random(seed),
                 anchor_weight=5,
                 anchor_tolerance=0,
+                band="mid",
             )
             assert r is not None
-            weights_seen.add(r.weight)
+            weights_seen.add(r.weight_at("mid"))
         # With 100 seeds and 3 candidates, all weights should appear
         assert weights_seen == {1, 5, 10}
 
@@ -2107,6 +2115,7 @@ class TestPickClusterWeightMatched:
             random.Random(42),
             anchor_weight=3,
             filter_fn=can_be_passant_node,
+            band="mid",
         )
         assert result is not None
         assert result.id == "ok"
@@ -2120,6 +2129,7 @@ class TestPickClusterWeightMatched:
             used,
             random.Random(42),
             anchor_weight=3,
+            band="mid",
         )
         assert result is not None
         assert result.id == "c2"
@@ -2131,6 +2141,7 @@ class TestPickClusterWeightMatched:
             set(),
             random.Random(42),
             anchor_weight=3,
+            band="mid",
         )
         assert result is None
 
@@ -2143,6 +2154,7 @@ class TestPickClusterWeightMatched:
             random.Random(42),
             anchor_weight=3,
             reserved_zones=frozenset({"z0"}),
+            band="mid",
         )
         assert result is None
 
@@ -2164,6 +2176,7 @@ class TestPickClusterWeightMatchedRequiredZones:
                 rng=random.Random(seed),
                 anchor_weight=5.0,
                 required_zones=frozenset({"z_required"}),
+                band="mid",
             )
             assert result is c_heavy_required
 
@@ -2178,6 +2191,7 @@ class TestPickClusterWeightMatchedRequiredZones:
                 rng=random.Random(seed),
                 anchor_weight=5.0,
                 required_zones=frozenset({"z_unmatched"}),
+                band="mid",
             )
             # Anchor=5, tolerance defaults to 3.0 -> c1 selected every time.
             assert r is c1
@@ -2191,6 +2205,7 @@ class TestPickClusterWeightMatchedRequiredZones:
             used_zones=set(),
             rng=random.Random(0),
             anchor_weight=5.0,
+            band="mid",
         )
         assert r is c1
 
@@ -2205,6 +2220,7 @@ class TestPickClusterWeightMatchedRequiredZones:
             anchor_weight=5.0,
             reserved_zones=frozenset({"z_required"}),
             required_zones=frozenset({"z_required"}),
+            band="mid",
         )
         # c_req is reserved -> excluded; preferred is empty -> weight matching on c_other only
         assert r is c_other
@@ -2222,6 +2238,7 @@ class TestPickClusterWeightMatchedRequiredZones:
                 rng=random.Random(seed),
                 anchor_weight=5.0,
                 required_zones=frozenset({"z_req_a", "z_req_b"}),
+                band="mid",
             )
             seen.add(r.id)
         # c_non_required is never eligible; c_close_required wins every time (exact match).
@@ -2276,6 +2293,7 @@ def test_pick_layer_clusters_returns_requested_type_when_available():
         clusters=pool,
         used_zones=set(),
         rng=rng,
+        band="mid",
     )
     assert len(picked) == 3
     assert all(c.type == "mini_dungeon" for c in picked)
@@ -2302,13 +2320,14 @@ def test_pick_layer_clusters_matches_running_mean_anchor():
             clusters=pool,
             used_zones=set(),
             rng=rng,
+            band="mid",
         )
         assert fallbacks == []
         assert deltas[0] is None
         # Reconstruct the anchors and verify the recorded deltas match.
         for i in range(1, len(picked)):
-            anchor = sum(p.weight for p in picked[:i]) / i
-            assert deltas[i] == abs(picked[i].weight - anchor)
+            anchor = sum(p.weight_at("mid") for p in picked[:i]) / i
+            assert deltas[i] == abs(picked[i].weight_at("mid") - anchor)
 
 
 def test_pick_layer_clusters_rejects_out_of_window_candidates():
@@ -2336,12 +2355,13 @@ def test_pick_layer_clusters_rejects_out_of_window_candidates():
                 used_zones=set(),
                 rng=rng,
                 allowed_types=("mini_dungeon",),
+                band="mid",
             )
         except GenerationError:
             saw_light_first = True
             continue
         # If it succeeded, every pick must be a heavy (spread 0).
-        assert {c.weight for c in picked} == {20}
+        assert {c.weight_at("mid") for c in picked} == {20}
     assert saw_light_first, (
         "Expected at least one seed in [0,50) to start with the light cluster "
         "and then fail due to the window invariant"
@@ -2364,6 +2384,7 @@ def test_pick_layer_clusters_slot0_type_fallback():
         used_zones=set(),
         rng=rng,
         allowed_types=("mini_dungeon", "boss_arena"),
+        band="mid",
     )
     assert len(picked) == 2
     assert all(c.type == "boss_arena" for c in picked)
@@ -2388,6 +2409,7 @@ def test_pick_layer_clusters_falls_back_when_type_pool_exhausted():
         used_zones=set(),
         rng=rng,
         allowed_types=("mini_dungeon", "boss_arena"),
+        band="mid",
     )
     assert len(picked) == 3
     types = sorted(c.type for c in picked)
@@ -2411,6 +2433,7 @@ def test_pick_layer_clusters_fails_when_no_compatible_remaining():
             used_zones=set(),
             rng=rng,
             allowed_types=("mini_dungeon",),
+            band="mid",
         )
 
 
@@ -2432,6 +2455,7 @@ def test_pick_layer_clusters_places_required_zone_first():
             used_zones=set(),
             rng=rng,
             required_zones=frozenset({"md_required"}),
+            band="mid",
         )
         assert fallbacks == []
         assert any(c.id == "md_required" for c in picked)
@@ -2457,6 +2481,7 @@ def test_pick_layer_clusters_required_zone_consumed_across_slots():
             used_zones=set(),
             rng=rng,
             required_zones=frozenset({"md_req_a", "md_req_b"}),
+            band="mid",
         )
         ids = {c.id for c in picked}
         # Both required zones should be present (greedy consumption).
@@ -2480,6 +2505,7 @@ def test_pick_layer_clusters_default_required_zones_is_empty():
         clusters=pool,
         used_zones=set(),
         rng=rng,
+        band="mid",
     )
     assert len(picked) == 3
     assert fallbacks == []
@@ -2511,6 +2537,7 @@ class TestPickClusterWeightMatchedLayerBounds:
                 anchor_weight=2,
                 layer_bounds=(2.0, 2.0),
                 max_layer_spread=2.0,
+                band="mid",
             )
             assert r is None, f"seed={seed}: expected None, got {r}"
 
@@ -2526,6 +2553,7 @@ class TestPickClusterWeightMatchedLayerBounds:
                 anchor_weight=4,
                 layer_bounds=(4.0, 4.0),
                 max_layer_spread=2.0,
+                band="mid",
             )
             assert r is None
 
@@ -2539,9 +2567,10 @@ class TestPickClusterWeightMatchedLayerBounds:
             anchor_weight=2,
             layer_bounds=(2.0, 2.0),
             max_layer_spread=2.0,
+            band="mid",
         )
         assert r is not None
-        assert r.weight == 4
+        assert r.weight_at("mid") == 4
 
     def test_running_bounds_tighten_window(self):
         """Once layer has min=1, max=2, only candidates with weight in [0, 3] fit."""
@@ -2559,10 +2588,11 @@ class TestPickClusterWeightMatchedLayerBounds:
                 layer_bounds=(1.0, 2.0),
                 max_layer_spread=2.0,
                 anchor_tolerance=0,
+                band="mid",
             )
             assert r is not None
-            assert r.weight != 4.0
-            accepted_weights.add(r.weight)
+            assert r.weight_at("mid") != 4.0
+            accepted_weights.add(r.weight_at("mid"))
         assert accepted_weights == {0.5, 3.0}
 
     def test_no_layer_bounds_means_no_window(self):
@@ -2575,6 +2605,7 @@ class TestPickClusterWeightMatchedLayerBounds:
             anchor_weight=10,
             layer_bounds=None,
             max_layer_spread=2.0,
+            band="mid",
         )
         assert r is not None  # Both candidates allowed (no window)
 
@@ -2600,8 +2631,9 @@ def test_pick_layer_clusters_enforces_max_layer_spread():
             clusters=pool,
             used_zones=set(),
             rng=rng,
+            band="mid",
         )
-        weights = [c.weight for c in picked]
+        weights = [c.weight_at("mid") for c in picked]
         spread = max(weights) - min(weights)
         assert (
             spread <= 2.0
@@ -3260,10 +3292,9 @@ def test_merge_preserves_target_free_exits():
     tgt.entry_fogs = [e.entry_fog for e in dag.get_incoming_edges(tgt.id)]
     exits_after_merge = count_node_net_exits(dag, tgt.id)
 
-    assert exits_after_merge == exits_after_one, (
-        f"merge consumed extra exit capacity: {exits_after_one} -> "
-        f"{exits_after_merge}"
-    )
+    assert (
+        exits_after_merge == exits_after_one
+    ), f"merge consumed extra exit capacity: {exits_after_one} -> {exits_after_merge}"
 
 
 def test_generate_dag_places_required_zone_in_dag():
@@ -3509,3 +3540,86 @@ class TestExcludeZonesGeneration:
         # validate_config (where the orphan would crash) now accepts the config.
         errors, _ = validate_config(cfg, pool, _boss_candidates(pool))
         assert not any("final_boss candidate" in e for e in errors), errors
+
+
+class TestBandWeightPicking:
+    """A layer is balanced on the weights of the band it is played at."""
+
+    def _pool(self) -> ClusterPool:
+        """Two major bosses equal at early and mid scaling, 3 apart late."""
+        pool = ClusterPool()
+        steady = make_cluster("steady", zones=["z_steady"], cluster_type="major_boss")
+        steady.weights = (1.0, 1.0, 1.0)
+        scaling = make_cluster(
+            "scaling", zones=["z_scaling"], cluster_type="major_boss"
+        )
+        scaling.weights = (1.0, 1.0, 4.0)
+        pool.add(steady)
+        pool.add(scaling)
+        return pool
+
+    def _pick(self, band: str, seed: int) -> list[ClusterData]:
+        picked, _fallbacks, _deltas = pick_layer_clusters(
+            width=2,
+            layer_type="major_boss",
+            clusters=self._pool(),
+            used_zones=set(),
+            rng=random.Random(seed),
+            allowed_types=("major_boss",),
+            band=band,
+        )
+        return picked
+
+    def test_early_layer_pairs_them(self):
+        for seed in range(20):
+            assert {c.id for c in self._pick("early", seed)} == {"steady", "scaling"}
+
+    def test_late_layer_refuses_the_pair(self):
+        """Late spread 3.0 exceeds the layer window (2.0): no second pick."""
+        for seed in range(20):
+            with pytest.raises(GenerationError):
+                self._pick("late", seed)
+
+
+def test_generate_dag_picks_each_layer_at_the_band_of_its_tier(monkeypatch):
+    """The band handed to the layer picker is the one the layer's nodes end
+    up weighed at: the band of their tier."""
+    import speedfog.generator as generator_module
+    from speedfog.boss_arena_constraints import weight_band
+
+    picked_bands: list[str] = []
+    real_pick = generator_module.pick_layer_clusters
+
+    def recording_pick(**kwargs):
+        picked_bands.append(kwargs["band"])
+        return real_pick(**kwargs)
+
+    monkeypatch.setattr(generator_module, "pick_layer_clusters", recording_pick)
+    pool = load_real_clusters()
+    cfg = Config(
+        seed=12345,
+        requirements=RequirementsConfig(
+            legacy_dungeons=1,
+            bosses=3,
+            mini_dungeons=3,
+            major_bosses=1,
+            allowed_types=[
+                "mini_dungeon",
+                "boss_arena",
+                "legacy_dungeon",
+                "major_boss",
+            ],
+        ),
+        structure=StructureConfig(
+            layers_count=15,
+            max_parallel_paths=4,
+            final_tier=20,
+            final_boss_candidates={"leyndell_throne": 1},
+        ),
+    )
+
+    dag, _log = generate_dag(cfg, pool, boss_candidates=_boss_candidates(pool))
+
+    tier_of_layer = {n.layer: n.tier for n in dag.nodes.values()}
+    assert picked_bands == [weight_band(tier_of_layer[i]) for i in range(1, 14)]
+    assert set(picked_bands) == {"early", "mid", "late"}

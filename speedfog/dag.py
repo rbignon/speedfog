@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
+from speedfog.boss_arena_constraints import weight_band
 from speedfog.clusters import ClusterData
 
 
@@ -37,6 +38,11 @@ class DagNode:
         default_factory=list
     )  # FogRef pairs used to enter (empty for start)
     exit_fogs: list[FogRef] = field(default_factory=list)  # Available exits
+
+    @property
+    def weight(self) -> float:
+        """Weight of the cluster at this node's scaling band, in minutes."""
+        return self.cluster.weight_at(weight_band(self.tier))
 
     def __hash__(self) -> int:
         """Hash by id only."""
@@ -188,7 +194,7 @@ class Dag:
         heaviest: dict[str, float] = {}
         order = sorted(self.nodes.values(), key=lambda n: n.layer)
         for node in order:
-            weight = node.cluster.weight
+            weight = node.weight
             if weights is not None:
                 weight = weights.get(node.id, weight)
             sources = [s for s in incoming.get(node.id, []) if s in lightest]

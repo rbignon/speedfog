@@ -17,6 +17,12 @@
 # This reflects that players traverse a path through zones, not all of them.
 # Override with [clusters.<id>] weight = X to use observed race data directly.
 #
+# A major_boss or final_boss zone (or the [clusters.<id>] override of such a
+# cluster) can give one weight per scaling band instead of a number:
+#   weight = { early = 1.13, mid = 1.88, late = 2.32 }
+# early = tier <= 8, mid = 9-14, late = >= 15; real minutes in the vanilla
+# arena. All three keys are required. See docs/clusters.md.
+#
 # [warps."<name>"] entries opt specific FogMod warps into 'opensplit' handling
 # at runtime (see Graph.cs:1257-1266). Used for unique warps where one side
 # carries the 'open' tag (non-core in crawl mode), so the core side keeps

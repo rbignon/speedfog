@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 from pathlib import Path
+
+from speedfog.boss_arena_constraints import WEIGHT_BANDS
+
+# Oldest clusters.json the loader accepts: 1.11 added the per-band weights.
+MIN_CLUSTERS_VERSION = (1, 11)
 
 
 def parse_qualified_fog_id(qualified: str) -> tuple[str | None, str]:
@@ -43,6 +48,43 @@ def _filter_fogs_by_allowed(fogs: list[dict], allowed: list[str]) -> list[dict]:
     ]
 
 
+def _parse_band_weights(data: dict) -> tuple[float, float, float] | None:
+    """The ``weights`` band table of a clusters.json entry, None when flat."""
+    bands = data.get("weights")
+    if bands is None:
+        return None
+    if not isinstance(bands, dict) or set(bands) != set(WEIGHT_BANDS):
+        raise ValueError(
+            f"clusters.json cluster {data.get('id')}: weights must be "
+            f"{{{', '.join(WEIGHT_BANDS)}}}, got {bands!r}"
+        )
+    try:
+        early, mid, late = (float(bands[band]) for band in WEIGHT_BANDS)
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"clusters.json cluster {data.get('id')}: weights must be numbers, "
+            f"got {bands!r}"
+        ) from None
+    return (early, mid, late)
+
+
+def _check_version(data: dict, path: Path) -> None:
+    """Refuse a clusters.json generated before the per-band weights."""
+    version = data.get("version")
+    if version is None:
+        return
+    try:
+        parsed = tuple(int(part) for part in str(version).split("."))
+    except ValueError:
+        raise ValueError(f"{path}: unreadable version {version!r}") from None
+    if parsed < MIN_CLUSTERS_VERSION:
+        wanted = ".".join(str(part) for part in MIN_CLUSTERS_VERSION)
+        raise ValueError(
+            f"{path} has version {version}, older than {wanted}: rerun "
+            "tools/generate_clusters.py (or the bootstrap) to regenerate it"
+        )
+
+
 @dataclass
 class ClusterData:
     """A cluster loaded from clusters.json."""
@@ -50,7 +92,10 @@ class ClusterData:
     id: str
     zones: list[str]
     type: str  # start, final_boss, legacy_dungeon, mini_dungeon, boss_arena
-    weight: float
+    # Flat weight (minutes), the same in every scaling band. Constructor
+    # argument only: read a weight with ``weight_at``, which needs the band
+    # it is played at.
+    weight: InitVar[float]
     entry_fogs: list[dict]  # [{"fog_id": str, "zone": str}, ...]
     exit_fogs: list[dict]  # [{"fog_id": str, "zone": str, "unique"?: bool}, ...]
     unique_exit_fogs: list[dict] = field(
@@ -65,6 +110,19 @@ class ClusterData:
     )  # Fogs spatially close — entry and exit cannot share a group
     display_name: str = ""  # Pre-computed display name from clusters.json
     boss_name: str = ""  # Canonical boss name from enemy.txt (via clusters.json)
+    # Weight per scaling band (early, mid, late), in minutes. Major boss
+    # arenas get longer with scaling, each by its own factor; every other
+    # cluster has three equal values. None at construction means flat.
+    weights: tuple[float, float, float] | None = None
+
+    def __post_init__(self, weight: float) -> None:
+        if self.weights is None:
+            self.weights = (weight, weight, weight)
+
+    def weight_at(self, band: str) -> float:
+        """Weight of this cluster played in ``band`` (one of ``WEIGHT_BANDS``)."""
+        assert self.weights is not None
+        return self.weights[WEIGHT_BANDS.index(band)]
 
     @classmethod
     def from_dict(cls, data: dict) -> ClusterData:
@@ -95,6 +153,7 @@ class ClusterData:
             proximity_groups=data.get("proximity_groups", []),
             display_name=data.get("display_name", ""),
             boss_name=data.get("boss_name", ""),
+            weights=_parse_band_weights(data),
         )
 
 
@@ -270,6 +329,7 @@ class ClusterPool:
         """Load cluster pool from JSON file."""
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
+        _check_version(data, path)
 
         pool = cls()
         pool.zone_maps = data.get("zone_maps", {})

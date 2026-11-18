@@ -183,9 +183,36 @@ and cluster weights of boss arenas stay hand-tuned, since boss clear times depen
 on the scaling tier and on which players dare the fight; the per-boss `boss.weight`
 is a separate calibration (`docs/boss-arena-constraints.md`, Calibration).
 
+**Per-band weights.** A zone of type `major_boss` or `final_boss`, or the
+`[clusters.<id>]` override of a cluster of those types, can give one weight per
+scaling band instead of a number:
+
+```toml
+[zones.mohgwyn_boss]
+type = "major_boss"
+weight = { early = 1.13, mid = 1.88, late = 2.32 }
+```
+
+The bands are those of the boss weights (`early` tier <= 8, `mid` 9-14, `late` >= 15)
+and the values are real minutes in the vanilla arena, rising with the band. The three
+keys are required and must be positive; a band table on any other type is an error
+that stops the cluster generation. A plain number means the same weight in every band.
+As of the mechanism's introduction no zone uses a band table yet: the values come
+from a calibration on race data.
+
+In `clusters.json` a banded cluster keeps a scalar `weight` (its `mid` value, for
+tools that read one number) and adds `weights: {early, mid, late}`; a flat cluster
+has no `weights` key. A boss zone with a band table also sits in the dungeon cluster
+that leads to it: that cluster stays flat, the zone counting for its `mid` value.
+Version 1.11 introduced the key: `speedfog/clusters.py`
+refuses an older file and asks to rerun `tools/generate_clusters.py` (the bootstrap
+does), so a host that pulled new weights cannot keep generating from stale ones.
+
 Cluster weight = logarithmic aggregation of the zone weights, rounded to one decimal:
 `round(avg_zone_weight * (1 + 0.5 * ln(n_zones)), 1)` (players traverse a path through
-the cluster, not every zone). Explicit `[clusters.<id>] weight` overrides replace the
+the cluster, not every zone). When a zone of the cluster carries a band table, the
+aggregation runs per band (a flat zone counting the same in each) and is rounded to
+two decimals instead of one. Explicit `[clusters.<id>] weight` overrides replace the
 computed value as declared (observed race data for the whole cluster); an override
 whose id matches no generated cluster is reported on stderr and surfaced by
 `tools/bootstrap.py`. Weights are consumed by the DAG generator's intra-layer matcher:
@@ -266,7 +293,7 @@ Multi-zone `major_boss` clusters can be **downgraded** to `legacy_dungeon` when 
 
 ```json
 {
-  "version": "1.10",
+  "version": "1.11",
   "generated_from": "fog.txt",
   "cluster_count": 123,
   "zone_maps": {"stormveil": "m10_00_00_00"},

@@ -190,6 +190,10 @@ class Cluster:
     exit_fogs: list[dict] = field(default_factory=list)
     cluster_type: str = ""
     weight: float = 0.0
+    # Per-band weights (early, mid, late) of a major boss arena whose
+    # metadata declares them; None for a flat weight. ``weight`` then holds
+    # the mid value.
+    weights: tuple[float, float, float] | None = None
     cluster_id: str = ""
     defeat_flag: int = 0
     allow_entry_as_exit: bool = False
@@ -1792,12 +1796,68 @@ def extract_opensplit_warp_ids(metadata: dict) -> set[str]:
     }
 
 
+# Scaling bands of a weight table, in speedfog's order
+# (speedfog.boss_arena_constraints.WEIGHT_BANDS), and the zone types that
+# may carry one: the fight of a major boss gets longer with scaling, each
+# boss by its own factor.
+WEIGHT_BANDS = ("early", "mid", "late")
+BANDED_WEIGHT_TYPES = frozenset({"major_boss", "final_boss"})
+
+
+def parse_band_weights(
+    value: Any, where: str, zone_type: str
+) -> tuple[float, float, float] | None:
+    """A ``weight = {early, mid, late}`` table, or None for a plain number.
+
+    ``where`` names the metadata entry in errors. Raises ValueError for a
+    table on a type outside ``BANDED_WEIGHT_TYPES``, with missing or extra
+    bands, or with a non-positive value.
+    """
+    if not isinstance(value, dict):
+        return None
+    if zone_type not in BANDED_WEIGHT_TYPES:
+        raise ValueError(
+            f"{where}: a per-band weight is only allowed on "
+            f"{', '.join(sorted(BANDED_WEIGHT_TYPES))}, not on {zone_type}"
+        )
+    if set(value) != set(WEIGHT_BANDS):
+        raise ValueError(
+            f"{where}: weight bands must be exactly {', '.join(WEIGHT_BANDS)}, "
+            f"got {', '.join(sorted(value)) or 'none'}"
+        )
+    bands = []
+    for band in WEIGHT_BANDS:
+        minutes = value[band]
+        if isinstance(minutes, bool) or not isinstance(minutes, int | float):
+            raise ValueError(f"{where}: weight.{band} must be a number")
+        if minutes <= 0:
+            raise ValueError(f"{where}: weight.{band} must be > 0, got {minutes}")
+        bands.append(float(minutes))
+    return (bands[0], bands[1], bands[2])
+
+
+def get_zone_band_weights(
+    zone: str,
+    zone_type: str,
+    metadata: dict,
+) -> tuple[float, float, float] | None:
+    """Per-band weights of a zone, None when its metadata weight is flat."""
+    zone_meta = metadata.get("zones", {}).get(zone)
+    if isinstance(zone_meta, dict) and "weight" in zone_meta:
+        return parse_band_weights(zone_meta["weight"], f"[zones.{zone}]", zone_type)
+    return None
+
+
 def get_zone_weight(
     zone: str,
     zone_type: str,
     metadata: dict,
 ) -> float:
-    """Get weight for a zone from metadata."""
+    """Get the flat weight for a zone from metadata.
+
+    A zone with a per-band table has no flat weight: read it with
+    ``get_zone_band_weights``.
+    """
     # Check zone-specific override
     zones_meta = metadata.get("zones", {})
     if zone in zones_meta:
@@ -2075,7 +2135,11 @@ def filter_and_enrich_clusters(
         # Players traverse a path through zones, not all of them,
         # so additional zones have diminishing impact on traversal time.
         # Formula: avg_zone_weight * (1 + 0.5 * ln(n_zones))
+        # A zone with a per-band table contributes three weights, a flat
+        # zone the same weight three times.
         zone_weights: list[float] = []
+        zone_bands: list[tuple[float, float, float]] = []
+        banded = False
         for zone_name in cluster.zones:
             # Use metadata type override if available, else heuristic
             zone_type = None
@@ -2085,9 +2149,15 @@ def filter_and_enrich_clusters(
                     zone_type = zm["type"]
             if zone_type is None and zone_name in areas:
                 zone_type = get_zone_type(areas[zone_name], major_zones, fortress_zones)
-            zone_weights.append(
-                get_zone_weight(zone_name, zone_type or "other", metadata)
-            )
+            bands = get_zone_band_weights(zone_name, zone_type or "other", metadata)
+            if bands is not None:
+                banded = True
+                zone_weights.append(bands[WEIGHT_BANDS.index("mid")])
+                zone_bands.append(bands)
+                continue
+            flat = get_zone_weight(zone_name, zone_type or "other", metadata)
+            zone_weights.append(flat)
+            zone_bands.append((flat, flat, flat))
 
         n_zones = len(zone_weights)
         avg_weight = sum(zone_weights) / n_zones
@@ -2098,6 +2168,22 @@ def filter_and_enrich_clusters(
         # starved, and buys nothing now that the matcher's first band has
         # width (see docs/dag-generation.md, intra-layer weight balance).
         cluster.weight = round(avg_weight * (1 + 0.5 * math.log(n_zones)), 1)
+        # Bands belong to the boss arena cluster. A boss zone also sits in
+        # the dungeon cluster that leads to it: that cluster stays flat, the
+        # zone counting for its mid value above.
+        if banded and cluster.cluster_type in BANDED_WEIGHT_TYPES:
+            # Measured minutes: kept at 0.01, like the boss weights.
+            early, mid, late = (
+                round(
+                    sum(b[i] for b in zone_bands)
+                    / n_zones
+                    * (1 + 0.5 * math.log(n_zones)),
+                    2,
+                )
+                for i in range(len(WEIGHT_BANDS))
+            )
+            cluster.weights = (early, mid, late)
+            cluster.weight = mid
 
         # For boss_arena clusters with one-way internal links, remove
         # exit fogs from zones that become unreachable after traversal.
@@ -2149,7 +2235,17 @@ def filter_and_enrich_clusters(
             if cm.get("exclude"):
                 continue
             if "weight" in cm:
-                cluster.weight = float(cm["weight"])
+                override = parse_band_weights(
+                    cm["weight"],
+                    f"[clusters.{cluster.cluster_id}]",
+                    cluster.cluster_type,
+                )
+                if override is None:
+                    cluster.weight = float(cm["weight"])
+                    cluster.weights = None
+                else:
+                    cluster.weights = override
+                    cluster.weight = override[WEIGHT_BANDS.index("mid")]
             cluster.proximity_groups = cm.get("proximity_groups", [])
             cluster.allowed_entries = cm.get("allowed_entries", [])
             cluster.allowed_exits = cm.get("allowed_exits", [])
@@ -2368,6 +2464,11 @@ def clusters_to_json(
             "display_name": c.display_name_override
             or _pick_display_name(c, areas, zone_names),
             "weight": c.weight,
+            **(
+                {"weights": dict(zip(WEIGHT_BANDS, c.weights, strict=True))}
+                if c.weights is not None
+                else {}
+            ),
             "entry_fogs": c.entry_fogs,
             "exit_fogs": c.exit_fogs,
         }
@@ -2397,7 +2498,7 @@ def clusters_to_json(
         cluster_list.append(entry)
 
     return {
-        "version": "1.10",
+        "version": "1.11",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,

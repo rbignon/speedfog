@@ -467,7 +467,7 @@ def dag_to_dict(
             "layer": node.layer,
             "tier": node.tier,
             "original_tier": original_tier,
-            "weight": node.cluster.weight,
+            "weight": node.weight,
             "unused_exits": unused_exit_count(dag, node.id),
             "exits": [],
             "entrances": [],

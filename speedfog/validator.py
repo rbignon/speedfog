@@ -300,11 +300,11 @@ def _check_layer_weight_spread(
         if len(node_ids) <= 1:
             continue
 
-        weights = [dag.nodes[nid].cluster.weight for nid in node_ids]
+        weights = [dag.nodes[nid].weight for nid in node_ids]
         spread = max(weights) - min(weights)
         if spread > max_spread + 1e-9:
             details = ", ".join(
-                f"{dag.nodes[nid].cluster.id}(w={dag.nodes[nid].cluster.weight})"
+                f"{dag.nodes[nid].cluster.id}(w={dag.nodes[nid].weight})"
                 for nid in node_ids
             )
             errors.append(

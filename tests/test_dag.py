@@ -1021,3 +1021,38 @@ def test_dag_drops_crosslinks_added_field():
 
     d = Dag(seed=0)
     assert not hasattr(d, "crosslinks_added")
+
+
+def test_node_weight_follows_the_band_of_its_tier():
+    cluster = make_cluster("boss", cluster_type="major_boss")
+    cluster.weights = (1.1, 1.9, 2.3)
+    weights = [
+        DagNode(id="n", cluster=cluster, layer=1, tier=tier).weight
+        for tier in (8, 9, 14, 15)
+    ]
+    assert weights == [1.1, 1.9, 1.9, 2.3]
+
+
+def test_path_bounds_use_the_band_weights():
+    """The same diamond is balanced at early tiers and 3.0 apart late."""
+
+    def diamond(tier: int) -> Dag:
+        dag = Dag(seed=1)
+        specs = {
+            "s": (1.0,) * 3,
+            "a": (1.0,) * 3,
+            "b": (1.0, 1.0, 4.0),
+            "e": (2.0,) * 3,
+        }
+        for layer, ids in enumerate((["s"], ["a", "b"], ["e"])):
+            for nid in ids:
+                cluster = make_cluster(f"c_{nid}", zones=[f"z_{nid}"])
+                cluster.weights = specs[nid]
+                dag.add_node(DagNode(id=nid, cluster=cluster, layer=layer, tier=tier))
+        for src, dst in (("s", "a"), ("s", "b"), ("a", "e"), ("b", "e")):
+            dag.add_edge(src, dst, FogRef("x", "z"), FogRef("y", "z"))
+        dag.start_id, dag.end_id = "s", "e"
+        return dag
+
+    assert diamond(5).path_weight_bounds() == (4.0, 4.0)
+    assert diamond(20).path_weight_bounds() == (4.0, 7.0)

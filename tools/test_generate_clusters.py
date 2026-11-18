@@ -1918,6 +1918,120 @@ class TestClusterWeightAggregation:
         assert len(result) == 1
         assert result[0].weight == 2.7
 
+    BANDS = {"early": 1.13, "mid": 1.88, "late": 2.32}
+
+    def test_band_table_on_a_major_boss_zone(self):
+        """A {early, mid, late} weight is kept per band; the scalar weight
+        is the mid value."""
+        metadata = {
+            "defaults": {},
+            "zones": {"mohg": {"type": "major_boss", "weight": self.BANDS}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"mohg"}))
+
+        result = self._enrich([cluster], self._areas("mohg"), metadata)
+
+        assert result[0].weights == (1.13, 1.88, 2.32)
+        assert result[0].weight == 1.88
+
+    def test_flat_weight_has_no_bands(self):
+        metadata = {
+            "defaults": {},
+            "zones": {"mohg": {"type": "major_boss", "weight": 2}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"mohg"}))
+
+        result = self._enrich([cluster], self._areas("mohg"), metadata)
+
+        assert result[0].weights is None
+        assert result[0].weight == 2
+
+    def test_band_table_on_a_dungeon_is_rejected(self):
+        metadata = {
+            "defaults": {},
+            "zones": {"stormveil": {"type": "legacy_dungeon", "weight": self.BANDS}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        with pytest.raises(ValueError, match=r"\[zones\.stormveil\].*legacy_dungeon"):
+            self._enrich([cluster], self._areas("stormveil"), metadata)
+
+    @pytest.mark.parametrize(
+        "table",
+        [
+            {"early": 1, "mid": 2},
+            {"early": 1, "mid": 2, "late": 3, "final": 4},
+            {"early": 1, "mid": 0, "late": 3},
+            {"early": 1, "mid": "2", "late": 3},
+        ],
+    )
+    def test_malformed_band_table_is_rejected(self, table):
+        metadata = {
+            "defaults": {},
+            "zones": {"mohg": {"type": "major_boss", "weight": table}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"mohg"}))
+
+        with pytest.raises(ValueError, match=r"\[zones\.mohg\]"):
+            self._enrich([cluster], self._areas("mohg"), metadata)
+
+    def test_multi_zone_bands_aggregate_per_band(self):
+        """A banded zone (1, 2, 3) with a flat zone (1): per band,
+        avg * (1 + 0.5 ln 2), kept at two decimals."""
+        metadata = {
+            "defaults": {},
+            "zones": {
+                "boss": {
+                    "type": "major_boss",
+                    "weight": {"early": 1, "mid": 2, "late": 3},
+                },
+                "runup": {"type": "major_boss", "weight": 1},
+            },
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"boss", "runup"}))
+
+        result = self._enrich([cluster], self._areas("boss", "runup"), metadata)
+
+        assert result[0].weights == (1.35, 2.02, 2.69)
+        assert result[0].weight == 2.02
+
+    def test_cluster_override_with_bands(self):
+        """A banded [clusters.<id>] weight replaces the aggregation; a flat
+        one clears the bands the zones declared."""
+        areas = self._areas("mohg")
+        zones = {
+            "mohg": {"type": "major_boss", "weight": {"early": 9, "mid": 9, "late": 9}}
+        }
+        probe = _make_cluster_with_fogs(frozenset({"mohg"}))
+        self._enrich([probe], areas, {"defaults": {}, "zones": zones})
+        cid = probe.cluster_id
+
+        banded = self._enrich(
+            [_make_cluster_with_fogs(frozenset({"mohg"}))],
+            areas,
+            {"defaults": {}, "zones": zones, "clusters": {cid: {"weight": self.BANDS}}},
+        )
+        flat = self._enrich(
+            [_make_cluster_with_fogs(frozenset({"mohg"}))],
+            areas,
+            {"defaults": {}, "zones": zones, "clusters": {cid: {"weight": 3}}},
+        )
+
+        assert banded[0].weights == (1.13, 1.88, 2.32)
+        assert (flat[0].weights, flat[0].weight) == (None, 3)
+
+    def test_cluster_override_with_bands_on_a_dungeon_is_rejected(self):
+        areas = self._areas("stormveil")
+        metadata = {"defaults": {"legacy_dungeon": 10}, "zones": {}}
+        probe = _make_cluster_with_fogs(frozenset({"stormveil"}))
+        self._enrich([probe], areas, metadata)
+        metadata["clusters"] = {probe.cluster_id: {"weight": self.BANDS}}
+
+        with pytest.raises(ValueError, match=r"\[clusters\."):
+            self._enrich(
+                [_make_cluster_with_fogs(frozenset({"stormveil"}))], areas, metadata
+            )
+
     def test_cluster_override_applied_verbatim(self, capsys):
         """An explicit [clusters.<id>] weight replaces the computed one
         as declared, without rounding or warning."""
@@ -3377,6 +3491,47 @@ class TestMajorBossDowngrade:
         assert len(result) == 1
         assert result[0].cluster_type == "legacy_dungeon"
 
+    def test_downgraded_cluster_drops_the_boss_zone_bands(self):
+        """Bands describe the boss arena cluster. In a cluster downgraded to a
+        dungeon, a banded boss zone counts for its mid value and the cluster
+        keeps one weight, at one decimal."""
+        areas = self._make_areas(
+            entry_zone={"maps": ["m10_00_00_00"]},
+            boss_zone={"maps": ["m10_00_00_00"], "has_boss": True, "defeat_flag": 999},
+            exploration_zone={"maps": ["m10_00_00_00"]},
+        )
+        wg = WorldGraph()
+        wg.add_edge("entry_zone", "boss_zone", bidirectional=False)
+        wg.add_edge("entry_zone", "exploration_zone", bidirectional=True)
+        cluster = Cluster(
+            zones=frozenset({"entry_zone", "boss_zone", "exploration_zone"}),
+            entry_fogs=[{"fog_id": "entry_fog", "zone": "entry_zone"}],
+            exit_fogs=[
+                {"fog_id": "boss_exit", "zone": "boss_zone"},
+                {"fog_id": "explore_exit", "zone": "exploration_zone"},
+            ],
+        )
+        metadata = {
+            "defaults": {"other": 2, "legacy_dungeon": 2},
+            "zones": {"boss_zone": {"weight": {"early": 1, "mid": 2, "late": 9}}},
+        }
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            {"boss_zone"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            world_graph=wg,
+        )
+
+        assert result[0].cluster_type == "legacy_dungeon"
+        assert result[0].weights is None
+        # three zones at 2 (the boss zone's mid): 2 * (1 + 0.5 ln 3) = 3.1
+        assert result[0].weight == 3.1
+
     def test_unskippable_boss_entry_in_boss_zone(self):
         """Cluster with entry directly in boss zone stays major_boss.
 
@@ -4015,8 +4170,30 @@ class TestClusterConstraintsSerialization:
         assert "allowed_entries" not in c
         assert "allowed_exits" not in c
 
-    def test_version_is_1_10(self):
-        """clusters.json version bumped to 1.10."""
+    def test_band_weights_emitted_only_for_banded_clusters(self):
+        def entry(weights):
+            cluster = Cluster(
+                zones=frozenset({"z1"}),
+                cluster_id="test_1234",
+                cluster_type="major_boss",
+                weight=1.88,
+                weights=weights,
+            )
+            areas = {
+                "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
+            }
+            return clusters_to_json([cluster], areas)["clusters"][0]
+
+        assert entry((1.13, 1.88, 2.32))["weights"] == {
+            "early": 1.13,
+            "mid": 1.88,
+            "late": 2.32,
+        }
+        assert "weights" not in entry(None)
+        assert entry(None)["weight"] == 1.88
+
+    def test_version_is_1_11(self):
+        """clusters.json version bumped to 1.11 (per-band weights)."""
         cluster = Cluster(
             zones=frozenset({"z1"}),
             entry_fogs=[],
@@ -4029,7 +4206,7 @@ class TestClusterConstraintsSerialization:
             "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
         }
         result = clusters_to_json([cluster], areas)
-        assert result["version"] == "1.10"
+        assert result["version"] == "1.11"
         assert result["zone_conflicts"] == {}
 
 

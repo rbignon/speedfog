@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from speedfog.clusters import ClusterData, ClusterPool
 
 
@@ -132,7 +134,7 @@ class TestZoneConflicts:
     def test_zone_conflicts_loaded_from_json(self, tmp_path):
         """zone_conflicts dict is loaded from clusters.json."""
         data = {
-            "version": "1.10",
+            "version": "1.11",
             "zone_maps": {},
             "zone_names": {},
             "zone_conflicts": {
@@ -169,7 +171,7 @@ class TestZoneConflicts:
     def test_zone_conflicts_defaults_empty(self, tmp_path):
         """zone_conflicts defaults to empty dict if missing from JSON."""
         data = {
-            "version": "1.9",
+            "version": "1.11",
             "zone_maps": {},
             "zone_names": {},
             "clusters": [],
@@ -248,3 +250,51 @@ class TestExcludeZones:
         removed = pool.exclude_zones([])
         assert removed == []
         assert len(pool.clusters) == 3
+
+
+class TestBandWeights:
+    """Per-band weights (early, mid, late) of a cluster."""
+
+    BASE = {
+        "id": "boss_1234",
+        "zones": ["boss"],
+        "type": "major_boss",
+        "weight": 2,
+        "entry_fogs": [],
+        "exit_fogs": [],
+    }
+
+    def test_flat_cluster_weighs_the_same_in_every_band(self):
+        cluster = ClusterData.from_dict(self.BASE)
+        assert [cluster.weight_at(b) for b in ("early", "mid", "late")] == [2, 2, 2]
+
+    def test_band_table_wins_over_the_scalar(self):
+        cluster = ClusterData.from_dict(
+            {**self.BASE, "weights": {"early": 1.1, "mid": 1.9, "late": 2.3}}
+        )
+        assert [cluster.weight_at(b) for b in ("early", "mid", "late")] == [
+            1.1,
+            1.9,
+            2.3,
+        ]
+
+    def test_incomplete_band_table_is_rejected(self):
+        with pytest.raises(ValueError, match="boss_1234"):
+            ClusterData.from_dict({**self.BASE, "weights": {"early": 1, "mid": 2}})
+
+    def test_no_band_less_weight_attribute(self):
+        """A reader that forgot the band fails instead of reading one value."""
+        cluster = ClusterData.from_dict(self.BASE)
+        with pytest.raises(AttributeError):
+            cluster.weight  # noqa: B018
+
+    def test_file_older_than_band_weights_is_rejected(self, tmp_path):
+        path = tmp_path / "clusters.json"
+        path.write_text(json.dumps({"version": "1.10", "clusters": []}))
+        with pytest.raises(ValueError, match="generate_clusters"):
+            ClusterPool.from_json(path)
+
+    def test_file_without_version_loads(self, tmp_path):
+        path = tmp_path / "clusters.json"
+        path.write_text(json.dumps({"clusters": [self.BASE]}))
+        assert ClusterPool.from_json(path).by_id["boss_1234"].weight_at("late") == 2

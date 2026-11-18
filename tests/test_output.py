@@ -244,6 +244,16 @@ def _arena_dag(left_by: str) -> Dag:
     return dag
 
 
+def test_node_weight_exported_at_the_node_tier():
+    """graph.json carries the weight of the band the node is played at."""
+    dag = make_test_dag()
+    node = next(n for n in dag.nodes.values() if n.id != dag.start_id)
+    node.cluster.weights = (1.1, 1.9, 2.3)
+    node.tier = 20
+    clusters = ClusterPool(clusters=[n.cluster for n in dag.nodes.values()])
+    assert dag_to_dict(dag, clusters)["nodes"][node.cluster.id]["weight"] == 2.3
+
+
 class TestUnusedExits:
     def _nodes(self, dag: Dag) -> dict:
         clusters = ClusterPool(clusters=[n.cluster for n in dag.nodes.values()])

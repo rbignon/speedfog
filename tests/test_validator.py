@@ -1110,6 +1110,23 @@ class TestLayerWeightSpread:
         spread_errors = [e for e in result.errors if "spread" in e.lower()]
         assert spread_errors, f"Expected a spread error, got: {result.errors}"
 
+    def test_spread_is_measured_at_the_layer_band(self):
+        """Two clusters equal at early scaling and 3 apart late: the layer
+        passes at an early tier and fails at a late one."""
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
+        for tier, expect_error in ((5, False), (20, True)):
+            dag = self._make_dag_with_layer([1, 1])
+            dag.nodes["n1"].cluster.weights = (1.0, 1.0, 4.0)
+            for node in dag.nodes.values():
+                node.tier = tier
+            errors = [
+                e for e in validate_dag(dag, config).errors if "spread" in e.lower()
+            ]
+            assert bool(errors) is expect_error, (tier, errors)
+        assert "w=4.0" in errors[0]
+
     def test_single_node_layer_ignored(self):
         """Single-node layers cannot have spread > 0 by definition."""
         dag = make_simple_dag()  # only start (w=0) and end (w=5) layers

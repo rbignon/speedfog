@@ -331,6 +331,16 @@ bosses of a two-slot arena) to cap
 the lightest start-to-end path, see `docs/dag-generation.md` ("Fastest path
 cap").
 
+Two band systems coexist and are not on the same scale. `boss.weight` (this
+file) describes a boss wherever the randomizer places it, and each band has
+its common shift removed: it compares bosses inside one band. The per-band
+weight of a `major_boss` / `final_boss` cluster (`zone_metadata.toml`, see
+`docs/clusters.md`) describes the vanilla fight in its own arena, in real
+minutes that rise with the band; it is what the generator balances layers and
+paths with. An arena that receives a randomized boss keeps its cluster weight
+for the generation balance and is weighed by the placed boss only in the
+fastest path cap.
+
 ### Calibration
 
 `boss.weight` values come from `speedfog-racing/tools/extract_boss_weights.py`

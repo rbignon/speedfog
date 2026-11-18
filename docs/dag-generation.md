@@ -27,6 +27,7 @@ A cluster instance placed at a specific layer and tier in the DAG.
 |-------|------|-------------|
 | `id` | str | Unique node ID (usually `cluster.id`) |
 | `cluster` | ClusterData | Zone cluster with entry/exit fogs |
+| `weight` | float (property) | The cluster's weight at the scaling band of `tier` |
 | `layer` | int | Vertical position (0 = start) |
 | `tier` | int | Enemy difficulty scaling (1-34) |
 | `entry_fogs` | list[FogRef] | Fog gates consumed to enter (empty for start) |
@@ -281,14 +282,16 @@ single remaining node (convergence has reduced width to 1) to the boss.
 
 ### 6. Tier Assignment
 
-Tiers are assigned in a post-pass after DAG construction is complete. This ensures `total_layers`
-is exact (not estimated), guaranteeing monotonically non-decreasing tiers across layers. See "Tier
-Interpolation" below.
+A node gets its tier when it is created: the tier depends only on the layer index and the
+`[structure]` config (`layers_count` is exact, not estimated), which guarantees monotonically
+non-decreasing tiers across layers. See "Tier Interpolation" below. Knowing the tier that early
+is what lets the main loop weigh a layer's candidates at the layer's scaling band (see "Weight
+Balance").
 
 ## Tier Interpolation
 
-Tiers are assigned in a **post-pass** after DAG construction is complete. The progression curve is
-configurable via `tier_curve`:
+A node's tier is a function of its layer index, computed when the node is created. The
+progression curve is configurable via `tier_curve`:
 
 **Linear** (default): constant tier increase per layer.
 
@@ -318,6 +321,16 @@ This maps to FogMod's enemy scaling SpEffects.
 ## Weight Balance
 
 Each cluster has a **weight** (approximate traversal time in minutes, see `docs/clusters.md`).
+A `major_boss` or `final_boss` cluster can carry one weight per scaling band (`early` tier <= 8,
+`mid` 9-14, `late` >= 15, the bands of `weight_band` in `boss_arena_constraints.py`): the fight
+gets longer with scaling, each boss by its own factor, so two bosses that are fair alternatives
+on an early layer may not be on a late one. Every other cluster weighs the same in the three
+bands. A weight is therefore always read at a band: `ClusterData.weight_at(band)` for a
+candidate (the band of the layer being built), `DagNode.weight` for a placed node (the band of
+its tier). There is no band-less cluster weight, so a reader cannot ignore the bands by
+accident. Everything below (layer window, soft preference, path spread, fastest path cap, the
+node `weight` of graph.json, the spoiler) uses these band weights.
+
 Balance is enforced at two levels:
 
 **Per layer**: the `[structure]` keys `max_layer_spread` (hard window, re-asserted by the
