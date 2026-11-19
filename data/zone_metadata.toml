@@ -3,7 +3,7 @@
 # This file defines default weights per zone type and optional
 # zone-specific overrides for cluster weight calculations.
 #
-# weight = relative traversal difficulty (data-driven for dungeons, phase-based for bosses)
+# weight = approximate duration in minutes (measured for dungeons and major boss arenas)
 #
 # Dungeon weights (mini_dungeon, legacy_dungeon) follow the median clear time
 # in minutes, rounded to 0.5, reported by speedfog-racing's
@@ -19,9 +19,14 @@
 #
 # A major_boss or final_boss zone (or the [clusters.<id>] override of such a
 # cluster) can give one weight per scaling band instead of a number:
-#   weight = { early = 1.13, mid = 1.88, late = 2.32 }
+#   weight = { early = 1.15, mid = 1.86, late = 2.41 }
 # early = tier <= 8, mid = 9-14, late = >= 15; real minutes in the vanilla
 # arena. All three keys are required. See docs/clusters.md.
+# Values from speedfog-racing's tools/extract_zone_times.py, last run on the
+# 2026-11-18 production dump: --bands --since 2026-07-27 (player-adjusted
+# median of vanilla-arena clears, a band under 20 clears takes the nearest
+# measured band; one exception, see zones.fingergrounds). Bosses only ever
+# played last are measured on final clears.
 #
 # [warps."<name>"] entries opt specific FogMod warps into 'opensplit' handling
 # at runtime (see Graph.cs:1257-1266). Used for unique warps where one side
@@ -226,7 +231,7 @@ weight = 0.5
 weight = 1
 
 [clusters.volcano_temple_2a47]
-weight = 1.5
+weight = { early = 0.69, mid = 1.14, late = 1.29 }
 
 [clusters.sewer_46d2]
 weight = 1
@@ -328,7 +333,7 @@ weight = 2.5
 # --- Base game ---
 
 [zones.peninsula_leonine]
-weight = 0.5
+weight = { early = 0.45, mid = 0.58, late = 0.69 }
 
 [zones.volcano_abductors]
 type = "boss_arena"
@@ -337,7 +342,7 @@ weight = 1.5
 # Astel is a remembrance boss, override from boss_arena to major_boss
 [zones.ainsel_boss]
 type = "major_boss"
-weight = 2.5
+weight = { early = 1.13, mid = 1.57, late = 1.87 }
 
 [zones.caelid_catacombs_boss]
 weight = 0.5
@@ -356,6 +361,7 @@ exclude = true
 
 [zones.ainsel_dragonkin]
 type = "major_boss"
+weight = { early = 0.95, mid = 1.28, late = 1.39 }
 
 [zones.deeproot_boss]
 type = "boss_arena"
@@ -364,86 +370,84 @@ allow_entry_as_exit = false
 
 [zones.siofra_nokron_boss]
 type = "major_boss"
-weight = 2
+weight = { early = 0.98, mid = 1.4, late = 1.54 }
 
 [zones.siofra_nokron_mimic]
 type = "major_boss"
+weight = { early = 0.7, mid = 0.83, late = 0.89 }
 
 [zones.siofra_nokron_gargoyles]
 type = "major_boss"
-weight = 2
+weight = { early = 1.42, mid = 2.15, late = 2.64 }
 
 [zones.haligtree_malenia]
-weight = 5
+weight = { early = 2.17, mid = 3.15, late = 3.97 }
 
-# Multi-phase major boss (2+ phase transitions)
+# Weight: [clusters.academy_library_58f2] band override
 [zones.academy_library]
 type = "major_boss"
-weight = 3
-
-[zones.stormveil_godrick]
-weight = 2
 
 # Margit is Morgott in disguise: killing Morgott removes Margit from his arena.
 # These zones cannot coexist in the same run.
 [zones.stormveil_margit]
 conflicts_with = ["leyndell_throne"]
+weight = { early = 0.59, mid = 0.83, late = 1.02 }
 
 [zones.leyndell_throne]
-weight = 2
+weight = { early = 1.28, mid = 1.61, late = 1.94 }
 conflicts_with = ["stormveil_margit"]
 
 [zones.leyndell2_sanctuary]
-weight = 2
+weight = { early = 0.79, mid = 1.05, late = 1.23 }
 
 [zones.leyndell2_throne]
-weight = 4
+weight = { early = 1.35, mid = 1.93, late = 2.26 }
 
 [zones.volcano_rykard]
-weight = 4.5
+weight = { early = 2.23, mid = 2.58, late = 2.62 }
 
 [zones.flamepeak_firegiant]
-weight = 4
+weight = { early = 1.9, mid = 2.9, late = 3.42 }
 
 [zones.farumazula_maliketh]
-weight = 2.5
+weight = { early = 0.89, mid = 1.27, late = 1.51 }
 allow_entry_as_exit = false
 
 [zones.farumazula_placidusax]
-weight = 5.5
+weight = { early = 3.94, mid = 3.94, late = 4.34 }  # early from the nearest band; measured as a final boss
 allow_entry_as_exit = false
 
 [zones.altus_elemer]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Area has "minor"
 
 [zones.caelid_radahn]
-weight = 2.5
+weight = { early = 1.38, mid = 1.91, late = 2.25 }
 allow_entry_as_exit = false
 
 [zones.farumazula_godskinduo]
-weight = 2.5
+weight = { early = 1.37, mid = 2.09, late = 2.4 }
 
 [zones.mohgwyn_boss]
-weight = 2
+weight = { early = 1.15, mid = 1.86, late = 2.41 }
 
 [zones.mountaintops_sol_boss]
-weight = 2
+weight = { early = 1.26, mid = 1.96, late = 2.42 }
 
 [zones.scadutree_base]
-weight = 5.5
+weight = { early = 1.76, mid = 2.38, late = 2.72 }
 
 [zones.sewer_mohg]
-weight = 2
+weight = { early = 0.84, mid = 1.33, late = 1.48 }
 
 [zones.leyndell_erdtree]
-weight = 5
+weight = { early = 3.71, mid = 3.71, late = 4.22 }  # early from the nearest band
 allow_entry_as_exit = false
 
 # --- DLC ---
 
 [zones.enirilim_radahn]
 type = "final_boss"
-weight = 4
+weight = { early = 3.23, mid = 3.23, late = 3.18 }  # early from the nearest band
 
 [zones.enirilim]
 type = "mini_dungeon"
@@ -500,25 +504,25 @@ type = "mini_dungeon"
 weight = 1
 
 [zones.scaduview_gaius]
-weight = 2
+weight = { early = 0.97, mid = 1.39, late = 1.64 }
 
 [zones.fissure_boss]
-weight = 2
+weight = { early = 1, mid = 1.46, late = 1.75 }
 
 [zones.jaggedpeak_bayle]
-weight = 4
+weight = { early = 1.79, mid = 2.44, late = 2.83 }
 
 [zones.midramanse_boss]
-weight = 2
+weight = { early = 0.91, mid = 1.3, late = 1.62 }
 
 [zones.belurat_boss]
-weight = 2
+weight = { early = 0.85, mid = 1.31, late = 1.68 }
 
 [zones.storehouse_messmer]
-weight = 3
+weight = { early = 0.95, mid = 1.45, late = 1.71 }
 
 [zones.fingergrounds]
-weight = 3.5
+weight = { early = 1.84, mid = 1.84, late = 1.84 }  # measured as a final boss, late band (the only well-sampled one)
 allow_entry_as_exit = false
 
 # Exclude all mausoleums
@@ -589,6 +593,7 @@ exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, n
 
 [clusters.academy_library_58f2]
 display_name = "Rennala, Queen of the Full Moon"
+weight = { early = 1.37, mid = 1.9, late = 2.12 }
 
 [clusters.caelid_gaeltunnel_befe]
 exclude = true
@@ -856,3 +861,43 @@ allowed_entries = [
 # SpeedFog starts at Chapel of Anticipation).
 [warps."15002600"]
 opensplit = true
+
+# =============================================================================
+# Major boss band weights without another entry (measured, see header)
+# =============================================================================
+
+# Red Wolf of Radagon
+[zones.academy_redwolf]
+weight = { early = 0.51, mid = 0.79, late = 0.88 }
+
+# Castle Ensis - Rellana, Twin Moon Knight
+[zones.ensis_boss]
+weight = { early = 0.8, mid = 1.2, late = 1.64 }
+
+# Loretta, Knight of the Haligtree
+[zones.haligtree_loretta]
+weight = { early = 0.74, mid = 1.2, late = 1.51 }
+
+# Leyndell - Godfrey
+[zones.leyndell_sanctuary]
+weight = { early = 0.67, mid = 0.99, late = 1.14 }
+
+# Royal Knight Loretta
+[zones.liurnia_loretta]
+weight = { early = 0.58, mid = 0.95, late = 1.27 }
+
+# Magma Wyrm Makar
+[zones.precipice_boss]
+weight = { early = 0.9, mid = 1.16, late = 1.42 }
+
+# Ancient Ruins of Rauh - Romina, Saint of the Bud
+[zones.rauhruins_romina]
+weight = { early = 0.9, mid = 1.31, late = 1.63 }
+
+# Shadow Keep - Golden Hippopotamus
+[zones.shadowkeep_boss]
+weight = { early = 0.74, mid = 1.19, late = 1.37 }
+
+# Godrick the Grafted
+[clusters.stormveil_godrick_48fd]
+weight = { early = 0.8, mid = 1.17, late = 1.34 }

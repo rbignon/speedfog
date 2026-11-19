@@ -427,7 +427,7 @@ def effective_node_weights(
     ``enemy_assignments`` (item_config's ``{arena entity: boss entity}``,
     decimal strings) weighs the placed boss's ``boss.weight`` at the band
     of the node's tier, in place of its cluster weight: the cluster weight
-    of an arena is hand-tuned for its vanilla boss. A multi-phase arena has
+    of an arena is set for its vanilla boss. A multi-phase arena has
     a second slot (``phase_mapping``, leader -> phase-1 entity) that
     receives a boss of its own, fought before the leader's: the node
     weighs both.

@@ -178,10 +178,11 @@ Per-zone overrides `[zones.<name>] weight` for notably smaller/larger areas (e.g
 (observed traversal times from production race data, plus manual adjustments).
 Dungeon weights (`mini_dungeon`, `legacy_dungeon`) follow the median clear time,
 rounded to 0.5, reported by speedfog-racing's `tools/extract_zone_times.py` (the
-header of `zone_metadata.toml` records the last run and its thresholds). The zone
-and cluster weights of boss arenas stay hand-tuned, since boss clear times depend
-on the scaling tier and on which players dare the fight; the per-boss `boss.weight`
-is a separate calibration (`docs/boss-arena-constraints.md`, Calibration).
+header of `zone_metadata.toml` records the last run and its thresholds). Major
+boss arenas (`major_boss`, `final_boss`) carry measured per-band weights from the
+same tool's `--bands` report (see below); `boss_arena` weights stay hand-tuned.
+The per-boss `boss.weight` is a separate calibration
+(`docs/boss-arena-constraints.md`, Calibration).
 
 **Per-band weights.** A zone of type `major_boss` or `final_boss`, or the
 `[clusters.<id>]` override of a cluster of those types, can give one weight per
@@ -189,16 +190,16 @@ scaling band instead of a number:
 
 ```toml
 [zones.mohgwyn_boss]
-type = "major_boss"
-weight = { early = 1.13, mid = 1.88, late = 2.32 }
+weight = { early = 1.15, mid = 1.86, late = 2.41 }
 ```
 
 The bands are those of the boss weights (`early` tier <= 8, `mid` 9-14, `late` >= 15)
-and the values are real minutes in the vanilla arena, rising with the band. The three
+and the values are real minutes in the vanilla arena, generally rising with the band
+(a band with too few clears takes the nearest measured one). The three
 keys are required and must be positive; a band table on any other type is an error
 that stops the cluster generation. A plain number means the same weight in every band.
-As of the mechanism's introduction no zone uses a band table yet: the values come
-from a calibration on race data.
+Every `major_boss` and `final_boss` cluster carries a measured band table since
+2026-11-19 (41 clusters, three of them as a `[clusters.<id>]` override).
 
 In `clusters.json` a banded cluster keeps a scalar `weight` (its `mid` value, for
 tools that read one number) and adds `weights: {early, mid, late}`; a flat cluster

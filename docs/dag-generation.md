@@ -349,7 +349,7 @@ auto mode.
 
 Choosing the tolerance is a per-pool call because the spread scales with `layers_count` and
 width: measured on the racing pools, ~30-35-layer width-3 pools sit at a median spread around
-5 (tolerance 5 rerolls ~half the candidates, ~2 attempts per seed; 6 rerolls ~15-25%), the
+5 (on `standard`, tolerance 4 takes ~49 attempts per seed, 4.5 ~15, 5 ~5.5, 5.5 ~3), the
 90-layer expedition pool sits around 11 (tolerance below ~15 makes generation fail), and
 width-1 pools always have spread 0.
 
@@ -366,11 +366,11 @@ boss's `boss.weight` at the band of the node's tier (`effective_node_weights` in
 every other node (dungeons, arenas the matcher left vanilla, every node when bosses are not
 randomized) weighs its cluster. A multi-phase arena (Fire Giant, Rennala: two slots, each
 with its own placed boss, see "Multi-phase bosses" in that document) weighs both bosses.
-Replacing rather than adjusting is deliberate: an arena's cluster weight is hand-tuned for
-its vanilla boss. Known approximation: the few arena clusters spanning several zones (a
+Replacing rather than adjusting is deliberate: an arena's cluster weight is set for its
+vanilla boss (measured for major arenas, hand-tuned for `boss_arena` clusters). Known approximation: the few arena clusters spanning several zones (a
 post-boss room, a chest) lose the weight of those extra zones when a boss is placed there. `budget.tolerance` is unaffected and stays
 on cluster weights, so the two keys do not measure the same thing: with placed bosses the
-lightest-to-heaviest gap is wider than the tolerance (median 5.0 on `standard` and 8.0 on
+lightest-to-heaviest gap is wider than the tolerance (median 4.9 on `standard` and 8.0 on
 `boss_rush`, both at tolerance 4).
 
 Because the boss assignment is only known after matching, the check is not part of
@@ -384,22 +384,26 @@ Every generated seed prints `Path weight: lightest <a>, heaviest <b>` (effective
 stdout, and in `spoiler.txt` with `--logs`, whether or not the cap is set, so kept seeds can
 be ranked.
 
-Measured on 1000 seeds per racing pool (2026-11-18, cap disabled, both pools at tolerance 4,
-about 23 attempts per accepted seed before any cap):
+Measured on 1000 runs per racing pool (2026-11-19, measured band weights of the major
+arenas, cap disabled, both pools at tolerance 4). Before any cap, `standard` takes about 49
+attempts per accepted seed and exhausts 100 attempts on 13.5% of runs, `boss_rush` about 39
+and 7.3%:
 
-| Pool | Lightest path over the 1000 seeds | Cap | Seeds under the cap | Attempts per kept seed |
+| Pool | Lightest path over the accepted seeds | Cap | Seeds under the cap | Attempts per kept seed |
 |------|------|-----|------|------|
-| `standard` (30 layers) | min 38.4, median 47.7, max 56.4 | 42 | 2.6% | ~900 |
-| | | 44 | 11% | ~225 |
-| | | 46 | 30% | ~80 |
-| | | 48 | 54% | ~45 |
-| `boss_rush` (35 layers) | min 37.4, median 42.9, max 47.8 | 40 | 4.9% | ~450 |
-| | | 41 | 14% | ~160 |
-| | | 42 | 32% | ~70 |
-| | | 43 | 53% | ~42 |
+| `standard` (30 layers) | min 34.4, median 40.1, max 47.3 | 36 | 3.1% | ~1600 |
+| | | 37 | 9.0% | ~550 |
+| | | 38 | 20% | ~245 |
+| | | 40 | 50% | ~100 |
+| `boss_rush` (35 layers) | min 29.2, median 33.7, max 37.9 | 31 | 3.9% | ~1000 |
+| | | 32 | 17% | ~225 |
+| | | 33 | 34% | ~115 |
+| | | 34 | 57% | ~70 |
 
-The default `--max-attempts` is 100, which those pools already exhaust on about 1% of runs
-without a cap: a cap that keeps under a third of the seeds needs `--max-attempts` raised to
+The default `--max-attempts` is 100, which those pools already exhaust without a cap (figures
+above):
+raise it even when no cap is set (at 300, about 0.3% of `standard` runs and 1% of `chill`
+runs still fail). A cap that keeps under a third of the seeds needs `--max-attempts` raised to
 several times the "attempts per kept seed" figure. Re-measure before choosing a cap for
 another pool: the distribution follows `layers_count`, the cluster pool and the boss weights.
 
