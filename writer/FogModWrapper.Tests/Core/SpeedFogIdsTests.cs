@@ -138,8 +138,14 @@ public class SpeedFogIdsTests
         Assert.DoesNotContain(SpeedFogIds.RelayLockFlag, relay);
         Assert.DoesNotContain(SpeedFogIds.RelayChapelWarpFlag, relay);
         Assert.NotEqual(SpeedFogIds.RelayLockFlag, SpeedFogIds.RelayChapelWarpFlag);
+        Assert.DoesNotContain(SpeedFogIds.RelayFastTravelFlag, relay);
+        Assert.Equal(
+            3,
+            new[] { SpeedFogIds.RelayLockFlag, SpeedFogIds.RelayChapelWarpFlag, SpeedFogIds.RelayFastTravelFlag }
+                .Distinct().Count());
         relay.Add(SpeedFogIds.RelayLockFlag);
         relay.Add(SpeedFogIds.RelayChapelWarpFlag);
+        relay.Add(SpeedFogIds.RelayFastTravelFlag);
 
         // Everything below the relay flags in the category is taken by the
         // other features; the relay flags sit above the last of them.

@@ -54,7 +54,7 @@ SpeedFog uses a **dedicated base `1050290000`**, in map coordinates m60_50_29_00
 | 1050290000-1050290099 | 0xxx offsets 0-99 | Saved (persistent) | Mod state flags | Various injectors |
 | 1050290100-1050290299 | 0xxx offsets 100-299 | Saved (persistent) | Race item use and removal flags | RaceItemsPlugin |
 | 1050290300-1050290499 | 0xxx offsets 300-499 | Saved (persistent) | Race item talisman removal flags | RaceItemsPlugin |
-| 1050290500-1050290999 | 0xxx offsets 500-999 | Saved (persistent) | Relay lock, Chapel warp and connection warp flags | RelayPlugin (raised by the racing mod) |
+| 1050290500-1050290999 | 0xxx offsets 500-999 | Saved (persistent) | Relay lock, Chapel warp and connection warp flags (raised by the racing mod); Chapel fast travel flag (set by the plugin's own event) | RelayPlugin |
 | 1050294000-1050294999 | 4xxx offsets 0-999 | Saved (persistent) | Zone tracking, finish event, death markers | ZoneTrackingInjector, RunCompleteInjector, DeathMarkerInjector |
 
 Both ranges use saved flags (persist across area reloads):
@@ -131,6 +131,7 @@ Event ID ranges and auxiliary flags are declared centrally in
 | 755865600 | HalloweenJumpscareInjector | map emevds | Halloween jumpscare actors (one event per actor, capacity 100) |
 | 755865700 | RaceItemsPlugin | common.emevd | Race items (opt-in): use events at `base + n` (usable goods only), removal events at `base + 50 + n`, n = goods id - 1450800 (capacity 100) |
 | 755865800 | RaceItemsPlugin | common.emevd | Race items (opt-in): talisman removal events at `base + n`, n = the talisman's index in `data/plugins/race_items_talismans.toml` (capacity 200) |
+| 755866000 | RelayPlugin | common.emevd | Relay (opt-in): Chapel warp at `base`, fast travel gate at `base + 1`, connection warps at `base + 10 + n`, n = the connection's zone-tracking flag - 1050294000 (capacity 500) |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0),
 built by `EmevdHelper.InitializeEvent`.

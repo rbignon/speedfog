@@ -1,8 +1,9 @@
 # Relay Plugin
 
 Lets an outside driver (the racing mod) hold a player in place and move them
-along the graph by raising event flags: a lock on every graph warp, a warp to
-the entrance of any connection, and a warp back to the Chapel grace. This is
+along the graph by raising event flags: a lock on every graph warp and on
+fast travel from the Chapel, a warp to the entrance of any connection, and a
+warp back to the Chapel grace. This is
 the seed side of relay races, where a team's runners take turns on one run.
 Opt-in via config:
 
@@ -21,9 +22,12 @@ them: they are driven from outside EMEVD.
 
 | Flag | Effect |
 |------|--------|
-| 1050290500 (lock) | While ON, no graph warp takes the player |
+| 1050290500 (lock) | While ON, no graph warp takes the player, and the Chapel map refuses fast travel |
 | 1050290501 (Chapel warp) | Raised: warps the player to the Chapel grace, then clears itself |
 | 1050290510 + n (connection warp) | Raised: warps the player to the entrance of connection n, then clears itself |
+
+Flag 1050290502 is the plugin's own (the fast travel gate below): a driver
+never writes it.
 
 `n` is the connection's zone-tracking flag minus 1050294000 (`flag_id` in
 `graph.json`), so a driver that knows which connection a runner took derives
@@ -75,14 +79,43 @@ skips one more line, so the event's branches land where they did.
 
 Limits:
 
-- The lock covers graph warps only. Fast travel, death and quit-outs are not
-  EMEVD warps: blocking fast travel is the driver's job.
+- Death and quit-outs are not EMEVD warps: the lock does not act on them.
+- Fast travel is only refused from the Chapel map (next section), where a
+  locked player is meant to wait.
+- A save made while locked stays locked when nothing drives it any more:
+  no gate, and no fast travel out of the Chapel.
 - A lock raised between an event's trigger and its warp comes too late: the
   warp happens, with its zone and trap flags. The window is one second on a
   fog gate, 2 to 5 seconds on the sending gates and cutscene transitions.
   A driver that locks a player and then moves them must wait it out.
 - Unlocking a fog gate brings its prompt back; an event triggered by a flag
   or a region whose trigger still holds warps by itself at the unlock.
+
+## Fast travel gate
+
+The game allows fast travel from a map while the event flag named by its
+`MapDefaultInfoParam` row (`EnableFastTravelEventFlagId`) is ON; 0 means
+always. Vanilla catacombs point it at their boss defeat flag, which is the
+"cannot fast travel here" of an uncleared dungeon; FogMod zeroes every row.
+
+`RelayInjector.ApplyFastTravelGate` points the Chapel row (10010000,
+m10_01_00_00) at flag 1050290502, and a common.emevd event (slot 1 of
+`RelayEvents`) keeps that flag the opposite of the lock:
+
+```
+SkipIfEventFlag(1, ON, EventFlag, 1050290500)
+SetEventFlag(EventFlag, 1050290502, ON)
+IfEventFlag(MAIN, ON, EventFlag, 1050290500)
+SetEventFlag(EventFlag, 1050290502, OFF)
+IfEventFlag(MAIN, OFF, EventFlag, 1050290500)
+EndUnconditionally(EventEndType.Restart)
+```
+
+Each start of the event derives the flag from the lock's current state, so
+a lock raised or lowered while the event was not running (a loading screen)
+is caught up when it starts again. A seed nobody drives never raises the
+lock, so its Chapel allows fast travel from the first frame. The refusal is the game's own, with its message. Only
+the Chapel map is gated: a player locked elsewhere can still fast travel.
 
 ## Warp events
 
@@ -144,6 +177,19 @@ table, `Event Flags > Event Flags by ID` (re-type the ID after an action, its
 7. **Warp while locked.** Lock ON, raise a warp flag: the warp still happens;
    the fog gates of the destination show no prompt.
 8. **Chapel warp.** From anywhere, raise 1050290501: back at the Chapel grace.
-9. **Warp from a menu or a grace.** Raise a warp flag while sitting at a
-   grace, and while a menu is open: note what happens (warp at once, on
-   leaving, or never).
+9. **Fast travel, unlocked.** At the Chapel with the lock OFF: fast travel
+   from the map and from the Chapel grace both work (flag 1050290502 reads
+   ON).
+10. **Fast travel, locked.** Lock ON at the Chapel: the map refuses fast
+    travel, from the map screen and from the grace. Lock OFF: it works again
+    without reloading.
+11. **Fast travel, locked, after a reload.** Lock ON, quit to the title
+    screen, load: still refused.
+12. **Fast travel, map already open.** Open the map with the lock OFF,
+    raise the lock, then pick a grace: note whether the travel goes through.
+13. **Fast travel, lock raised during a load.** Raise the Chapel warp flag
+    from another zone and set the lock ON during the loading screen: at the
+    Chapel, fast travel is refused. Try it from two spots of the Chapel.
+14. **Warp from a menu or a grace.** Raise a warp flag while sitting at a
+    grace, and while a menu is open: note what happens (warp at once, on
+    leaving, or never).

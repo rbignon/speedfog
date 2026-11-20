@@ -179,7 +179,7 @@ speedfog/
 │   │   │   ├── Summer/      # SummerPlugin (text theme only)
 │   │   │   ├── Weather/     # WeatherPlugin + WeatherInjector (force weather / pin clock hour)
 │   │   │   ├── RaceItems/   # RaceItemsPlugin + injectors (regulation rows, EMEVD use and removal events, texts) for [plugin.race_items]
-│   │   │   ├── Relay/       # RelayPlugin + RelayInjector (lock wait and check in events with a graph warp, flag-driven warp events) for [plugin.relay]
+│   │   │   ├── Relay/       # RelayPlugin + RelayInjector (lock wait and check in events with a graph warp, flag-driven warp events, Chapel fast travel gate) for [plugin.relay]
 │   │   │   └── Halloween/   # HalloweenPlugin and its injectors
 │   │   │       ├── HalloweenPlugin.cs  # Hooks, parsed settings, jumpscare plan, regulation-to-MSB row guards
 │   │   │       ├── HalloweenPluginSettings.cs  # Parse [plugin.halloween] parameters
@@ -267,7 +267,7 @@ speedfog/
 │       ├── halloween-darkness.md  # Halloween evergaol lighting over the whole run
 │       ├── halloween-jumpscares.md  # Halloween jumpscares: Aging Untouchable warping onto the player in drawn dungeon layers
 │       ├── race-items.md    # Race items: Mario Kart style goods, SpEffects, flags, texts, icons, in-game checks
-│       ├── relay.md         # Relay: flag-driven lock on graph warps, warps to connection entrances and to the Chapel, in-game checks
+│       ├── relay.md         # Relay: flag-driven lock on graph warps and on fast travel from the Chapel, warps to connection entrances and to the Chapel, in-game checks
 │       └── weather.md       # Weather plugin: force weather + pin clock hour
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by StaticModBuilder)
 └── output/                  # Generated mod (gitignored, self-contained)
@@ -320,7 +320,7 @@ speedfog/
 | `docs/plugins/halloween-jumpscares.md` | Halloween jumpscares: layer draw (JumpscarePlanner), hidden c5280 actors, warp-onto-player event, ids, owed in-game checks |
 | `docs/plugins/halloween-darkness.md` | Halloween darkness: vanilla evergaol gparam override re-applied from common.emevd, area interactions, rejected custom-gparam approach, owed in-game checks |
 | `docs/plugins/winter.md` | Winter plugin: static mod built at bootstrap (scan of the vertex layouts, two matbin binders, 276 frosted half-resolution TPFs), `[plugin.winter]` + weather companion, racing activation lines, `WINTER FAILED` and `--no-winter`, measured sizes and times, validation status (in-game pass owed), deferred families and trees |
-| `docs/plugins/relay.md` | Relay plugin: lock flag on graph warps, per-connection and Chapel warp events, flag derivation, in-game checks |
+| `docs/plugins/relay.md` | Relay plugin: lock flag on graph warps, Chapel fast travel gate, per-connection and Chapel warp events, flag derivation, in-game checks |
 | `docs/plugins/race-items.md` | Race items plugin: goods and item tables, reserved ids and flags, goods/SpEffect rows, use and removal events, texts, icon replacement, calibration values, in-game checks |
 | `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |

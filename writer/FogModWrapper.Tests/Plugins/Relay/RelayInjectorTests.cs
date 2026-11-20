@@ -237,6 +237,61 @@ public class RelayInjectorTests
         Assert.Empty(targets);
     }
 
+    [Fact]
+    public void ApplyFastTravelGate_PointsTheChapelMapAtTheFastTravelFlagAndNoOtherMap()
+    {
+        var param = ParamTestHelper.BuildParamFromDef("MapDefaultInfoParam", RelayInjector.ChapelMapRow);
+        ParamTestHelper.AddRowFromTemplate(param, 11000000);
+
+        RelayInjector.ApplyFastTravelGate(param);
+
+        Assert.Equal(
+            (uint)SpeedFogIds.RelayFastTravelFlag,
+            param[RelayInjector.ChapelMapRow]!["EnableFastTravelEventFlagId"].Value);
+        Assert.Equal(0u, param[11000000]!["EnableFastTravelEventFlagId"].Value);
+    }
+
+    [Fact]
+    public void ApplyFastTravelGate_WithoutTheChapelRow_Throws()
+    {
+        var param = ParamTestHelper.BuildParamFromDef("MapDefaultInfoParam", 11000000);
+
+        Assert.Throws<InvalidDataException>(() => RelayInjector.ApplyFastTravelGate(param));
+    }
+
+    [Fact]
+    public void InjectFastTravelEvent_DerivesTheFlagFromTheLockAtEachStart()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var common = new EMEVD();
+        common.Events.Add(new EMEVD.Event(0));
+        RelayInjector.InjectFastTravelEvent(common, events);
+
+        // Started unlocked (a seed nobody drives): allowed at once. Started
+        // locked (lock raised during a loading screen): the skip jumps the
+        // ON write and the wait passes straight to the OFF write.
+        var evt = Assert.Single(common.Events, e => e.ID != 0);
+        int lockFlag = SpeedFogIds.RelayLockFlag;
+        var expected = new[]
+        {
+            $"SkipIfEventFlag(1, ON, TargetEventFlagType.EventFlag, {lockFlag})",
+            SetFlag(SpeedFogIds.RelayFastTravelFlag),
+            $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {lockFlag})",
+            SetFlag(SpeedFogIds.RelayFastTravelFlag, "OFF"),
+            $"IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, {lockFlag})",
+            "EndUnconditionally(EventEndType.Restart)",
+        }.Select(events.ParseAdd).ToList();
+        Assert.Equal(expected.Count, evt.Instructions.Count);
+        for (int i = 0; i < expected.Count; i++)
+            Assert.True(Same(evt.Instructions[i], expected[i]), $"instruction {i}");
+
+        var init = Assert.Single(common.Events[0].Instructions);
+        Assert.Equal((int)evt.ID, BitConverter.ToInt32(init.ArgData, 4));
+    }
+
     private static EMEVD RunInjectWarpEvents(
         Events events,
         Dictionary<int, List<int>> regionToFlags,

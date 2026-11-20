@@ -57,11 +57,15 @@
     </None>
   </ItemGroup>
 
-  <!-- Copy paramdefs needed for shop and bonfire injection -->
+  <!-- Copy the paramdefs the regulation injectors read -->
   <ItemGroup>
     <None Include="eldendata/Defs/ShopLineupParam.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/ShopLineupParam.xml</Link>
+    </None>
+    <None Include="eldendata/Defs/MapDefaultInfoParam.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/MapDefaultInfoParam.xml</Link>
     </None>
     <None Include="eldendata/Defs/BonfireWarpParam.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -1,3 +1,4 @@
+using FogModWrapper.Common;
 using FogModWrapper.Graces;
 using FogModWrapper.Models;
 using FogModWrapper.Pipeline;
@@ -8,7 +9,8 @@ namespace FogModWrapper.Plugins.Relay;
 /// <summary>
 /// [plugin.relay]: lets an outside driver (the racing mod) hold a player in
 /// place and move them along the graph by raising flags, see
-/// docs/plugins/relay.md. The only setting is <c>enabled</c>. The warp
+/// docs/plugins/relay.md; the same lock closes fast travel from the Chapel
+/// map. The only setting is <c>enabled</c>. The warp
 /// destinations are collected while PatchEmevdPhase scans the EMEVD files
 /// and turned into common.emevd events afterwards.
 /// </summary>
@@ -31,8 +33,17 @@ internal sealed class RelayPlugin : SpeedFogPlugin
         return n > 0;
     }
 
+    public override void OnRegulation(Context ctx, RegulationEditor reg)
+    {
+        var mapDefaultInfo = reg.GetParam("MapDefaultInfoParam")
+            ?? throw new InvalidOperationException("relay: MapDefaultInfoParam unavailable");
+        RelayInjector.ApplyFastTravelGate(mapDefaultInfo);
+        Console.WriteLine($"relay: Chapel fast travel gated by flag {SpeedFogIds.RelayFastTravelFlag}");
+    }
+
     public override void OnCommonEmevd(Context ctx)
     {
+        RelayInjector.InjectFastTravelEvent(ctx.CommonEmevd, ctx.Events);
         Console.WriteLine($"relay: {_locks} graph warp(s) locked behind flag {SpeedFogIds.RelayLockFlag}");
         RelayInjector.InjectWarpEvents(
             ctx.CommonEmevd, ctx.Events,

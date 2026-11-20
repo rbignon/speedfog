@@ -12,7 +12,9 @@ namespace FogModWrapper.Plugins.Relay;
 ///    cannot leave through a fog gate;
 /// B) one common.emevd event per connection, warping the player to that
 ///    connection's entrance when its flag is raised, plus one event warping
-///    back to the Chapel grace.
+///    back to the Chapel grace;
+/// C) fast travel from the Chapel map refused while the lock is ON (a
+///    MapDefaultInfoParam row and the event driving its flag).
 ///
 /// Same warp-patching pattern as ZoneTrackingInjector and
 /// BossTriggerInjector: scan the compiled events for warp instructions and
@@ -23,6 +25,13 @@ public static class RelayInjector
     /// <summary>Slot of the first connection warp event in
     /// <see cref="SpeedFogIds.RelayEvents"/> (slot 0 is the Chapel warp).</summary>
     private const int WarpEventSlotBase = 10;
+
+    /// <summary>Slot of the fast travel gate event.</summary>
+    private const int FastTravelEventSlot = 1;
+
+    /// <summary>MapDefaultInfoParam row of the Chapel of Anticipation
+    /// (m10_01_00_00), where a locked player waits.</summary>
+    public const int ChapelMapRow = 10010000;
 
     /// <summary>What the scan learned about a graph warp region: its map and
     /// the flags the gate sets on the way in (the SetEventFlag instructions
@@ -250,6 +259,50 @@ public static class RelayInjector
         }
 
         Console.WriteLine($"relay: {count} connection warp event(s)");
+    }
+
+    /// <summary>
+    /// Make the Chapel map allow fast travel only while the fast travel
+    /// flag is ON. The game reads MapDefaultInfoParam's
+    /// EnableFastTravelEventFlagId that way: vanilla catacombs point it at
+    /// their boss defeat flag (no fast travel until the boss is dead), and
+    /// 0 means always allowed (FogMod zeroes every row).
+    /// </summary>
+    public static void ApplyFastTravelGate(PARAM mapDefaultInfo)
+    {
+        var row = mapDefaultInfo[ChapelMapRow]
+            ?? throw new InvalidDataException($"relay: MapDefaultInfoParam row {ChapelMapRow} not found");
+        row["EnableFastTravelEventFlagId"].Value = (uint)SpeedFogIds.RelayFastTravelFlag;
+    }
+
+    /// <summary>
+    /// Add the common.emevd event keeping the fast travel flag the opposite
+    /// of the lock flag, so a seed nobody drives (lock never raised) allows
+    /// fast travel from its first frame. Each start of the event derives the
+    /// flag from the lock's current state: a lock changed while the event
+    /// was not running (a loading screen) is caught up at the next start.
+    /// </summary>
+    public static void InjectFastTravelEvent(EMEVD commonEmevd, Events events)
+    {
+        var initEvent = commonEmevd.Events.Find(e => e.ID == 0)
+            ?? throw new InvalidOperationException("relay: Event 0 not found in common.emevd");
+
+        int id = SpeedFogIds.RelayEvents.Base + FastTravelEventSlot;
+        var evt = new EMEVD.Event(id);
+        foreach (var line in new[]
+        {
+            $"SkipIfEventFlag(1, ON, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})",
+            $"SetEventFlag(TargetEventFlagType.EventFlag, {SpeedFogIds.RelayFastTravelFlag}, ON)",
+            $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})",
+            $"SetEventFlag(TargetEventFlagType.EventFlag, {SpeedFogIds.RelayFastTravelFlag}, OFF)",
+            $"IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})",
+            "EndUnconditionally(EventEndType.Restart)",
+        })
+        {
+            evt.Instructions.Add(events.ParseAdd(line));
+        }
+        commonEmevd.Events.Add(evt);
+        initEvent.Instructions.Add(EmevdHelper.InitializeEvent(id));
     }
 
     /// <summary>Start an event that waits for <paramref name="flag"/> and

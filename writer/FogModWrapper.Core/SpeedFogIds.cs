@@ -106,7 +106,7 @@ public static class SpeedFogIds
         new("RaceItemsPlugin talismans", 755865800, 200);
 
     /// <summary>[plugin.relay]: slot 0 is the warp back to the Chapel
-    /// grace, slot 10 + n the warp to the entrance of connection n (n = the
+    /// grace, slot 1 the fast travel gate, slot 10 + n the warp to the entrance of connection n (n = the
     /// connection's zone-tracking flag - <see cref="ZoneFlagBase"/>).</summary>
     public static readonly IdRange RelayEvents =
         new("RelayPlugin", 755866000, 500);
@@ -202,9 +202,12 @@ public static class SpeedFogIds
     /// graph warp takes the player; raising the chapel flag warps the player
     /// to the Chapel grace; raising warp flag base + n warps the player to
     /// the entrance of connection n, as its fog gate would. The two warp
-    /// events clear their flag.</summary>
+    /// events clear their flag. The fast travel flag is the plugin's own:
+    /// its event keeps it the opposite of the lock flag, and the Chapel
+    /// map only allows fast travel while it is ON.</summary>
     public const int RelayLockFlag = 1050290500;
     public const int RelayChapelWarpFlag = 1050290501;
+    public const int RelayFastTravelFlag = 1050290502;
     public const int RelayWarpFlagBase = 1050290510;
     public const int RelayWarpFlagCount = 490;
 

@@ -62,7 +62,7 @@ internal static class RegulationPhase
         // untouchable's burst (3001), boss placed or not.
         UntouchableBossInjector.ApplyNearWarpMarker(reg);
 
-        // Plugin hook (Halloween NpcParam rows and icons): inside the single
+        // Plugin hook (rows and icons of the enabled plugins): inside the single
         // regulation.bin batch; skipped with it when regulation.bin is
         // unavailable, which the MSB hook's two-phase guards rely on.
         foreach (var plugin in ctx.Plugins)
