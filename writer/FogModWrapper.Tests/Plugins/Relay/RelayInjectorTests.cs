@@ -260,7 +260,7 @@ public class RelayInjectorTests
     }
 
     [Fact]
-    public void InjectFastTravelEvent_DerivesTheFlagFromTheLockAtEachStart()
+    public void InjectFastTravelEvent_ReadsTheLockOnEachPassAndNeverWaitsOnIt()
     {
         var events = BuildEvents();
         if (events == null)
@@ -270,33 +270,58 @@ public class RelayInjectorTests
         common.Events.Add(new EMEVD.Event(0));
         RelayInjector.InjectFastTravelEvent(common, events);
 
-        // Started unlocked (a seed nobody drives): allowed at once. Started
-        // locked (lock raised during a loading screen): the skip jumps the
-        // ON write and the wait passes straight to the OFF write.
+        // Each pass writes the flag the lock's state calls for, then the
+        // event restarts after a fixed pause: no wait on the lock, which
+        // would miss a lock changed during a loading screen.
         var evt = Assert.Single(common.Events, e => e.ID != 0);
         int lockFlag = SpeedFogIds.RelayLockFlag;
         var expected = new[]
         {
             $"SkipIfEventFlag(1, ON, TargetEventFlagType.EventFlag, {lockFlag})",
             SetFlag(SpeedFogIds.RelayFastTravelFlag),
-            $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {lockFlag})",
+            $"SkipIfEventFlag(1, OFF, TargetEventFlagType.EventFlag, {lockFlag})",
             SetFlag(SpeedFogIds.RelayFastTravelFlag, "OFF"),
-            $"IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, {lockFlag})",
-            "EndUnconditionally(EventEndType.Restart)",
         }.Select(events.ParseAdd).ToList();
-        Assert.Equal(expected.Count, evt.Instructions.Count);
         for (int i = 0; i < expected.Count; i++)
             Assert.True(Same(evt.Instructions[i], expected[i]), $"instruction {i}");
+        // No condition instruction at all (banks below 1000), so no wait on
+        // a flag; a timer wait (bank 1001) paces the loop before the restart.
+        Assert.Equal(6, evt.Instructions.Count);
+        Assert.DoesNotContain(evt.Instructions, i => i.Bank < 1000);
+        Assert.Equal(1001, evt.Instructions[4].Bank);
+        Assert.True(Same(evt.Instructions[5], events.ParseAdd("EndUnconditionally(EventEndType.Restart)")));
 
         var init = Assert.Single(common.Events[0].Instructions);
         Assert.Equal((int)evt.ID, BitConverter.ToInt32(init.ArgData, 4));
+    }
+
+    private static readonly RelayInjector.ChapelTarget Chapel = new(10010982, 10012021);
+    // The two ids differ, so a swap of the record's fields shows in the event.
+
+    [Fact]
+    public void InjectWarpEvents_TheChapelWarpMovesTheRespawnPointBeforeWarping()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var common = RunInjectWarpEvents(events, new(), Array.Empty<int>());
+
+        // A death at the Chapel must respawn there, not at the grace the
+        // player used last: the respawn point is set before the warp.
+        var evt = Assert.Single(common.Events, e => e.ID == SpeedFogIds.RelayEvents.Base);
+        int respawnAt = evt.Instructions.FindIndex(
+            i => Same(i, events.ParseAdd("SetPlayerRespawnPoint(10012021)")));
+        int warpAt = evt.Instructions.FindIndex(
+            i => Same(i, events.ParseAdd("WarpPlayer(10, 1, 0, 0, 10010982, 0)")));
+        Assert.True(respawnAt >= 0 && warpAt > respawnAt);
     }
 
     private static EMEVD RunInjectWarpEvents(
         Events events,
         Dictionary<int, List<int>> regionToFlags,
         IEnumerable<int> warpRegions,
-        uint? chapelPlayerEntity = 10010982,
+        bool chapel = true,
         params string[] prelude)
     {
         var common = new EMEVD();
@@ -306,7 +331,7 @@ public class RelayInjectorTests
             warpRegions.ToDictionary(r => r, _ => new RelayInjector.WarpTarget(
                 Map, prelude.Select(events.ParseAdd).ToList())),
             new Dictionary<string, string> { [ZoneFlag.ToString()] = "node_a" },
-            chapelPlayerEntity);
+            chapel ? Chapel : null);
         return common;
     }
 
@@ -358,7 +383,7 @@ public class RelayInjectorTests
             events,
             new() { [Region] = new() { ZoneFlag }, [Region + 1] = new() { ZoneFlag } },
             new[] { Region + 1 },
-            chapelPlayerEntity: null);
+            chapel: false);
 
         var evt = Assert.Single(common.Events, e => e.ID != 0);
         Assert.Contains(evt.Instructions, i => Same(i, events.ParseAdd(Warp(Region + 1))));
@@ -372,7 +397,7 @@ public class RelayInjectorTests
             return;
 
         var common = RunInjectWarpEvents(
-            events, new() { [Region] = new() { ZoneFlag } }, new[] { Region }, chapelPlayerEntity: null);
+            events, new() { [Region] = new() { ZoneFlag } }, new[] { Region }, chapel: false);
 
         Assert.DoesNotContain(common.Events, e => e.ID == SpeedFogIds.RelayEvents.Base);
     }
@@ -393,6 +418,6 @@ public class RelayInjectorTests
             new() { [Region] = new() { flag } },
             new() { [Region] = new RelayInjector.WarpTarget(Map, new List<EMEVD.Instruction>()) },
             new Dictionary<string, string> { [flag.ToString()] = "node_a" },
-            10010982));
+            Chapel));
     }
 }

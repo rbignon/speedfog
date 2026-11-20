@@ -49,6 +49,9 @@ internal sealed class RelayPlugin : SpeedFogPlugin
             ctx.CommonEmevd, ctx.Events,
             ctx.InjectionResult.RegionToFlags, _targets,
             ctx.GraphData.EventMap,
-            ctx.GraphData.ChapelGrace ? ChapelGraceInjector.DefaultPlayerEntity : null);
+            ctx.GraphData.ChapelGrace
+                ? new RelayInjector.ChapelTarget(
+                    ChapelGraceInjector.DefaultPlayerEntity, ChapelGraceInjector.GRACE_SPAWN_REGION)
+                : null);
     }
 }

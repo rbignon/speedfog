@@ -82,6 +82,11 @@ Limits:
 - Death and quit-outs are not EMEVD warps: the lock does not act on them.
 - Fast travel is only refused from the Chapel map (next section), where a
   locked player is meant to wait.
+- The gate events wait on the lock, and a wait may miss a lock changed
+  during a loading screen: seen in game on the first fast travel gate event
+  (next section), not checked on the gate events (in-game check 13). Until
+  then a driver changes the lock outside loading screens, or lowers and
+  raises it again afterwards.
 - A save made while locked stays locked when nothing drives it any more:
   no gate, and no fast travel out of the Chapel.
 - A lock raised between an event's trigger and its warp comes too late: the
@@ -105,17 +110,23 @@ m10_01_00_00) at flag 1050290502, and a common.emevd event (slot 1 of
 ```
 SkipIfEventFlag(1, ON, EventFlag, 1050290500)
 SetEventFlag(EventFlag, 1050290502, ON)
-IfEventFlag(MAIN, ON, EventFlag, 1050290500)
+SkipIfEventFlag(1, OFF, EventFlag, 1050290500)
 SetEventFlag(EventFlag, 1050290502, OFF)
-IfEventFlag(MAIN, OFF, EventFlag, 1050290500)
+WaitFixedTimeFrames(10)
 EndUnconditionally(EventEndType.Restart)
 ```
 
-Each start of the event derives the flag from the lock's current state, so
-a lock raised or lowered while the event was not running (a loading screen)
-is caught up when it starts again. A seed nobody drives never raises the
-lock, so its Chapel allows fast travel from the first frame. The refusal is the game's own, with its message. Only
-the Chapel map is gated: a player locked elsewhere can still fast travel.
+The event reads the lock every 10 frames instead of waiting on it. A first
+version waited (`IfEventFlag(MAIN, ON, lock)`) and missed a lock raised
+during a loading screen: in game both flags read ON afterwards and the event
+stayed on its wait until the lock was lowered and raised again. A seed
+nobody drives never raises the lock, so its Chapel allows fast travel from
+the first frame.
+
+The refusal is the game's own, with its message. Only the Chapel map is
+gated: a player locked elsewhere can still fast travel. A player already on
+the travel confirmation popup when the lock goes up still travels (seen in
+game, accepted).
 
 ## Warp events
 
@@ -148,6 +159,12 @@ above are the event's own). Notes:
 - A cutscene transition (`PlayCutsceneToPlayerAndWarp`) gets a plain
   `WarpPlayer` to the same region: no cutscene, and none of the story flags
   the vanilla event sets on the way. Not checked in game.
+- The Chapel warp first makes the Chapel grace the respawn point
+  (`SetPlayerRespawnPoint` on the grace's spawn region, as the seed does at
+  game start), as a fast travel there would: with a plain warp, a player
+  dying at the Chapel respawned at the grace used last. The connection
+  warps leave the respawn point alone, like the fog gates: after a Chapel
+  warp it stays on the Chapel until the player rests at another grace.
 - The Chapel warp targets the grace's default warp entity
   (`ChapelGraceInjector.DefaultPlayerEntity`); the injector warns when the
   grace had to take another id. A seed without the Chapel grace
@@ -186,10 +203,16 @@ table, `Event Flags > Event Flags by ID` (re-type the ID after an action, its
 11. **Fast travel, locked, after a reload.** Lock ON, quit to the title
     screen, load: still refused.
 12. **Fast travel, map already open.** Open the map with the lock OFF,
-    raise the lock, then pick a grace: note whether the travel goes through.
+    raise the lock, then pick a grace: refused, unless the confirmation
+    popup was already up.
 13. **Fast travel, lock raised during a load.** Raise the Chapel warp flag
     from another zone and set the lock ON during the loading screen: at the
-    Chapel, fast travel is refused. Try it from two spots of the Chapel.
-14. **Warp from a menu or a grace.** Raise a warp flag while sitting at a
+    Chapel, fast travel is refused (flag 1050290502 reads OFF). Try it from
+    two spots of the Chapel. Also note whether the Chapel fog gate shows its
+    prompt.
+14. **Death at the Chapel.** Rest at a grace in another zone, raise the
+    Chapel warp flag, die at the Chapel: the respawn is at the Chapel grace.
+    Same after a quit to the title screen and a reload.
+15. **Warp from a menu or a grace.** Raise a warp flag while sitting at a
     grace, and while a menu is open: note what happens (warp at once, on
     leaving, or never).

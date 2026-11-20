@@ -71,7 +71,7 @@ public static class ChapelGraceInjector
     private const long GAME_START_EVENT_ID = 10010020;
     private const uint VANILLA_SPAWN_REGION = 10012020;
     // SpawnPoint region entity ID for our grace spawn (next available after vanilla)
-    private const uint GRACE_SPAWN_REGION = 10012021;
+    internal const uint GRACE_SPAWN_REGION = 10012021;
 
     // One-shot warp event: teleports player to grace on first map load (new-game spawn).
     // SetPlayerRespawnPoint only controls *re*spawns (after death/loading), not the initial

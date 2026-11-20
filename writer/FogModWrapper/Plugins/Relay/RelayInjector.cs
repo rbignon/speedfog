@@ -33,6 +33,14 @@ public static class RelayInjector
     /// (m10_01_00_00), where a locked player waits.</summary>
     public const int ChapelMapRow = 10010000;
 
+    /// <summary>Frames between two reads of the lock by the fast travel
+    /// gate event.</summary>
+    private const int FastTravelPollFrames = 10;
+
+    /// <summary>Where the Chapel warp lands: the grace's warp entity, and
+    /// its spawn region for the respawn point.</summary>
+    public sealed record ChapelTarget(uint PlayerEntity, uint RespawnRegion);
+
     /// <summary>What the scan learned about a graph warp region: its map and
     /// the flags the gate sets on the way in (the SetEventFlag instructions
     /// the core patches put before the warp).</summary>
@@ -180,23 +188,26 @@ public static class RelayInjector
     /// Add the warp events to common.emevd. The event of a connection sets
     /// the flags its fog gate sets before warping (the region's recorded
     /// prelude: zone-tracking flags, boss trap flag, map variant flag).
-    /// <paramref name="chapelPlayerEntity"/> null leaves the Chapel warp out
-    /// (seed without the Chapel grace).
+    /// The Chapel warp also makes the Chapel grace the respawn point, as a
+    /// fast travel there would: a plain warp leaves it at the last grace
+    /// used. <paramref name="chapel"/> null leaves the Chapel warp out (seed
+    /// without the Chapel grace).
     /// </summary>
     public static void InjectWarpEvents(
         EMEVD commonEmevd, Events events,
         Dictionary<int, List<int>> regionToFlags,
         Dictionary<int, WarpTarget> targets,
         IReadOnlyDictionary<string, string> eventMap,
-        uint? chapelPlayerEntity)
+        ChapelTarget? chapel)
     {
         var initEvent = commonEmevd.Events.Find(e => e.ID == 0)
             ?? throw new InvalidOperationException("relay: Event 0 not found in common.emevd");
 
-        if (chapelPlayerEntity != null)
+        if (chapel != null)
         {
             var evt = NewEvent(commonEmevd, initEvent, events, SpeedFogIds.RelayEvents.Base, SpeedFogIds.RelayChapelWarpFlag);
-            evt.Instructions.Add(events.ParseAdd($"WarpPlayer(10, 1, 0, 0, {chapelPlayerEntity}, 0)"));
+            evt.Instructions.Add(events.ParseAdd($"SetPlayerRespawnPoint({chapel.RespawnRegion})"));
+            evt.Instructions.Add(events.ParseAdd($"WarpPlayer(10, 1, 0, 0, {chapel.PlayerEntity}, 0)"));
             EndEvent(evt, events);
             Console.WriteLine($"relay: flag {SpeedFogIds.RelayChapelWarpFlag} -> Chapel grace");
         }
@@ -278,9 +289,10 @@ public static class RelayInjector
     /// <summary>
     /// Add the common.emevd event keeping the fast travel flag the opposite
     /// of the lock flag, so a seed nobody drives (lock never raised) allows
-    /// fast travel from its first frame. Each start of the event derives the
-    /// flag from the lock's current state: a lock changed while the event
-    /// was not running (a loading screen) is caught up at the next start.
+    /// fast travel from its first frame. The event reads the lock every few
+    /// frames instead of waiting on it: a wait misses a lock changed during
+    /// a loading screen (seen in game: the flag reads ON afterwards and the
+    /// waiting event stays put until the flag changes again).
     /// </summary>
     public static void InjectFastTravelEvent(EMEVD commonEmevd, Events events)
     {
@@ -293,9 +305,9 @@ public static class RelayInjector
         {
             $"SkipIfEventFlag(1, ON, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})",
             $"SetEventFlag(TargetEventFlagType.EventFlag, {SpeedFogIds.RelayFastTravelFlag}, ON)",
-            $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})",
+            $"SkipIfEventFlag(1, OFF, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})",
             $"SetEventFlag(TargetEventFlagType.EventFlag, {SpeedFogIds.RelayFastTravelFlag}, OFF)",
-            $"IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})",
+            $"WaitFixedTimeFrames({FastTravelPollFrames})",
             "EndUnconditionally(EventEndType.Restart)",
         })
         {
