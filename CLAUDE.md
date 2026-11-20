@@ -88,7 +88,7 @@ speedfog/
 │   │   ├── summer.toml      # Summer theme text catalogue (tracked)
 │   │   ├── halloween.toml   # Halloween theme text catalogue (tracked)
 │   │   ├── race_items.toml  # Race items catalog: icons, the two goods (rows, markers, texts; flags derived from the goods id), the items and their effect SpEffect rows, the junk weapons and the `[hunter]` table (tracked)
-│   │   ├── race_items_icon_<icon>.png  # Race item icon art, square (artist's drawings at 768x768; item_box and hunter still 1024x1024 placeholders; the 160x160 textures are derived), one per [icons] name (tracked)
+│   │   ├── race_items_icon_<icon>.png  # Race item icon art, square (artist's drawings at 768x768, four temporary ones recomposed from them; item_box still a 1024x1024 placeholder; the 160x160 textures are derived), one per [icons] name (tracked)
 │   │   ├── halloween_decorations.toml  # Halloween gate decoration catalogue (bones, candelabras, candles; tracked)
 │   │   ├── halloween_icon_pumpkin_seed.png  # Golden Seed ("Pumpkin Seed") authored icon art, 160x160 (tracked)
 │   │   ├── halloween_icon_profane_tear.png  # Sacred Tear ("Profane Tear") authored icon art, 160x160 (tracked)

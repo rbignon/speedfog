@@ -14,8 +14,8 @@ data/plugins/ as race_items_icon_<icon>.png.
 
 The final art is authored by the graphic artist and overwrites these files
 (tools/import_race_item_icons.py reframes it). Most icons are final art by
-now: always name the icons to draw on the command line (item_box and hunter
-are the ones still placeholders), a run without names overwrites the art.
+now: always name the icons to draw on the command line (item_box is the one
+still a placeholder), a run without names overwrites the art.
 After changing any PNG, re-run tools/bootstrap.py (or StaticModBuilder
 directly) to rebuild data/mods/speedfog-icons/. See docs/plugins/race-items.md.
 """

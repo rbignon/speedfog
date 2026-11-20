@@ -301,11 +301,15 @@ graph.json.
 
 ## Replacing the icons
 
-19 of the 21 icons are the graphic artist's drawings (imported 2026-11-20 at
-768x768, the size they were delivered at); `item_box` and `hunter` still ship
-as placeholder flat shapes (1024x1024, drawn by
-`tools/generate_race_item_icons.py`). The art is replaced by dropping PNG files
-in, nothing else changes. For the graphic artist and for Roger:
+16 of the 21 icons are the graphic artist's drawings (imported 2026-11-20 at
+768x768, the size they were delivered at). Four are temporary, recomposed
+from those drawings until the artist delivers theirs: `hunter` (the hooded
+figure in red, in a crosshair), `giant` (the red mushroom over a tiny copy of
+itself), `junk_weapon` (the swords rusted, tips snapped) and `unseen_foes`
+(the hooded figure fading out, eyes aglow). `item_box` still ships as a
+placeholder flat shape (1024x1024, drawn by
+`tools/generate_race_item_icons.py`). The art is replaced by dropping PNG
+files in, nothing else changes. For the graphic artist and for Roger:
 
 - **Format**: PNG, RGBA with a transparent background, square, at least
   160x160; 1024x1024 asked of the artist, so sharper large icons stay one
