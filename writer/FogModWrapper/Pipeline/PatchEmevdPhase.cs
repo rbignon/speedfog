@@ -156,6 +156,14 @@ internal static class PatchEmevdPhase
                 }
             }
 
+            // Plugin hook: after the core warp patches, so plugins see the
+            // final warp instructions.
+            foreach (var plugin in ctx.Plugins)
+            {
+                if (plugin.OnPatchEmevd(ctx, emevd))
+                    modified = true;
+            }
+
             if (modified)
                 emevd.Write(file);
         }
@@ -201,6 +209,9 @@ internal static class PatchEmevdPhase
                 totalSealingTreePatched += n;
             }
         }
+
+        foreach (var plugin in ctx.Plugins)
+            plugin.OnPatchEmevd(ctx, ctx.CommonEmevd);
 
         // Log scan results
         if (regionToTrapFlag.Count > 0)

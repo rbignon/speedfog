@@ -1,5 +1,6 @@
 using FogModWrapper.Common;
 using FogModWrapper.Pipeline;
+using SoulsFormats;
 
 namespace FogModWrapper.Plugins;
 
@@ -25,6 +26,12 @@ internal abstract class SpeedFogPlugin
     /// chance to add flags to RegionToFlags before PatchEmevdPhase injects
     /// them.</summary>
     public virtual void AfterFogModWrite(Context ctx) { }
+
+    /// <summary>PatchEmevdPhase, once per EMEVD file (every map file, then
+    /// common.emevd in memory), after the core warp patches so a plugin
+    /// sees the final warp instructions. Returns true when it changed the
+    /// file.</summary>
+    public virtual bool OnPatchEmevd(Context ctx, EMEVD emevd) => false;
 
     /// <summary>CommonEmevdPhase, after the core injectors and before
     /// AlternateFlagPatcher and the single common.emevd write.</summary>

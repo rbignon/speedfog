@@ -34,6 +34,11 @@ public static class ChapelGraceInjector
     // chrEntity = bonfireEntity - 1000, playerEntity = bonfireEntity - 970
     private const uint BONFIRE_ENTITY_BASE = 10011952;
 
+    /// <summary>Warp target of the Chapel grace when its bonfire takes the
+    /// base entity id (the usual case: Inject only moves off it when a part
+    /// of the map already carries that id).</summary>
+    internal const uint DefaultPlayerEntity = BONFIRE_ENTITY_BASE - 970;
+
     // BonfireWarpParam row ID base (FogRando chapel convention: 100102)
     private const int BONFIRE_ROW_BASE = 100102;
 
@@ -90,6 +95,12 @@ public static class ChapelGraceInjector
             return;
 
         // Step 2: BonfireWarpParam - add fast travel entry (via shared editor)
+        if (msbResult.Value.PlayerEntityId != DefaultPlayerEntity)
+        {
+            Console.WriteLine($"Warning: Chapel grace warp target is entity {msbResult.Value.PlayerEntityId}, " +
+                $"not the default {DefaultPlayerEntity}: events warping to the default will miss it");
+        }
+
         var bonfireFlag = InjectBonfireWarpParam(reg, msbResult.Value.BonfireEntityId);
         if (bonfireFlag == null)
             return;

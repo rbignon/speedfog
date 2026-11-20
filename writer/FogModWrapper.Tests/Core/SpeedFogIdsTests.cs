@@ -128,6 +128,29 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
+    public void RelayFlags_HaveAnEventPerWarpFlagAndStayClearOfEveryOtherSavedFlag()
+    {
+        Assert.Contains(SpeedFogIds.RelayEvents, SpeedFogIds.EventRanges);
+        // Slot 0: Chapel warp; slots 10+: one per warp flag.
+        Assert.True(10 + SpeedFogIds.RelayWarpFlagCount <= SpeedFogIds.RelayEvents.Capacity);
+
+        var relay = Enumerable.Range(SpeedFogIds.RelayWarpFlagBase, SpeedFogIds.RelayWarpFlagCount).ToHashSet();
+        Assert.DoesNotContain(SpeedFogIds.RelayLockFlag, relay);
+        Assert.DoesNotContain(SpeedFogIds.RelayChapelWarpFlag, relay);
+        Assert.NotEqual(SpeedFogIds.RelayLockFlag, SpeedFogIds.RelayChapelWarpFlag);
+        relay.Add(SpeedFogIds.RelayLockFlag);
+        relay.Add(SpeedFogIds.RelayChapelWarpFlag);
+
+        // Everything below the relay flags in the category is taken by the
+        // other features; the relay flags sit above the last of them.
+        int lastOther = SpeedFogIds.RaceItemTalismanRemoveFlagBase + SpeedFogIds.RaceItemTalismanRemoveFlagCount - 1;
+        Assert.All(relay, f => Assert.True(f > lastOther));
+
+        // Saved category 1050290 (flags 1050290000-1050290999).
+        Assert.All(relay, f => Assert.Equal(1050290, f / 1000));
+    }
+
+    [Fact]
     public void RaceItemEffectRange_SitsInsideTheParamRange()
     {
         Assert.True(SpeedFogIds.RaceItemEffectIdMin <= SpeedFogIds.RaceItemEffectIdMax);

@@ -105,6 +105,12 @@ public static class SpeedFogIds
     public static readonly IdRange RaceItemTalismanEvents =
         new("RaceItemsPlugin talismans", 755865800, 200);
 
+    /// <summary>[plugin.relay]: slot 0 is the warp back to the Chapel
+    /// grace, slot 10 + n the warp to the entrance of connection n (n = the
+    /// connection's zone-tracking flag - <see cref="ZoneFlagBase"/>).</summary>
+    public static readonly IdRange RelayEvents =
+        new("RelayPlugin", 755866000, 500);
+
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -121,6 +127,7 @@ public static class SpeedFogIds
         HalloweenJumpscareEvents,
         RaceItemEvents,
         RaceItemTalismanEvents,
+        RelayEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---
@@ -184,6 +191,22 @@ public static class SpeedFogIds
     /// <see cref="RaceItemTalismanEvents"/> has events.</summary>
     public const int RaceItemTalismanRemoveFlagBase = 1050290300;
     public const int RaceItemTalismanRemoveFlagCount = 200;
+
+    /// <summary>First zone-tracking flag (Python's EVENT_FLAG_BASE, see
+    /// speedfog/constants.py): connection n of graph.json carries flag
+    /// base + n.</summary>
+    public const int ZoneFlagBase = 1050294000;
+
+    /// <summary>Saved flags of [plugin.relay] (same category), all driven
+    /// from outside EMEVD (the racing mod): while the lock flag is ON no
+    /// graph warp takes the player; raising the chapel flag warps the player
+    /// to the Chapel grace; raising warp flag base + n warps the player to
+    /// the entrance of connection n, as its fog gate would. The two warp
+    /// events clear their flag.</summary>
+    public const int RelayLockFlag = 1050290500;
+    public const int RelayChapelWarpFlag = 1050290501;
+    public const int RelayWarpFlagBase = 1050290510;
+    public const int RelayWarpFlagCount = 490;
 
     /// <summary>Reserved EquipParamGoods and SpEffectParam ids of the race
     /// items (vanilla has neither, adjacent to the phantom skins range).</summary>

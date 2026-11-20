@@ -1,0 +1,291 @@
+using FogModWrapper.Plugins.Relay;
+using SoulsFormats;
+using SoulsIds;
+using Xunit;
+
+namespace FogModWrapper.Tests.Plugins.Relay;
+
+/// <summary>
+/// RelayInjector builds its instructions through FogMod's Events.ParseAdd,
+/// so the tests need a real SoulsIds.Events instance backed by the
+/// gitignored data/er-common.emedf.json; they skip (early return) when it is
+/// absent, like RaceItemsEmevdInjectorTests.
+/// </summary>
+public class RelayInjectorTests
+{
+    private const int Region = 755890042;
+    private const int ZoneFlag = 1050294003;
+    private static readonly (byte, byte, byte, byte) Map = (31, 5, 0, 0);
+
+    private static Events? BuildEvents()
+    {
+        var envDir = Environment.GetEnvironmentVariable("DATA_DIR");
+        var candidate = Path.GetFullPath(
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../../..", "data"));
+        foreach (var dir in new[] { envDir, candidate })
+        {
+            if (!string.IsNullOrEmpty(dir) && File.Exists(Path.Combine(dir, "er-common.emedf.json")))
+                return new Events(Path.Combine(dir, "er-common.emedf.json"), darkScriptMode: true, paramAwareMode: true);
+        }
+        return null;
+    }
+
+    private static string Warp(int region) => $"WarpPlayer(31, 5, 0, 0, {region}, 0)";
+
+    private static EMEVD.Event BuildEvent(Events events, params string[] lines)
+    {
+        var evt = new EMEVD.Event(1040290001);
+        foreach (var line in lines)
+            evt.Instructions.Add(events.ParseAdd(line));
+        return evt;
+    }
+
+    private static bool Same(EMEVD.Instruction instr, EMEVD.Instruction expected) =>
+        instr.Bank == expected.Bank && instr.ID == expected.ID
+            && instr.ArgData.SequenceEqual(expected.ArgData);
+
+    private static bool IsLockCheck(Events events, EMEVD.Instruction instr) => Same(instr, events.ParseAdd(
+        $"EndIfEventFlag(EventEndType.Restart, ON, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})"));
+
+    private static bool IsLockWait(Events events, EMEVD.Instruction instr) => Same(instr, events.ParseAdd(
+        $"IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})"));
+
+    private static string SetFlag(int flag, string state = "ON") =>
+        $"SetEventFlag(TargetEventFlagType.EventFlag, {flag}, {state})";
+
+    private static (EMEVD.Event Evt, Dictionary<int, RelayInjector.WarpTarget> Targets, int Count) Patch(
+        Events events, Dictionary<int, List<int>> regionToFlags, params string[] lines)
+    {
+        var evt = BuildEvent(events, lines);
+        var emevd = new EMEVD();
+        emevd.Events.Add(evt);
+        var targets = new Dictionary<int, RelayInjector.WarpTarget>();
+        int n = RelayInjector.PatchEmevdFile(emevd, events, regionToFlags, targets);
+        return (evt, targets, n);
+    }
+
+    [Fact]
+    public void PatchEmevdFile_ALockedEventStaysDormantAndALateLockRaisesNoGateFlag()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        // What the core patches leave: the zone flag, then the trap flag,
+        // right before the warp.
+        var evt = BuildEvent(events,
+            "WaitFixedTimeSeconds(1)", SetFlag(ZoneFlag), SetFlag(10000851), Warp(Region));
+        evt.Parameters.Add(new EMEVD.Parameter(0, 0, 0, 4));
+        evt.Parameters.Add(new EMEVD.Parameter(3, 4, 4, 4));
+        var emevd = new EMEVD();
+        emevd.Events.Add(evt);
+        var targets = new Dictionary<int, RelayInjector.WarpTarget>();
+
+        int n = RelayInjector.PatchEmevdFile(
+            emevd, events, new() { [Region] = new() { ZoneFlag } }, targets);
+
+        Assert.Equal(1, n);
+        Assert.Equal(6, evt.Instructions.Count);
+        Assert.True(IsLockWait(events, evt.Instructions[0]));
+        // The check sits above both flags.
+        Assert.True(IsLockCheck(events, evt.Instructions[2]));
+        // Parameters follow their instruction.
+        Assert.Equal(1, evt.Parameters[0].InstructionIndex);
+        Assert.Equal(5, evt.Parameters[1].InstructionIndex);
+
+        // The target carries the map and the flags the gate sets.
+        Assert.Equal(Map, targets[Region].Map);
+        Assert.Equal(2, targets[Region].Prelude.Count);
+        Assert.True(Same(targets[Region].Prelude[0], events.ParseAdd(SetFlag(ZoneFlag))));
+        Assert.True(Same(targets[Region].Prelude[1], events.ParseAdd(SetFlag(10000851))));
+    }
+
+    [Fact]
+    public void PatchEmevdFile_LeavesTheEventsOwnFlagsAndSkipsAsTheyWere()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        // Shape of the vanilla cutscene warp events (common.emevd 902): the
+        // event sets its own flags in two skip-selected branches right above
+        // the zone flag.
+        var (evt, targets, _) = Patch(events, new() { [Region] = new() { ZoneFlag } },
+            "SkipIfEventFlag(3, ON, TargetEventFlagType.EventFlag, 100)",
+            SetFlag(780010),
+            SetFlag(780011, "OFF"),
+            "SkipUnconditionally(2)",
+            SetFlag(780010, "OFF"),
+            SetFlag(780011),
+            SetFlag(ZoneFlag),
+            Warp(Region));
+
+        // The check lands between the event's flags and the zone flag...
+        Assert.True(IsLockCheck(events, evt.Instructions[7]));
+        Assert.True(Same(evt.Instructions[8], events.ParseAdd(SetFlag(ZoneFlag))));
+        // ...outside both skip ranges, whose counts did not move.
+        Assert.Equal(3, evt.Instructions[1].ArgData[0]);
+        Assert.Equal(2, evt.Instructions[4].ArgData[0]);
+        Assert.Single(targets[Region].Prelude);
+    }
+
+    [Fact]
+    public void PatchEmevdFile_ASkipOverTheWarpAlsoSkipsItsCheck()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        // Alternate-side gate: the first warp is skipped when flag 330 is ON.
+        var (evt, _, n) = Patch(events,
+            new() { [Region] = new() { ZoneFlag }, [Region + 1] = new() { ZoneFlag } },
+            "SkipIfEventFlag(2, ON, TargetEventFlagType.EventFlag, 330)",
+            Warp(Region),
+            "SkipUnconditionally(1)",
+            Warp(Region + 1));
+
+        Assert.Equal(2, n);
+        // wait, skip, check, warp, skip, check, warp
+        Assert.Equal(
+            new[] { false, false, true, false, false, true, false },
+            evt.Instructions.Select(i => IsLockCheck(events, i)));
+        // Both skips still land where they did: past the first warp's skip
+        // for the first, on the second warp for the second.
+        Assert.Equal(3, evt.Instructions[1].ArgData[0]);
+        Assert.Equal(2, evt.Instructions[4].ArgData[0]);
+    }
+
+    [Fact]
+    public void PatchEmevdFile_AnEventStartingWithItsGateFlags_IsLockedFromItsFirstLine()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var (evt, _, _) = Patch(events, new() { [Region] = new() { ZoneFlag } },
+            SetFlag(ZoneFlag), Warp(Region));
+
+        Assert.True(IsLockWait(events, evt.Instructions[0]));
+        Assert.True(IsLockCheck(events, evt.Instructions[1]));
+        Assert.Equal(4, evt.Instructions.Count);
+    }
+
+    [Fact]
+    public void PatchEmevdFile_LeavesEventsWithoutAGraphWarpUntouched()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var (evt, targets, n) = Patch(events, new() { [Region] = new() { ZoneFlag } },
+            SetFlag(ZoneFlag), Warp(999));
+
+        Assert.Equal(0, n);
+        Assert.Equal(2, evt.Instructions.Count);
+        Assert.Empty(targets);
+    }
+
+    private static EMEVD RunInjectWarpEvents(
+        Events events,
+        Dictionary<int, List<int>> regionToFlags,
+        IEnumerable<int> warpRegions,
+        uint? chapelPlayerEntity = 10010982,
+        params string[] prelude)
+    {
+        var common = new EMEVD();
+        common.Events.Add(new EMEVD.Event(0));
+        RelayInjector.InjectWarpEvents(
+            common, events, regionToFlags,
+            warpRegions.ToDictionary(r => r, _ => new RelayInjector.WarpTarget(
+                Map, prelude.Select(events.ParseAdd).ToList())),
+            new Dictionary<string, string> { [ZoneFlag.ToString()] = "node_a" },
+            chapelPlayerEntity);
+        return common;
+    }
+
+    [Fact]
+    public void InjectWarpEvents_AConnectionWarpSetsTheGatesFlagsThenWarps()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var common = RunInjectWarpEvents(
+            events,
+            // 1050290020: a mirror flag a plugin appended, not a connection.
+            new() { [Region] = new() { ZoneFlag, 1050290020 } },
+            new[] { Region },
+            prelude: new[] { SetFlag(ZoneFlag), SetFlag(10000851) });
+
+        int slot = ZoneFlag - SpeedFogIds.ZoneFlagBase;
+        int warpFlag = SpeedFogIds.RelayWarpFlagBase + slot;
+        var evt = Assert.Single(common.Events, e => e.ID == SpeedFogIds.RelayEvents.Base + 10 + slot);
+        var expected = new[]
+        {
+            $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {warpFlag})",
+            SetFlag(warpFlag, "OFF"),
+            SetFlag(ZoneFlag),
+            SetFlag(10000851),
+            Warp(Region),
+        }.Select(events.ParseAdd).ToList();
+        Assert.True(evt.Instructions.Count >= expected.Count);
+        for (int i = 0; i < expected.Count; i++)
+            Assert.True(Same(evt.Instructions[i], expected[i]), $"instruction {i}");
+
+        // Chapel warp + the one connection: the mirror flag got no event.
+        Assert.Equal(3, common.Events.Count);
+        // Every added event is initialized from Event 0.
+        Assert.Equal(2, common.Events[0].Instructions.Count);
+    }
+
+    [Fact]
+    public void InjectWarpEvents_AConnectionWithTwoRegions_GetsOneEventOnTheRegionThatHasAWarp()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        // Entrance with an alternate side: two regions carry the flag, and
+        // the scan only met a warp to the second.
+        var common = RunInjectWarpEvents(
+            events,
+            new() { [Region] = new() { ZoneFlag }, [Region + 1] = new() { ZoneFlag } },
+            new[] { Region + 1 },
+            chapelPlayerEntity: null);
+
+        var evt = Assert.Single(common.Events, e => e.ID != 0);
+        Assert.Contains(evt.Instructions, i => Same(i, events.ParseAdd(Warp(Region + 1))));
+    }
+
+    [Fact]
+    public void InjectWarpEvents_WithoutChapelGrace_LeavesTheChapelWarpOut()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var common = RunInjectWarpEvents(
+            events, new() { [Region] = new() { ZoneFlag } }, new[] { Region }, chapelPlayerEntity: null);
+
+        Assert.DoesNotContain(common.Events, e => e.ID == SpeedFogIds.RelayEvents.Base);
+    }
+
+    [Fact]
+    public void InjectWarpEvents_AConnectionBeyondTheWarpFlags_Throws()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        int flag = SpeedFogIds.ZoneFlagBase + SpeedFogIds.RelayWarpFlagCount;
+        var common = new EMEVD();
+        common.Events.Add(new EMEVD.Event(0));
+
+        Assert.Throws<InvalidDataException>(() => RelayInjector.InjectWarpEvents(
+            common, events,
+            new() { [Region] = new() { flag } },
+            new() { [Region] = new RelayInjector.WarpTarget(Map, new List<EMEVD.Instruction>()) },
+            new Dictionary<string, string> { [flag.ToString()] = "node_a" },
+            10010982));
+    }
+}

@@ -54,10 +54,11 @@ SpeedFog uses a **dedicated base `1050290000`**, in map coordinates m60_50_29_00
 | 1050290000-1050290099 | 0xxx offsets 0-99 | Saved (persistent) | Mod state flags | Various injectors |
 | 1050290100-1050290299 | 0xxx offsets 100-299 | Saved (persistent) | Race item use and removal flags | RaceItemsPlugin |
 | 1050290300-1050290499 | 0xxx offsets 300-499 | Saved (persistent) | Race item talisman removal flags | RaceItemsPlugin |
+| 1050290500-1050290999 | 0xxx offsets 500-999 | Saved (persistent) | Relay lock, Chapel warp and connection warp flags | RelayPlugin (raised by the racing mod) |
 | 1050294000-1050294999 | 4xxx offsets 0-999 | Saved (persistent) | Zone tracking, finish event, death markers | ZoneTrackingInjector, RunCompleteInjector, DeathMarkerInjector |
 
 Both ranges use saved flags (persist across area reloads):
-- Category 1050290 (offset 0-499): persistent mod state (items given, etc.), the race item goods' use/removal flags and the talisman removal flags
+- Category 1050290 (offset 0-999): persistent mod state (items given, etc.), the race item goods' use/removal flags, the talisman removal flags and the relay flags
 - Category 1050294 (offset 0-999): zone tracking, cleared by racing mod after capture
   (so generator EMEVD must never wait on these: features needing "player entered
   cluster X" set their own 1050290xxx mirror flags, see the Halloween jumpscares)

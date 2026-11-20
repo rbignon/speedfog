@@ -174,11 +174,12 @@ speedfog/
 │   │   │   └── PhantomCatalogInjector.cs  # Phantom skins catalog baked into params
 │   │   ├── Plugins/         # C# side of the [plugin.<name>] tables (contract: docs/plugins/README.md)
 │   │   │   ├── SpeedFogPlugin.cs  # Plugin base class: no-op hooks the pipeline phases call
-│   │   │   ├── PluginRegistry.cs  # Enabled plugins in execution order (summer, weather, halloween, race_items)
+│   │   │   ├── PluginRegistry.cs  # Enabled plugins in execution order (summer, weather, halloween, race_items, relay)
 │   │   │   ├── Themes/      # TextTheme: cosmetic text reskins shared by summer and halloween
 │   │   │   ├── Summer/      # SummerPlugin (text theme only)
 │   │   │   ├── Weather/     # WeatherPlugin + WeatherInjector (force weather / pin clock hour)
 │   │   │   ├── RaceItems/   # RaceItemsPlugin + injectors (regulation rows, EMEVD use and removal events, texts) for [plugin.race_items]
+│   │   │   ├── Relay/       # RelayPlugin + RelayInjector (lock wait and check in events with a graph warp, flag-driven warp events) for [plugin.relay]
 │   │   │   └── Halloween/   # HalloweenPlugin and its injectors
 │   │   │       ├── HalloweenPlugin.cs  # Hooks, parsed settings, jumpscare plan, regulation-to-MSB row guards
 │   │   │       ├── HalloweenPluginSettings.cs  # Parse [plugin.halloween] parameters
@@ -266,6 +267,7 @@ speedfog/
 │       ├── halloween-darkness.md  # Halloween evergaol lighting over the whole run
 │       ├── halloween-jumpscares.md  # Halloween jumpscares: Aging Untouchable warping onto the player in drawn dungeon layers
 │       ├── race-items.md    # Race items: Mario Kart style goods, SpEffects, flags, texts, icons, in-game checks
+│       ├── relay.md         # Relay: flag-driven lock on graph warps, warps to connection entrances and to the Chapel, in-game checks
 │       └── weather.md       # Weather plugin: force weather + pin clock hour
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by StaticModBuilder)
 └── output/                  # Generated mod (gitignored, self-contained)
@@ -318,6 +320,7 @@ speedfog/
 | `docs/plugins/halloween-jumpscares.md` | Halloween jumpscares: layer draw (JumpscarePlanner), hidden c5280 actors, warp-onto-player event, ids, owed in-game checks |
 | `docs/plugins/halloween-darkness.md` | Halloween darkness: vanilla evergaol gparam override re-applied from common.emevd, area interactions, rejected custom-gparam approach, owed in-game checks |
 | `docs/plugins/winter.md` | Winter plugin: static mod built at bootstrap (scan of the vertex layouts, two matbin binders, 276 frosted half-resolution TPFs), `[plugin.winter]` + weather companion, racing activation lines, `WINTER FAILED` and `--no-winter`, measured sizes and times, validation status (in-game pass owed), deferred families and trees |
+| `docs/plugins/relay.md` | Relay plugin: lock flag on graph warps, per-connection and Chapel warp events, flag derivation, in-game checks |
 | `docs/plugins/race-items.md` | Race items plugin: goods and item tables, reserved ids and flags, goods/SpEffect rows, use and removal events, texts, icon replacement, calibration values, in-game checks |
 | `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
@@ -402,9 +405,9 @@ speedfog/
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |
 | `MapSplitsInjector` | Injects map_splits.toml synthetic zones/fogs into AnnotationData before `Graph.Construct`, splits EnemyAreas (see `docs/map-splits.md`) |
-| `SpeedFogPlugin` | Base class of the C# side of a `[plugin.<name>]` table: no-op hooks the phases call (`AfterFogModWrite`, `OnCommonEmevd`, `OnRegulation`, `TextThemeName`, `OnModDirMsb`, `OnModDirLate`); plugin state lives in the object (see `docs/plugins/README.md`) |
-| `PluginRegistry` | Creates the enabled, known plugins in execution order (summer, weather, halloween, race_items) at the end of `LoadInputsPhase` and names them from its entries (plugin classes do not repeat their config key); each parses its table on creation |
-| `SummerPlugin` / `WeatherPlugin` / `HalloweenPlugin` / `RaceItemsPlugin` | The plugins (`RaceItemsPlugin`: see `docs/plugins/race-items.md`); `HalloweenPlugin` owns the parsed settings, the jumpscare plan and the regulation-to-MSB row guards |
+| `SpeedFogPlugin` | Base class of the C# side of a `[plugin.<name>]` table: no-op hooks the phases call (`AfterFogModWrite`, `OnPatchEmevd`, `OnCommonEmevd`, `OnRegulation`, `TextThemeName`, `OnModDirMsb`, `OnModDirLate`); plugin state lives in the object (see `docs/plugins/README.md`) |
+| `PluginRegistry` | Creates the enabled, known plugins in execution order (summer, weather, halloween, race_items, relay) at the end of `LoadInputsPhase` and names them from its entries (plugin classes do not repeat their config key); each parses its table on creation |
+| `SummerPlugin` / `WeatherPlugin` / `HalloweenPlugin` / `RaceItemsPlugin` / `RelayPlugin` | The plugins (`RaceItemsPlugin`: see `docs/plugins/race-items.md`; `RelayPlugin`: see `docs/plugins/relay.md`); `HalloweenPlugin` owns the parsed settings, the jumpscare plan and the regulation-to-MSB row guards |
 | `TextTheme` | Cosmetic text reskins per theme, summer + halloween, applied by `ModDirPhase` for each plugin's `TextThemeName` |
 | `MsgBndEditor` | Shared msgbnd editing for the engus + frafr text injectors (`TextTheme`, `BossNameInjector`): mod copy over vanilla, written only on change |
 | `BossNameInjector` | Healthbar names of relocated enemies (graph.json `boss_names`): resolves each name to a NpcName id (exact vanilla engus match, else a `SpeedFogIds.BossNameFmgIds` entry written to engus + frafr) and repoints the arena's `DisplayBossHealthBar` nameId in the map EMEVD, leaving alone the arenas the randomizer already named; runs before `TextTheme` and hands it the allocated {name -> id} so a theme can reskin them by `boss_name` (see `docs/boss-healthbar-names.md`) |
