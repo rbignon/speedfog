@@ -149,6 +149,66 @@ public class RelayInjectorTests
     }
 
     [Fact]
+    public void PatchEmevdFile_OnlyAWaitOnMainCountsAsTheTrigger()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        // The gate template registers a condition in a group after its
+        // prompt (the trapped check): it is not a wait.
+        var (evt, _, _) = Patch(events, new() { [Region] = new() { ZoneFlag } },
+            Prompt,
+            "IfCharacterHasSpEffect(AND_06, 10000, 4280, false, ComparisonType.Equal, 1)",
+            Warp(Region));
+
+        // wait, prompt, check, condition, warp
+        Assert.Equal(
+            new[] { false, false, true, false, false },
+            evt.Instructions.Select(i => IsLockCheck(events, i)));
+    }
+
+    [Fact]
+    public void PatchEmevdFile_TwoTriggersInOneEvent_EachGetItsCheckAndSkipsKeepTheirTargets()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var regions = new Dictionary<int, List<int>>
+        {
+            [Region] = new() { ZoneFlag },
+            [Region + 1] = new() { ZoneFlag },
+        };
+        var evt = BuildEvent(events,
+            "SkipIfEventFlag(1, ON, TargetEventFlagType.EventFlag, 100)", // lands on the first warp
+            Prompt,
+            Warp(Region),
+            "SkipIfEventFlag(2, ON, TargetEventFlagType.EventFlag, 101)", // lands past the second warp
+            Prompt,
+            Warp(Region + 1),
+            "WaitFixedTimeFrames(1)");
+        evt.Parameters.Add(new EMEVD.Parameter(2, 4, 4, 4));
+        evt.Parameters.Add(new EMEVD.Parameter(5, 4, 4, 4));
+        var emevd = new EMEVD();
+        emevd.Events.Add(evt);
+
+        RelayInjector.PatchEmevdFile(emevd, events, regions, new());
+
+        // wait, skip, prompt, check, warp, skip, prompt, check, warp, wait 1 frame
+        Assert.Equal(
+            new[] { false, false, false, true, false, false, false, true, false, false },
+            evt.Instructions.Select(i => IsLockCheck(events, i)));
+        // The first skip landed on the first warp's check position: it now
+        // runs the check before the warp, its count unchanged. The second
+        // skips its prompt, the check and the warp.
+        Assert.Equal(1, evt.Instructions[1].ArgData[0]);
+        Assert.Equal(3, evt.Instructions[5].ArgData[0]);
+        Assert.Equal(4, evt.Parameters[0].InstructionIndex);
+        Assert.Equal(8, evt.Parameters[1].InstructionIndex);
+    }
+
+    [Fact]
     public void PatchEmevdFile_AnEventWithoutAWaitAboveItsWarp_OnlyGetsTheTopWait()
     {
         var events = BuildEvents();

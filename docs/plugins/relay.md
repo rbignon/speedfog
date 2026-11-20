@@ -38,8 +38,8 @@ the flags the warp sets.
 
 `RelayInjector.PatchEmevdFile` runs from the `OnPatchEmevd` hook on every
 EMEVD file. Each event holding a warp instruction whose region belongs to a
-graph connection (`RegionToFlags`, as for zone tracking) gets two
-instructions:
+graph connection (`RegionToFlags`, as for zone tracking) gets a wait and,
+after each of its triggers, a check (here a fog gate):
 
 ```
 IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, 1050290500)        # first line
@@ -58,9 +58,10 @@ WarpPlayer(...)
   its side effects.
 - **Check after the trigger.** It covers a lock raised after the event
   passed its first line (a player already standing at the prompt). It sits
-  right after the last wait on MAIN that precedes the warp, above everything
-  the trigger sets off; the event restarts and stops on the top wait. An
-  event with no wait above its warp only gets the top wait.
+  right after the last wait on MAIN that precedes the warp (by instruction
+  order, not by control flow), above everything the trigger sets off; the
+  event restarts and stops on the top wait. An event with no wait above its
+  warp only gets the top wait.
 
 The check must come before the gate's animation: `RotateCharacter` with
 animation 60060 walks the character through the fog wall, and FogMod warps
@@ -76,8 +77,12 @@ Limits:
 
 - The lock covers graph warps only. Fast travel, death and quit-outs are not
   EMEVD warps: blocking fast travel is the driver's job.
-- A lock raised between a gate's prompt and its warp (one second) comes
-  too late: the player takes the gate.
+- A lock raised between an event's trigger and its warp comes too late: the
+  warp happens, with its zone and trap flags. The window is one second on a
+  fog gate, 2 to 5 seconds on the sending gates and cutscene transitions.
+  A driver that locks a player and then moves them must wait it out.
+- Unlocking a fog gate brings its prompt back; an event triggered by a flag
+  or a region whose trigger still holds warps by itself at the unlock.
 
 ## Warp events
 
