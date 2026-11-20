@@ -64,19 +64,24 @@ public class RelayInjectorTests
         return (evt, targets, n);
     }
 
+    private const string Prompt = "IfActionButtonInArea(MAIN, 9000, 10011800)";
+
     [Fact]
-    public void PatchEmevdFile_ALockedEventStaysDormantAndALateLockRaisesNoGateFlag()
+    public void PatchEmevdFile_ChecksTheLockRightAfterThePromptBeforeTheGateAnimation()
     {
         var events = BuildEvents();
         if (events == null)
             return;
 
-        // What the core patches leave: the zone flag, then the trap flag,
-        // right before the warp.
+        // A fog gate once the core patches ran: prompt, walk through the fog
+        // wall, then the zone flag and the trap flag right before the warp.
         var evt = BuildEvent(events,
-            "WaitFixedTimeSeconds(1)", SetFlag(ZoneFlag), SetFlag(10000851), Warp(Region));
+            Prompt,
+            "RotateCharacter(10000, 755890022, 60060, false)",
+            "WaitFixedTimeSeconds(1)",
+            SetFlag(ZoneFlag), SetFlag(10000851), Warp(Region));
         evt.Parameters.Add(new EMEVD.Parameter(0, 0, 0, 4));
-        evt.Parameters.Add(new EMEVD.Parameter(3, 4, 4, 4));
+        evt.Parameters.Add(new EMEVD.Parameter(5, 4, 4, 4));
         var emevd = new EMEVD();
         emevd.Events.Add(evt);
         var targets = new Dictionary<int, RelayInjector.WarpTarget>();
@@ -85,13 +90,15 @@ public class RelayInjectorTests
             emevd, events, new() { [Region] = new() { ZoneFlag } }, targets);
 
         Assert.Equal(1, n);
-        Assert.Equal(6, evt.Instructions.Count);
+        // wait, prompt, check, rotate, wait 1 s, zone flag, trap flag, warp
+        Assert.Equal(8, evt.Instructions.Count);
         Assert.True(IsLockWait(events, evt.Instructions[0]));
-        // The check sits above both flags.
+        Assert.True(Same(evt.Instructions[1], events.ParseAdd(Prompt)));
         Assert.True(IsLockCheck(events, evt.Instructions[2]));
+        Assert.Equal(1, evt.Instructions.Count(i => IsLockCheck(events, i)));
         // Parameters follow their instruction.
         Assert.Equal(1, evt.Parameters[0].InstructionIndex);
-        Assert.Equal(5, evt.Parameters[1].InstructionIndex);
+        Assert.Equal(7, evt.Parameters[1].InstructionIndex);
 
         // The target carries the map and the flags the gate sets.
         Assert.Equal(Map, targets[Region].Map);
@@ -101,62 +108,48 @@ public class RelayInjectorTests
     }
 
     [Fact]
-    public void PatchEmevdFile_LeavesTheEventsOwnFlagsAndSkipsAsTheyWere()
+    public void PatchEmevdFile_TheGatesFlagsLeaveOutTheEventsOwn()
     {
         var events = BuildEvents();
         if (events == null)
             return;
 
         // Shape of the vanilla cutscene warp events (common.emevd 902): the
-        // event sets its own flags in two skip-selected branches right above
-        // the zone flag.
-        var (evt, targets, _) = Patch(events, new() { [Region] = new() { ZoneFlag } },
-            "SkipIfEventFlag(3, ON, TargetEventFlagType.EventFlag, 100)",
-            SetFlag(780010),
-            SetFlag(780011, "OFF"),
-            "SkipUnconditionally(2)",
-            SetFlag(780010, "OFF"),
-            SetFlag(780011),
-            SetFlag(ZoneFlag),
-            Warp(Region));
+        // event sets its own flags right above the zone flag.
+        var (_, targets, _) = Patch(events, new() { [Region] = new() { ZoneFlag } },
+            SetFlag(780010, "OFF"), SetFlag(780011), SetFlag(ZoneFlag), SetFlag(300), Warp(Region));
 
-        // The check lands between the event's flags and the zone flag...
-        Assert.True(IsLockCheck(events, evt.Instructions[7]));
-        Assert.True(Same(evt.Instructions[8], events.ParseAdd(SetFlag(ZoneFlag))));
-        // ...outside both skip ranges, whose counts did not move.
-        Assert.Equal(3, evt.Instructions[1].ArgData[0]);
-        Assert.Equal(2, evt.Instructions[4].ArgData[0]);
-        Assert.Single(targets[Region].Prelude);
+        Assert.Equal(2, targets[Region].Prelude.Count);
+        Assert.True(Same(targets[Region].Prelude[0], events.ParseAdd(SetFlag(ZoneFlag))));
+        Assert.True(Same(targets[Region].Prelude[1], events.ParseAdd(SetFlag(300))));
     }
 
     [Fact]
-    public void PatchEmevdFile_ASkipOverTheWarpAlsoSkipsItsCheck()
+    public void PatchEmevdFile_ASkipOverTheCheckStillLandsOnItsTarget()
     {
         var events = BuildEvents();
         if (events == null)
             return;
 
-        // Alternate-side gate: the first warp is skipped when flag 330 is ON.
+        // A branch skipping over the prompt of the first warp.
         var (evt, _, n) = Patch(events,
             new() { [Region] = new() { ZoneFlag }, [Region + 1] = new() { ZoneFlag } },
             "SkipIfEventFlag(2, ON, TargetEventFlagType.EventFlag, 330)",
+            Prompt,
             Warp(Region),
-            "SkipUnconditionally(1)",
             Warp(Region + 1));
 
         Assert.Equal(2, n);
-        // wait, skip, check, warp, skip, check, warp
+        // wait, skip, prompt, check, warp, warp: one check serves both
+        // warps, and the skip still lands on the second warp.
         Assert.Equal(
-            new[] { false, false, true, false, false, true, false },
+            new[] { false, false, false, true, false, false },
             evt.Instructions.Select(i => IsLockCheck(events, i)));
-        // Both skips still land where they did: past the first warp's skip
-        // for the first, on the second warp for the second.
         Assert.Equal(3, evt.Instructions[1].ArgData[0]);
-        Assert.Equal(2, evt.Instructions[4].ArgData[0]);
     }
 
     [Fact]
-    public void PatchEmevdFile_AnEventStartingWithItsGateFlags_IsLockedFromItsFirstLine()
+    public void PatchEmevdFile_AnEventWithoutAWaitAboveItsWarp_OnlyGetsTheTopWait()
     {
         var events = BuildEvents();
         if (events == null)
@@ -166,8 +159,7 @@ public class RelayInjectorTests
             SetFlag(ZoneFlag), Warp(Region));
 
         Assert.True(IsLockWait(events, evt.Instructions[0]));
-        Assert.True(IsLockCheck(events, evt.Instructions[1]));
-        Assert.Equal(4, evt.Instructions.Count);
+        Assert.Equal(3, evt.Instructions.Count);
     }
 
     [Fact]
@@ -178,10 +170,10 @@ public class RelayInjectorTests
             return;
 
         var (evt, targets, n) = Patch(events, new() { [Region] = new() { ZoneFlag } },
-            SetFlag(ZoneFlag), Warp(999));
+            Prompt, SetFlag(ZoneFlag), Warp(999));
 
         Assert.Equal(0, n);
-        Assert.Equal(2, evt.Instructions.Count);
+        Assert.Equal(3, evt.Instructions.Count);
         Assert.Empty(targets);
     }
 

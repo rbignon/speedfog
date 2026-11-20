@@ -44,7 +44,10 @@ instructions:
 ```
 IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, 1050290500)        # first line
 ...
+IfConditionGroup(MAIN, PASS, OR_01)                                      # the gate's prompt
 EndIfEventFlag(EventEndType.Restart, ON, TargetEventFlagType.EventFlag, 1050290500)
+...
+RotateCharacter(...)                                                     # walk through the fog wall
 SetEventFlag(<zone-tracking flag>, ON)                                   # core patches
 SetEventFlag(<trap flag>, ON)
 WarpPlayer(...)
@@ -53,27 +56,28 @@ WarpPlayer(...)
 - **Wait at the top.** While the lock is ON the event is dormant: a fog gate
   shows no prompt, and an event triggered by a flag or a region runs none of
   its side effects.
-- **Check before the warp.** It covers a lock raised after the event passed
-  its first line (a player already standing at the prompt). The event
-  restarts and stops on the wait. In that case the instructions above the
-  check have run once (for a fog gate: the turn toward the gate and a one
-  second wait).
+- **Check after the trigger.** It covers a lock raised after the event
+  passed its first line (a player already standing at the prompt). It sits
+  right after the last wait on MAIN that precedes the warp, above everything
+  the trigger sets off; the event restarts and stops on the top wait. An
+  event with no wait above its warp only gets the top wait.
 
-The check sits above the `SetEventFlag` instructions the core patches put
-before the warp (from the region's first zone-tracking flag down), so a
-locked player raises neither the zone flag nor the trap flag. The event's
-own `SetEventFlag` instructions above them stay where they are. Every
-skip-by-line-count instruction whose range holds an insertion point skips
-one more line, so the event's branches land where they did.
+The check must come before the gate's animation: `RotateCharacter` with
+animation 60060 walks the character through the fog wall, and FogMod warps
+one second in. A check placed just before the warp restarts the event too
+late: the player ends up on the far side of the gate, in the vanilla area
+behind it (seen in game on the first test seed). For the same reason, a
+lock raised during that second does not stop the warp.
+
+Every skip-by-line-count instruction whose range holds an insertion point
+skips one more line, so the event's branches land where they did.
 
 Limits:
 
 - The lock covers graph warps only. Fast travel, death and quit-outs are not
   EMEVD warps: blocking fast travel is the driver's job.
-- A gate with an alternate side (`SkipIfEventFlag(2, ON, 330)` shape) whose
-  alternate flag is ON skips over the check of its alternate warp, because
-  the zone-tracking insertion already left that skip count one flag short:
-  the lock does not hold there, as the zone flag is not set there.
+- A lock raised between a gate's prompt and its warp (one second) comes
+  too late: the player takes the gate.
 
 ## Warp events
 
@@ -84,7 +88,7 @@ connection n:
 ```
 IfEventFlag(MAIN, ON, EventFlag, <warp flag>)
 SetEventFlag(EventFlag, <warp flag>, OFF)
-<the SetEventFlag instructions found between the lock check and the warp>
+<the SetEventFlag instructions the core patches put before the gate's warp>
 WarpPlayer(<map>, <region>, 0)
 WaitFixedTimeFrames(1)
 EndUnconditionally(EventEndType.Restart)
@@ -92,7 +96,9 @@ EndUnconditionally(EventEndType.Restart)
 
 The map, the region and the replayed flags (zone-tracking flags, boss trap
 flag, the Erdtree map variant flag 300) are recorded during the lock scan,
-from the first compiled warp met for the region. Notes:
+from the first compiled warp met for the region: the run of `SetEventFlag`
+right above it, from the region's first zone-tracking flag down (the ones
+above are the event's own). Notes:
 
 - The warp events ignore the lock: the driver decides who moves.
 - They have no guard on the player's state (dead, in an animation, in a
@@ -119,7 +125,7 @@ table, `Event Flags > Event Flags by ID` (re-type the ID after an action, its
 2. **Lock.** At the Chapel, set 1050290500 ON and walk to a fog gate: no
    prompt. Set it OFF: the prompt comes back and the gate works.
 3. **Late lock.** Stand at a gate with its prompt shown, set the lock ON,
-   then use the gate: the character turns toward it, no warp, and the prompt
+   then use the gate: nothing happens (no animation, no warp) and the prompt
    is gone afterwards. Set it OFF: the gate works at the next use, not by
    itself.
 4. **Lock across a reload.** Lock ON, quit to the title screen, load: still

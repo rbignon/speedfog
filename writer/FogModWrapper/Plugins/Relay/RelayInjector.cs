@@ -8,8 +8,8 @@ namespace FogModWrapper.Plugins.Relay;
 /// <summary>
 /// EMEVD side of [plugin.relay] (docs/plugins/relay.md):
 /// A) in every event holding a graph warp, a wait on the lock flag at the
-///    top and a restart check before the warp, so a locked player cannot
-///    leave through a fog gate;
+///    top and a restart check after the event's trigger, so a locked player
+///    cannot leave through a fog gate;
 /// B) one common.emevd event per connection, warping the player to that
 ///    connection's entrance when its flag is raised, plus one event warping
 ///    back to the Chapel grace.
@@ -30,12 +30,13 @@ public static class RelayInjector
     public sealed record WarpTarget((byte, byte, byte, byte) Map, IReadOnlyList<EMEVD.Instruction> Prelude);
 
     /// <summary>
-    /// Patch a single EMEVD. In each event with a warp instruction whose
-    /// region is in <paramref name="regionToFlags"/>: a wait for the lock
-    /// flag to be OFF at the top (a locked event stays dormant, prompt
-    /// included) and, before the warp, a check restarting the event when
-    /// the lock was raised meanwhile. Records each matched region in
-    /// <paramref name="targets"/>. Returns the number of warps locked.
+    /// Patch a single EMEVD. Each event with a warp instruction whose region
+    /// is in <paramref name="regionToFlags"/> gets a wait for the lock flag
+    /// to be OFF at the top (a locked event stays dormant, prompt included)
+    /// and, right after the last wait that precedes the warp, a check
+    /// restarting the event when the lock was raised meanwhile. Records
+    /// each matched region in <paramref name="targets"/>. Returns the number
+    /// of warps locked.
     /// </summary>
     public static int PatchEmevdFile(
         EMEVD emevd, Events events,
@@ -46,59 +47,80 @@ public static class RelayInjector
 
         foreach (var evt in emevd.Events)
         {
-            bool matched = false;
+            int warps = 0;
+            var checkPositions = new SortedSet<int>();
 
-            // From last to first, so an insertion does not shift the
-            // positions still to visit.
-            for (int i = evt.Instructions.Count - 1; i >= 0; i--)
+            for (int i = 0; i < evt.Instructions.Count; i++)
             {
                 var warpInfo = ZoneTrackingInjector.TryExtractWarpInfo(evt.Instructions[i]);
                 if (warpInfo == null || warpInfo.Value.Region == 0)
                     continue;
                 if (!regionToFlags.TryGetValue(warpInfo.Value.Region, out var zoneFlags))
                     continue;
+                warps++;
 
                 // The core patches put their SetEventFlag right before the
-                // warp, zone tracking first: the check goes above the
-                // region's first zone flag, or a locked player would still
-                // raise them. SetEventFlag instructions above that one are
-                // the event's own and stay where they are.
+                // warp, zone tracking first: from the region's first zone
+                // flag down, they are what the gate sets on the way in.
+                // SetEventFlag instructions above are the event's own.
                 int runStart = i;
                 while (runStart > 0 && IsSetEventFlag(evt.Instructions[runStart - 1]))
                     runStart--;
-                int at = i;
+                int preludeStart = i;
                 for (int k = runStart; k < i; k++)
                 {
                     if (zoneFlags.Contains(SetEventFlagId(evt.Instructions[k])))
                     {
-                        at = k;
+                        preludeStart = k;
                         break;
                     }
                 }
-
                 targets.TryAdd(warpInfo.Value.Region, new WarpTarget(
                     warpInfo.Value.DestMap,
-                    evt.Instructions.GetRange(at, i - at)
+                    evt.Instructions.GetRange(preludeStart, i - preludeStart)
                         .Select(x => new EMEVD.Instruction(x.Bank, x.ID, (byte[])x.ArgData.Clone()))
                         .ToList()));
 
+                // The check goes right after the event's trigger (its last
+                // wait before the warp), above everything the trigger sets
+                // off: a fog gate walks the character through the fog wall
+                // before warping, so a later check would leave the player on
+                // the far side of the gate. No wait above the warp: the top
+                // wait alone covers the event.
+                for (int k = i - 1; k >= 0; k--)
+                {
+                    if (IsMainWait(evt.Instructions[k]))
+                    {
+                        checkPositions.Add(k + 1);
+                        break;
+                    }
+                }
+            }
+
+            if (warps == 0)
+                continue;
+            totalInjected += warps;
+
+            // From last to first, so an insertion does not shift the
+            // positions still to fill.
+            foreach (int at in checkPositions.Reverse())
+            {
                 InsertAt(evt, at, events.ParseAdd(
                     "EndIfEventFlag(EventEndType.Restart, ON, TargetEventFlagType.EventFlag, "
                     + $"{SpeedFogIds.RelayLockFlag})"));
-                totalInjected++;
-                matched = true;
-                i = at;
             }
-
-            if (matched)
-            {
-                InsertAt(evt, 0, events.ParseAdd(
-                    $"IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})"));
-            }
+            InsertAt(evt, 0, events.ParseAdd(
+                $"IfEventFlag(MAIN, OFF, TargetEventFlagType.EventFlag, {SpeedFogIds.RelayLockFlag})"));
         }
 
         return totalInjected;
     }
+
+    /// <summary>A condition instruction (banks below 1000, first argument =
+    /// result condition group) evaluated on MAIN (group 0): the event waits
+    /// there until the condition holds.</summary>
+    private static bool IsMainWait(EMEVD.Instruction instr) =>
+        instr.Bank < 1000 && instr.ArgData.Length >= 1 && instr.ArgData[0] == 0;
 
     /// <summary>Insert an instruction, keeping the event's parameters on
     /// their instruction and every skip-by-line-count above it on its
