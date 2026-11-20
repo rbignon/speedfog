@@ -98,7 +98,7 @@ per item, 1450800 + index), so the v1 effect ids keep their meaning.
 | `camera` | Camera | `race_item` | `camera` | none (memory writes) | 15 s |
 | `talisman_thief` | Talisman Thief | `race_item` | `talisman_thief` | none (the racing mod picks a talisman and raises its removal flag) | none |
 | `junk_weapon` | Junk Weapon | `race_item` | `junk_weapon` | none (the racing mod equips one of the junk weapons below) | none |
-| `hunter` | Hunter | `race_item` | `hunter` | none (the racing mod spawns him from the Hunter rows below) | 30 s |
+| `hunter` | Hunter | `race_item` | `hunter` | none (the racing mod spawns him from the Hunter rows below) | 15 s |
 
 The Junk Weapon forces one of the base game's whips and torches into the
 victim's right hand, +0 standard: Whip (20000000), Thorned Whip (20020000),

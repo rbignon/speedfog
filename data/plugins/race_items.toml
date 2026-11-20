@@ -225,7 +225,7 @@ key = "hunter"
 goods = "race_item"
 icon = "hunter"
 name = "Hunter"
-duration_s = 30
+duration_s = 15
 
 # Weapons the Junk Weapon forces into the victim's right hand: the base game's
 # whips and torches (+0, standard; the Item Randomizer's auto-upgrade may raise

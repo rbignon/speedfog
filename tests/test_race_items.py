@@ -85,9 +85,9 @@ VANILLA_ENDURANCE = {102360: 15, 4101: 0}
 
 
 MEMORY_EFFECTS = {"vanish", "unseen_foes", "slow_mo", "giant", "camera"}
-# Applied by the racing mod without a SpEffect row: the Hunter lasts 30 s of
+# Applied by the racing mod without a SpEffect row: the Hunter lasts 15 s of
 # play clock, the Talisman Thief and the Junk Weapon are permanent.
-MOD_APPLIED_DURATIONS = {"hunter": 30, "talisman_thief": None, "junk_weapon": None}
+MOD_APPLIED_DURATIONS = {"hunter": 15, "talisman_thief": None, "junk_weapon": None}
 
 
 def test_duration_matches_the_speffect_that_carries_it():
