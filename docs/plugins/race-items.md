@@ -301,13 +301,23 @@ graph.json.
 
 ## Replacing the icons
 
-The 22 icons ship as placeholder flat shapes. The art is replaced by dropping
-PNG files in, nothing else changes. For the graphic artist and for Roger:
+19 of the 21 icons are the graphic artist's drawings (imported 2026-11-20 at
+768x768, the size they were delivered at); `item_box` and `hunter` still ship
+as placeholder flat shapes (1024x1024, drawn by
+`tools/generate_race_item_icons.py`). The art is replaced by dropping PNG files
+in, nothing else changes. For the graphic artist and for Roger:
 
 - **Format**: PNG, RGBA with a transparent background, square, at least
   160x160; 1024x1024 asked of the artist, so sharper large icons stay one
   setting away (below). One file per icon: every in-game texture is derived
   from it by resizing.
+- **Framing**: delivered art goes through
+  `tools/import_race_item_icons.py <icon>=<file> ...` (Pillow only, any image
+  format and canvas size), which centres each drawing and scales it so its
+  longer side takes 88% of a 768x768 canvas: every icon then fills its slot
+  alike, whatever empty space its source had. A faint glow is left out of the
+  measure and lands in the margin (a glow wider than the margin shrinks the
+  drawing until it fits).
 - **Files**: `data/plugins/race_items_icon_<icon>.png`, `<icon>` being a name of
   the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
   `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
@@ -317,7 +327,8 @@ PNG files in, nothing else changes. For the graphic artist and for Roger:
   one icon; `item_box` is the Race Item's own icon, shown until the racing
   mod writes the held item's icon).
 - **After the drop**: overwrite the files (never re-run
-  `tools/generate_race_item_icons.py` afterwards, it would overwrite the art),
+  `tools/generate_race_item_icons.py` without icon names afterwards, it would
+  overwrite the art; with names it only redraws those placeholders),
   re-run `tools/bootstrap.py` on the generation host (it also needs a re-run
   after the rename to `speedfog-icons`; `speedfog` refuses to generate a
   Halloween or race items seed while the overlay is missing or older than the
@@ -325,7 +336,7 @@ PNG files in, nothing else changes. For the graphic artist and for Roger:
   not a square of at least 160x160, makes `ItemIconPatcher` skip the whole
   overlay with a warning), regenerate the pools, then in speedfog-racing run
   `uv run tools/sync_race_item_icons.py` and release the mod. A detailed
-  1024x1024 PNG can pass the 500 KB limit of the `check-added-large-files`
+  PNG (768x768 already) can pass the 500 KB limit of the `check-added-large-files`
   pre-commit hook: commit the drop with `SKIP=check-added-large-files`.
 
 Each PNG becomes two textures, both found by name like any texture of the
@@ -348,7 +359,7 @@ large icons.
 The icons ship in the shared `data/mods/speedfog-icons/` overlay, together with
 the Halloween icons (see [halloween-icons.md](halloween-icons.md)): one
 `05_dummy.tpf.dcx` per variant (`menu/hi`, `menu/low`), shipped when Halloween
-or race items is enabled. With the flat placeholders it weighs about 0.17 MB
+or race items is enabled. With the flat placeholders it weighed about 0.17 MB
 per seed (83 KB per variant), measured with 11 icons, before the item box.
 
 ## Calibration values

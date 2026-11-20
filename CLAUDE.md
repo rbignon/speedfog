@@ -88,7 +88,7 @@ speedfog/
 │   │   ├── summer.toml      # Summer theme text catalogue (tracked)
 │   │   ├── halloween.toml   # Halloween theme text catalogue (tracked)
 │   │   ├── race_items.toml  # Race items catalog: icons, the two goods (rows, markers, texts; flags derived from the goods id), the items and their effect SpEffect rows, the junk weapons and the `[hunter]` table (tracked)
-│   │   ├── race_items_icon_<icon>.png  # Race item icon art (placeholders), 1024x1024 (the 160x160 textures are derived), one per [icons] name (tracked)
+│   │   ├── race_items_icon_<icon>.png  # Race item icon art, square (artist's drawings at 768x768; item_box and hunter still 1024x1024 placeholders; the 160x160 textures are derived), one per [icons] name (tracked)
 │   │   ├── halloween_decorations.toml  # Halloween gate decoration catalogue (bones, candelabras, candles; tracked)
 │   │   ├── halloween_icon_pumpkin_seed.png  # Golden Seed ("Pumpkin Seed") authored icon art, 160x160 (tracked)
 │   │   ├── halloween_icon_profane_tear.png  # Sacred Tear ("Profane Tear") authored icon art, 160x160 (tracked)
@@ -216,7 +216,8 @@ speedfog/
 │   ├── port_boss_arena_tags.py  # Port BAR data → data/boss_arena_tags.json
 │   ├── generate_title_screen.py  # Generate data/title_screen_overlay.png (title badge)
 │   ├── generate_halloween_icons.py  # Generate the placeholder Halloween item icon PNGs (data/plugins/)
-│   ├── generate_race_item_icons.py  # Generate the placeholder race item icon PNGs (data/plugins/; one-shot, never re-run over real art)
+│   ├── generate_race_item_icons.py  # Generate the placeholder race item icon PNGs (data/plugins/; name the icons to draw, with none it overwrites the real art)
+│   ├── import_race_item_icons.py  # Reframe delivered race item art (centre, fill 88%, 768x768) into data/plugins/
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── diff_vanilla_snapshot.py  # Hash-diff an unpacked game dir against eldendata/Vanilla (game patch triage)
 │   ├── refresh_vanilla_snapshot.py  # Refresh the FogMod snapshot (eldendata/Vanilla) from the game dir (run automatically by bootstrap.py; manual runs for game-patch triage)
@@ -460,7 +461,7 @@ speedfog/
 | `WinterTextureBuilder` / `FrostEncoder` / `DdsImage` | Frost 276 TPFs (foliage, elevator, lever and staircase textures) at half resolution (albedos re-encoded BC1 1-bit alpha at the catalogue's `FrostStrength`, normal or heavy; other textures lose their top mip) |
 | `WinterOverlay` | Copies every file under `data/mods-src/speedfog-winter/` (the Torrent skin binders) verbatim into the winter build; optional folder, a collision with a built file fails the build |
 | `WinterReport` | Writes `data/mods/speedfog-winter.report.txt` (not shipped) |
-| `ItemIconPatcher` | Ships the Halloween icons (Golden Seed/Sacred Tear) and the 22 race item icons (21 item icons + the Race Item goods' item box) as one 05_dummy.tpf.dcx superset, a 160x160 `MENU_ItemIcon_<id>` and a `MENU_Knowledge_<id>` (inventory detail panel; 160x160 too, reusing the small encode: the vanilla 1024/512 sizes cost minutes of BC7 under Wine) per icon, both from one square PNG (`--icons-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md` and `docs/plugins/race-items.md`) |
+| `ItemIconPatcher` | Ships the Halloween icons (Golden Seed/Sacred Tear) and the 21 race item icons (20 item icons + the Race Item goods' item box) as one 05_dummy.tpf.dcx superset, a 160x160 `MENU_ItemIcon_<id>` and a `MENU_Knowledge_<id>` (inventory detail panel; 160x160 too, reusing the small encode: the vanilla 1024/512 sizes cost minutes of BC7 under Wine) per icon, both from one square PNG (`--icons-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md` and `docs/plugins/race-items.md`) |
 | `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |
 | `LayoutFile` | Menu .layout XML helpers (find/remove SubTexture entries) |
 

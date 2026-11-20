@@ -430,8 +430,8 @@ enabled = false
 # Race items: Mario Kart style items for speedfog-racing (goods, SpEffects,
 # EMEVD events and texts from data/plugins/race_items.toml, ids exported in
 # graph.json). The racing server and mod hand them out; on its own the seed
-# only defines them, nothing grants them. Their icons are drawn by our
-# generator (tools/generate_race_item_icons.py) and shipped in the icon
-# overlay. enabled is the only setting.
+# only defines them, nothing grants them. Their icons
+# (data/plugins/race_items_icon_*.png) are shipped in the icon overlay.
+# enabled is the only setting.
 [plugin.race_items]
 enabled = false
